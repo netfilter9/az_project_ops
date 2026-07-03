@@ -1,0 +1,207 @@
+archives.downloadBasket = {{ downloads.download_drive }}:\SilentInstall\KERNEL
+
+NW_GetSidFromCluster.networkName = {{ sap.logical_hosts.ascs.hostname | default () }}
+NW_GetSidFromCluster.networkNameERS = {{ sap.logical_hosts.ers.hostname | default () }}
+NW_GetSidFromCluster.sid = {{ sap.sid | default () }}
+NW_GetSidFromCluster.shareDecision = {{ sap.shareDecision | default () }}
+{% if sap.shareDecision is defined and  sap.shareDecision == 'FS' %}
+NW_GetSidFromCluster.fileShare = {{ sap.global_hostname | default () }}
+{% else %}
+NW_GetSidFromCluster.sharedDrive = {{ sap.diskshare | default () }}
+{% endif %}
+NW_CreateDBandLoad.movePVCforUsagePiAndDi = false
+NW_GetSidNoProfiles.sapdrive = {{ sap.install_drive }}:
+NW_GetSidNoProfiles.sid = {{ sap.sid }}
+
+NW_getFQDN.setFQDN = true
+NW_getFQDN.FQDN = {{ domain_fqdn }}
+
+NW_SCS_Instance.ascsVirtualHostname = {{ sap.logical_hosts.ascs.hostname | default () }}
+NW_SCS_Instance.instanceNumber = {{ sap.instance_numbers.ascs }}
+NW_SCS_Instance.scsVirtualHostname = {{ sap.logical_hosts.ascs.hostname | default () }}
+
+NW_JAVA_Export.keyPhrase = {{ passwords.master }}
+db2.sidAdmPassword = {{ passwords.sidadm | default () }}
+hostAgent.sapAdmPassword = {{ passwords.sapadm | default () }}
+NW_GetMasterPassword.masterPwd = {{ passwords.master }}
+nwUsers.sapServiceSIDPassword = {{ passwords.sapservice }}
+MSS.DBUSER.AbapPassword = {{ passwords.sidadm }}
+nwUsers.sidadmPassword = {{ passwords.sidadm }}
+NW_DDIC_Password.ddic000Password = {{ passwords.master }}
+DiagnosticsAgent.dasidAdmPassword = {{ passwords.master }}
+DiagnosticsAgent.sapServiceDASIDPassword = {{ passwords.master }}
+storageBasedCopy.hdb.systemPassword = {{ passwords.system | default(passwords.master) }}
+
+DiagnosticsAgent.SLD.Connection = {{ sap.DiagnosticsAgent.sld_Connection | default ('no') }}
+DiagnosticsAgent.SLD.UseHTTPS = {{ sap.DiagnosticsAgent.sld_UseHTTPS | default (false) }}
+DiagnosticsAgent.SolMan.Connection = {{ sap.DiagnosticsAgent.solman_connection | default ('none') }}
+DiagnosticsAgent.SolMan.UseSSL = {{ sap.DiagnosticsAgent.solman_usessL | default (false) }}
+
+NW_checkMsgServer.abapMSPort = 36{{ sap.instance_numbers.ascs }}
+NW_System.installSAPHostAgent = false
+
+NW_CI_Instance.ascsVirtualHostname = {{ sap.logical_hosts.ascs.hostname | default () }}
+NW_CI_Instance.ciInstanceNumber = {{ sap.instance_numbers.pas }}
+NW_CI_Instance.ciVirtualHostname = {{ sap.logical_hosts.pas.hostname | default () }}
+NW_CI_Instance.scsVirtualHostname = {{ sap.logical_hosts.scs.hostname | default () }}
+NW_CI_Instance_ABAP_Reports.executeReportsForDepooling = true
+
+NW_MSS_DBINFO.dbhost = {{ sap.logical_hosts.db.hostname | default (groups["db"][0]) }}
+NW_MSS_DBINFO.dbsid = {{ sap.sid }}
+
+NW_System.installSAPHostAgent = false
+NW_getLoadType.loadType = {{ sap.load_type | default () }}
+NW_getUnicode.isUnicode = true
+
+NW_readProfileDir.profileDir = \\{{ sap.global_hostname | default (groups["ascs"][0])}}\sapmnt\{{ sap.sid }}\SYS\profile
+NW_readProfileDir.sapdrive = {{ sap.install_drive }}:
+
+MSS.DataDrive = {{ sap.data_drive }}:
+MSS.LogDrive = {{ sap.log_drive }}:
+MSS.Database.Action = {{ sap.database_action | default ('CRE') }}
+
+NW_ABAP_Import_Dialog.migmonJobNum = 3
+
+nw_instance_ers.ersInstanceNumber = {{ sap.instance_numbers.ers | default () }}
+nw_instance_ers.ersVirtualHostname = {{ ers_hostname | default () }}
+
+DiagnosticsAgent.SAPJVMVersion = {{ sap.DiagnosticsAgent.SAPJVMVersion | default ('SAPJVM8') }}
+
+HDB_Software_Dialogs.useMediaCD = {{ sap.use_media_cd | default(false)}}
+
+{% for entry in sap_exports_folders.stdout_lines %}
+SAPINST.CD.PACKAGE.EXP{{ loop.index }} = {{ entry }}
+{% endfor %}
+
+NW_CI_Instance.scsInstanceNumber = {{ sap.instance_numbers.ascs }}
+NW_JMigmon.jobNumber = 1
+
+{% if sybase is defined %}
+
+NW_SYB_DBPostload.numberParallelStatisticJobs = 2
+SYB.NW_DB.databaseCopyMethod = dump
+SYB.NW_DB.databaseLoadMethod = empty
+
+{% if node2 is defined %}
+{% if ansible_hostname == node2.split(".")[0] %}
+NW_readProfileDir.profilesAvailable = false
+{% endif %}
+{% endif %}
+
+SYB.NW_DB.aseSortOrder = binaryalt
+SYB.NW_DB.databaseDevices = {% for item in sybase.databaseDevices %}{{ item.device | default() }},{{ item.folder | default() }},{{ item.size | default() }},,,{{ item.filename | default() }}{% if not loop.last %},{% endif %}{% endfor %}
+SYB.NW_DB.enableGranularPermissions = true
+SYB.NW_DB.enableStrongCipherSuitesForSSL = false
+SYB.NW_DB.encryptionMasterKeyPassword = {{ master_password }}
+SYB.NW_DB.folderDatabaseSoftware = {{ sybase.DatabaseSoftware_drive }}:\sybase\{{ sap.sid }}
+SYB.NW_DB.folderDiagDevice = {{ sybase.Diag_drive }}:\sybase\{{ sap.sid }}\sapdiag
+SYB.NW_DB.folderSAPTempdbDevice = {{ sybase.SAPTempdb_drive }}:\sybase\{{ sap.sid }}\saptemp
+SYB.NW_DB.folderSecurityDevices = {{ sybase.Security_drive }}:\sybase\{{ sap.sid }}\sybsecurity
+SYB.NW_DB.folderSystemDevices = {{ sybase.System_drive }}:\sybase\{{ sap.sid }}\sybsystem
+SYB.NW_DB.folderTempdbDevice = {{ sybase.Tempdb_drive }}:\sybase\{{ sap.sid }}\sybtemp
+SYB.NW_DB.initializeDefaultSystemEncryptionPassword = false
+SYB.NW_DB.portBackupServer = {{ sap.port.backup | default ('4902') }}
+SYB.NW_DB.portDatabaseServer = {{ sap.port.database | default ('4901') }}
+SYB.NW_DB.portJobScheduler = {{ sap.port.jobscheduler | default ('4903') }}
+SYB.NW_DB.portXPServer = {{ sap.port.xpserver | default ('4904') }}
+SYB.NW_DB.sa_pass = {{ sybase_db_password | default () }}
+SYB.NW_DB.sapsa_pass = {{ sybase_db_password | default () }}
+SYB.NW_DB.sapsr3_pass = {{ sybase_db_password | default () }}
+SYB.NW_DB.sapsr3db_pass = {{ sybase_db_password | default () }}
+SYB.NW_DB.sapsso_pass = {{ sybase_db_password | default () }}
+SYB.NW_DB.sqlServerConnections = 200
+SYB.NW_DB.sqlServerCores = 8
+SYB.NW_DB.sqlServerHostname = {{ ansible_hostname }}
+SYB.NW_DB.sqlServerMemory = 7000
+SYB.NW_DB.sslPassword = {{ sybase_db_password | default () }}
+SYB.NW_DB.sybmgmtdbDataDeviceFolder = {{ sybase.sybmgmtdbData_drive }}:\sybase\{{ sap.sid }}\sybsystem 
+SYB.NW_DB.sybmgmtdbLogDeviceFolder = {{ sybase.sybmgmtdbLog_drive }}:\sybase\{{ sap.sid }}\sybsystem
+SYB.NW_DB.userstore_hostname = {{ sap.logical_hosts.db.hostname | default(groups["db"][0]) }}
+
+SYB_REP_ENV.actionRepconf = false
+SYB_REP_ENV.actionRepmat = false
+SYB_REP_ENV.actionRepsw = false
+SYB_REP_ENV.actionDbinstance = true
+SYB_REP_ENV.allowUnsignedDatabaseSoftware = false
+SYB_REP_ENV.asePrimHost = {{ sap.logical_hosts.db.hostname | default(groups["db"][0]) }}
+SYB_REP_ENV.asePrimPort = 49{{ sap.instance_numbers.ascs }}
+SYB_REP_ENV.databaseSoftwarePackage = {{ sybase_zip_path }}
+SYB_REP_ENV.dradminPassword = {{ sybase_db_password | default () }}
+SYB_REP_ENV.masterPassword = {{ sybase_db_password | default () }}
+SYB_REP_ENV.sapsaPassword = {{ sybase_db_password | default () }}
+SYB_REP_ENV.sapssoPassword = {{ sybase_db_password | default () }}
+SYB_REP_ENV.sid = {{ sap.sid }} 
+nwUsers.syb.sybsidPassword = {{ sybsid_password | default () }}
+SYB.NW_DBClient.databaseSoftwarePackage = {{ sybase_zip_path }}
+
+{% endif %}
+
+{% if sap.db is defined %}
+
+hanadb.landscape.reorg.useCheckProcedureFile = DONOTUSEFILE
+hanadb.landscape.reorg.useParameterFile = DONOTUSEFILE
+
+HDB_Schema_Check_Dialogs.schemaName = {{ sap.db.schema_name | default() }}
+HDB_Schema_Check_Dialogs.schemaPassword = {{ passwords.schema | default(passwords.master) }}
+
+HDB_Userstore.doNotResolveHostnames = {{ sap.logical_hosts.db.hostname | default() }}
+
+NW_ABAP_Import_Dialog.dbCodepage = 4103
+NW_ABAP_Import_Dialog.migmonLoadArgs = -c 100000 -rowstorelist "{{ downloads.download_drive }}:\SilentInstall\db_instanceLogs\rowstorelist.txt"
+NW_ABAP_TMSConfig.transportPassword = {{ passwords.transport | default(passwords.master) }}
+
+NW_HDB_DB.abapSchemaName = {{ sap.db.schema_name | default() }}
+NW_HDB_DB.abapSchemaPassword = {{ passwords.abapschema | default(passwords.master) }}
+
+NW_HDB_getDBInfo.dbhost = {{ sap.logical_hosts.db.hostname | default() }}
+NW_HDB_getDBInfo.dbsid = {{ sap.db.sid|upper }}
+NW_HDB_getDBInfo.instanceNumber = {{ sap.instance_numbers.db | default('00')  }}
+NW_HDB_getDBInfo.systemid = {{ sap.db.sid|upper }}
+NW_HDB_getDBInfo.systemPassword = {{ passwords.system | default(passwords.master) }}
+NW_HDB_getDBInfo.systemDbPassword = {{ passwords.system | default(passwords.master) }}
+NW_HDB_getDBInfo.systemPasswordBackup = {{ passwords.system | default(passwords.master) }}
+
+HDB_Recovery_Dialogs.backupLocation = {{ sap.backup_location | default(default_backup_location)}}
+HDB_Recovery_Dialogs.backupName = {{ sap.db.backup_name | default("COMPLETE_DATA_BACKUP") }}
+HDB_Recovery_Dialogs.sapControlWsdlUrl = "http://{{ sap.logical_hosts.db.hostname | default() }}:5{{ sap.instance_numbers.db | default('00') }}13/SAPControl?wsdl"
+HDB_Recovery_Dialogs.sidAdmName = {{ sap.db.sid|lower }}adm
+HDB_Recovery_Dialogs.sidAdmPassword = {{ passwords.dbsidadm | default(passwords.master) }}
+HDB_Recovery_Dialogs.backupDestinationType = File
+
+storageBasedCopy.hdb.instanceNumber = {{ sap.instance_numbers.db | default('00')  }}
+{% endif %}
+
+SAPCS_INSTANCE.adminSecurity = false
+SAPCS_INSTANCE.adminSecurityGroup = {{ content_server.adminSecurityGroup | default('Administrator') }}
+SAPCS_INSTANCE.csHTTPPort = {{ content_server.csHTTPPort | default('1090') }}
+SAPCS_INSTANCE.csHTTPSPort = {{ content_server.csHTTPSPort | default('1091') }}
+SAPCS_INSTANCE.csHTTPScript = {{ content_server.csHTTPScript | default('/sapcs') }}
+SAPCS_INSTANCE.instanceNumber = {{ sap.instance_numbers.ascs | default('00')  }}
+SAPCS_INSTANCE.sapcsHostname = {{ virtual_hostname | default() }}
+SAPCS_INSTANCE.useCsHTTPPort = false
+
+ContentServerSapdb.fCsName = {{ sap.db.sid | default() }}
+SdbInstanceDialogs.sapdataFolder = {{ content_server.sapdataFolder | default('sapdata') }}
+SdbInstanceDialogs.saplogFolder = {{ content_server.saplogFolder | default('saplog') }} 
+Sdb_DBUser.dbaPassword = {{ passwords.sidbd | default(passwords.master) }}
+Sdb_DBUser.dbmPassword = {{ passwords.sidbd | default(passwords.master) }}
+Sdb_OSUser_Dialogs.SQD_DBSID_Password = {{ passwords.sidbd | default(passwords.master) }}
+Sdb_ServerSoftware_Dialogs.dependent_drive = {{ sap.data_drive }}:
+Sdb_ServerSoftware_Dialogs.indep_data_drive = {{ sap.data_drive }}:
+Sdb_ServerSoftware_Dialogs.indep_prog_drive =  {{ sap.install_drive }}:
+
+UmeConfiguration.adminName = J2EE_ADMIN
+UmeConfiguration.adminPassword = {{ passwords.admin | default(passwords.master) }}
+UmeConfiguration.guestName = J2EE_GUEST
+UmeConfiguration.sapjsfName =  SAPJSF
+UmeConfiguration.sapjsfPassword ={{ passwords.admin | default(passwords.master) }}
+
+UmeConfiguration.umeClient =  001
+UmeConfiguration.umeHost = {{ sap.ume.host | default() }}
+UmeConfiguration.umeInstance = {{ sap.ume.instanceno | default() }}
+UmeConfiguration.umeType =  {{ sap.ume.type | default('db') }}
+
+MSS.STM.AODBServer = {{ secondary_db_hostname | default() }}
+MSS.STM.domain = {{ domain_fqdn }}
+MSS.STM.password = {{ passwords.sidadm }}
+MSS.STM.profileDir = \\{{ sap.global_hostname | default (groups["ascs"][0])}}\{{ sap.profile_dir | default ("sapmnt") }}\{{ sap.sid }}\SYS\profile

@@ -1,0 +1,2942 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "title": "Cloud Builder Azure Foundation",
+    "description": "JSON schema for Cloud Builder Azure Foundation module",
+    "type": "object",
+    "definitions": {
+        "firewall_policies": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "rule_collection_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "priority": {
+                                "type": "integer"
+                            },
+                            "application_rule_collections": {
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "priority":{
+                                            "type": "integer"
+                                        },
+                                        "action": {
+                                            "type": "string"
+                                        },
+                                        "rules": {
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "object",
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "source_addresses": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "destination_fqdns": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        } 
+                                                    },
+                                                    "protocols": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "object",
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "type": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "integer"
+                                                                }
+                                                            }
+                                                        }
+                                                
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "network_rule_collections": {
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "priority": {
+                                            "type": "integer"
+                                        },
+                                        "action": {
+                                            "type": "string"
+                                        },
+                                        "rules": {
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "object",
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "protocols": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "source_addresses": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "destination_addresses": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "destination_ports": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "nat_rule_collections": {
+                                "type": "array",
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "priority": {
+                                            "type": "integer"
+                                        },
+                                        "action": {
+                                            "type": "string"
+                                        },
+                                        "rules": {
+                                            "type": "array",
+                                            "uniqueItems": true,
+                                            "items": {
+                                                "type": "object",
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "protocols": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "source_addresses": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "destination_address": {
+                                                        "type": "string"
+                                                    },
+                                                    "destination_ports": {
+                                                        "type": "array",
+                                                        "uniqueItems": true,
+                                                        "items": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "translated_address": {
+                                                        "type": "string"
+                                                    },
+                                                    "translated_port": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "custom_header": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "description": "The name of the custom header.",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "The value of custom header. Applicable for Http and Https protocol",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "value"
+            ]
+        },
+        "traffic_manager_profile": {
+            "description": "Manages a Traffic Manager Profile to which multiple endpoints can be attached",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "profile_status": {
+                    "description": "(Optional) The status of the profile, can be set to either Enabled or Disabled. Defaults to Enabled.",
+                    "default": "Enabled",
+                    "enum": [
+                        "Enabled",
+                        "Disabled"
+                    ]
+                },
+                "traffic_routing_method": {
+                    "description": "Specifies the algorithm used to route traffic",
+                    "enum": [
+                        "Geographic",
+                        "MultiValue",
+                        "Performance",
+                        "Priority",
+                        "Subnet",
+                        "Weighted"
+                    ]
+                },
+                "traffic_view_enabled": {
+                    "description": "(Optional) Indicates whether Traffic View is enabled for the Traffic Manager profile.",
+                    "type": "boolean"
+                },
+                "dns_config": {
+                    "description": "This block specifies the DNS configuration of the Profile",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "relative_name": {
+                            "description": "The relative domain name, this is combined with the domain name used by Traffic Manager to form the FQDN which is exported as documented below. Changing this forces a new resource to be created",
+                            "type": "string"
+                        },
+                        "ttl": {
+                            "description": "The TTL value of the Profile used by Local DNS resolvers and clients",
+                            "type": "integer",
+                            "default": 60
+                        }
+                    },
+                    "required": [
+                        "relative_name"
+                    ]
+                },
+                "monitor_config": {
+                    "description": "This block specifies the Endpoint monitoring configuration for the Profile",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "protocol": {
+                            "description": "The protocol used by the monitoring checks",
+                            "enum": [
+                                "HTTP",
+                                "HTTPS",
+                                "TCP"
+                            ]
+                        },
+                        "port": {
+                            "description": "The port number used by the monitoring checks",
+                            "type": "integer"
+                        },
+                        "path": {
+                            "description": "(Optional) The path used by the monitoring checks. Required when protocol is set to HTTP or HTTPS - cannot be set when protocol is set to TCP",
+                            "type": "string"
+                        },
+                        "expected_status_code_ranges": {
+                            "description": "(Optional) A list of status code ranges in the format of 100-101",
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "custom_headers": {
+                            "description": "(Optional) One or more custom_header blocks",
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/custom_header"
+                            }
+                        },
+                        "interval_in_seconds": {
+                            "description": "(Optional) The interval used to check the endpoint health from a Traffic Manager probing agent. You can specify two values here: 30 (normal probing) and 10 (fast probing). The default value is 30",
+                            "enum": [
+                                30,
+                                10
+                            ]
+                        },
+                        "timeout_in_seconds": {
+                            "description": "(Optional) The amount of time the Traffic Manager probing agent should wait before considering that check a failure when a health check probe is sent to the endpoint. If interval_in_seconds is set to 30, then timeout_in_seconds can be between 5 and 10. The default value is 10. If interval_in_seconds is set to 10, then valid values are between 5 and 9 and timeout_in_seconds is required.",
+                            "type": "integer",
+                            "default": 10,
+                            "minimum": 5,
+                            "maximum": 10
+                        },
+                        "tolerated_number_of_failures": {
+                            "description": "(Optional) The number of failures a Traffic Manager probing agent tolerates before marking that endpoint as unhealthy. Valid values are between 0 and 9. The default value is 3",
+                            "type": "integer",
+                            "default": 3,
+                            "minimum": 0,
+                            "maximum": 9
+                        }
+                    },
+                    "required": [
+                        "protocol",
+                        "port"
+                    ]
+                },
+                "max_return": {
+                    "description": "(Optional) The amount of endpoints to return for DNS queries to this Profile. Possible values range from 1 to 8",
+                    "type": "integer",
+                    "maximum": 8,
+                    "minimum": 1
+                },
+                "tags": {
+                    "description": "(Optional) A mapping of tags to assign to the resource",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "end_points": {
+                    "description": "Manages Traffic Manager Endpoints.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "description": "Manages a Traffic Manager Endpoint.",
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "resource_group_name": {
+                                "$ref": "#/definitions/resource_group_name"
+                            },
+                            "end_point_status": {
+                                "description": "(Optional) The status of the Endpoint, can be set to either Enabled or Disabled. Defaults to Enabled",
+                                "enum": [
+                                    "Enabled",
+                                    "Disabled"
+                                ],
+                                "default": "Enabled"
+                            },
+                            "type": {
+                                "description": "(Required) The Endpoint type",
+                                "enum": [
+                                    "azureEndpoints",
+                                    "externalEndpoints",
+                                    "nestedEndpoints"
+                                ]
+                            },
+                            "target": {
+                                "description": "(Optional) The FQDN DNS name of the target. This argument must be provided for an endpoint of type externalEndpoints, for other types it will be computed.",
+                                "type": "string"
+                            },
+                            "target_resource_id": {
+                                "description": "(Optional) The resource id of an Azure resource to target. This argument must be provided for an endpoint of type azureEndpoints or nestedEndpoints",
+                                "type": "string"
+                            },
+                            "weight": {
+                                "description": "(Optional) Specifies how much traffic should be distributed to this endpoint, this must be specified for Profiles using the Weighted traffic routing method. Supports values between 1 and 1000",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1000
+                            },
+                            "priority": {
+                                "description": "(Optional) Specifies the priority of this Endpoint, this must be specified for Profiles using the Priority traffic routing method. Supports values between 1 and 1000, with no Endpoints sharing the same value. If omitted the value will be computed in order of creation.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1000
+                            },
+                            "endpoint_location": {
+                                "description": "(Optional) Specifies the Azure location of the Endpoint, this must be specified for Profiles using the Performance routing method if the Endpoint is of either type nestedEndpoints or externalEndpoints. For Endpoints of type azureEndpoints the value will be taken from the location of the Azure target resource.",
+                                "type": "string"
+                            },
+                            "min_child_endpoints": {
+                                "description": "(Optional) This argument specifies the minimum number of endpoints that must be ‘online’ in the child profile in order for the parent profile to direct traffic to any of the endpoints in that child profile. This argument only applies to Endpoints of type nestedEndpoints and has to be larger than 0",
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "minimum_required_child_endpoints_ipv4": {
+                                "description": "(Optional) This argument specifies the minimum number of IPv4 (DNS record type A) endpoints that must be ‘online’ in the child profile in order for the parent profile to direct traffic to any of the endpoints in that child profile. This argument only applies to Endpoints of type nestedEndpoints and defaults to 1.",
+                                "type": "integer",
+                                "default": 1
+                            },
+                            "minimum_required_child_endpoints_ipv6": {
+                                "description": "(Optional) This argument specifies the minimum number of IPv6 (DNS record type AAAA) endpoints that must be ‘online’ in the child profile in order for the parent profile to direct traffic to any of the endpoints in that child profile. This argument only applies to Endpoints of type nestedEndpoints and defaults to 1.",
+                                "type": "integer",
+                                "default": 1
+                            },
+                            "geo_mappings": {
+                                "description": "(Optional) A list of Geographic Regions used to distribute traffic, such as WORLD, UK or DE. The same location can't be specified in two endpoints.",
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "WORLD",
+                                        "UK",
+                                        "DE"
+                                    ]
+                                }
+                            },
+                            "custom_headers": {
+                                "description": "(Optional) One or more custom_header blocks",
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/custom_header"
+                                }
+                            },
+                            "subnet": {
+                                "description": "(Optional) One or more subnet blocks",
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "first": {
+                                            "description": "The First IP",
+                                            "type": "string"
+                                        },
+                                        "last": {
+                                            "description": "The Last IP",
+                                            "type": "string"
+                                        },
+                                        "scope": {
+                                            "description": "The Scope",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "first"
+                                    ]
+                                }
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "traffic_routing_method",
+                "dns_config",
+                "monitor_config"
+            ]
+        },
+        "virtual_wan": {
+            "title": "Virtual WAN",
+            "description": "Defines a Virtual WAN ",
+            "type": "object",
+            "properties": {
+                "hubs": {
+                    "$ref": "#/definitions/hub"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {
+                    "hubs": {}
+                }
+            ]
+        },
+        "hub": {
+            "type": "object",
+            "additionalProperties": {
+                "title": "Virtual Hub",
+                "description": "Defines a Virtual Hub within a Virtual WAN",
+                "type": "object",
+                "properties": {
+                    "resource_group_name": {
+                        "description": "(optional) defaults to default RG",
+                        "$ref": "#/definitions/resource_group_name"
+                    },
+                    "location": {
+                        "description": "(optional) defaults to default RG location",
+                        "$ref": "#/definitions/location"
+                    },
+                    "address_prefix": {
+                        "description": "The Address Prefix which should be used for this Virtual Hub",
+                        "type": "string",
+                        "examples": [
+                            "10.x.x.x/x"
+                        ]
+                    },
+                    "vpn_gateway": {
+                        "$ref": "#/definitions/vpn_gateway"
+                    },
+                    "express_route_gateway": {
+                        "$ref": "#/definitions/express_route_gateway"
+                    },
+                    "point_to_site_vpn_gateway": {
+                        "$ref": "#/definitions/point_to_site_vpn_gateway"
+                    },
+                    "virtual_hub_connections": {
+                        "type": "object",
+                        "additionProperties": {
+                            "type": "object",
+                            "properties": {
+                                "internet_security_enabled": {
+                                    "type": "boolean",
+                                    "default": true
+                                }
+                            }
+                        },
+                        "examples": [
+                            {
+                                "vnet-hub": {}
+                            }
+                        ]
+                    }
+                },
+                "additionalProperties": false,
+                "required": [],
+                "examples": []
+            },
+            "examples": [
+                {
+                    "hub01": {}
+                }
+            ]
+        },
+        "vpn_gateway": {
+            "description": "Defines a VPN Gateway within a Virtual Hub, which enables Site-to-Site communication",
+            "type": "object",
+            "properties": {
+                "scale_unit": {
+                    "type": "integer",
+                    "default": 1
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "scale_unit"
+            ],
+            "examples": [
+                {
+                    "scale_unit": 1
+                }
+            ]
+        },
+        "express_route_gateway": {
+            "description": "Defines an ExpressRoute gateway",
+            "type": "object",
+            "properties": {
+                "scale_unit": {
+                    "description": "The number of scale units with which to provision the ExpressRoute gateway. Each scale unit is equal to 2Gbps, with support for up to 10 scale units (20Gbps)",
+                    "type": "integer",
+                    "default": 1,
+                    "maximum": 10
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "point_to_site_vpn_gateway": {
+            "description": "Defines a Point-to-Site VPN Gateway",
+            "type": "object",
+            "properties": {
+                "scale_unit": {
+                    "type": "integer",
+                    "default": 1
+                },
+                "client_address_prefix": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "10.x.x.x/x"
+                        ]
+                    }
+                },
+                "public_cert_data": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "firewall": {
+            "title": "Firewall",
+            "type": "object",
+            "properties": {
+                "firewall_policy_name": {
+                    "type": "string"
+                },
+                "virtual_wan": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "hub": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "lookup": {
+                    "$ref": "#/definitions/lookup"
+                },
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "application_rule_collections": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/application_rule_collection"
+                    }
+                },
+                "nat_rule_collections": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/nat_rule_collection"
+                    }
+                },
+                "network_rule_collections": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/network_rule_collection"
+                    }
+                },
+                "network": {
+                    "type": "string",
+                    "examples": [
+                        "vnet-prod"
+                    ]
+                },
+                "sku_name": {
+                    "enum": [
+                        "AZFW_Hub",
+                        "AZFW_VNet"
+                    ]
+                },
+                "sku_tier": {
+                    "enum": [
+                        "Premium",
+                        "Standard"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "application_rule_collection": {
+            "type": "object",
+            "properties": {
+                "priority": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 65000,
+                    "default": 100
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "Allow",
+                        "Deny"
+                    ]
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "examples": [
+                                    "rule1"
+                                ]
+                            },
+                            "source_addresses": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "10.x.x.x/24"
+                                    ]
+                                }
+                            },
+                            "target_fqdns": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "*.google.com"
+                                    ]
+                                }
+                            },
+                            "protocol": {
+                                "type": "object",
+                                "properties": {
+                                    "port": {
+                                        "type": "integer",
+                                        "examples": [
+                                            443
+                                        ]
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Http",
+                                            "Https",
+                                            "Mssql"
+                                        ]
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [
+                                    "type"
+                                ],
+                                "examples": []
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [],
+                        "examples": []
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "nat_rule_collection": {
+            "type": "object",
+            "properties": {
+                "priority": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 65000,
+                    "default": 100
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "Dnat",
+                        "Snat"
+                    ]
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "examples": [
+                                    "rule1"
+                                ]
+                            },
+                            "source_addresses": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "10.x.x.x/24"
+                                    ]
+                                }
+                            },
+                            "destination_ports": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer",
+                                    "examples": [
+                                        53
+                                    ]
+                                }
+                            },
+                            "translated_port": {
+                                "type": "integer",
+                                "examples": [
+                                    53
+                                ]
+                            },
+                            "translated_address": {
+                                "type": "string",
+                                "examples": [
+                                    "8.8.8.8"
+                                ]
+                            },
+                            "protocols": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "TCP",
+                                        "UDP",
+                                        "Any",
+                                        "ICMP"
+                                    ]
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [],
+                        "examples": []
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "network_rule_collection": {
+            "type": "object",
+            "properties": {
+                "priority": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 65000,
+                    "default": 100
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "Allow",
+                        "Deny"
+                    ]
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "examples": [
+                                    "rule1"
+                                ]
+                            },
+                            "source_addresses": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "10.x.x.x/24"
+                                    ]
+                                }
+                            },
+                            "destination_ports": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer",
+                                    "examples": [
+                                        53
+                                    ]
+                                }
+                            },
+                            "destination_addresses": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "8.8.8.8",
+                                        "8.8.4.4"
+                                    ]
+                                }
+                            },
+                            "protocols": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "Any",
+                                        "ICMP",
+                                        "TCP",
+                                        "UDP"
+                                    ]
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [],
+                        "examples": []
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "key_vault": {
+            "title": "Key Vault",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "network_acls": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "bypass": {
+                            "type": "string",
+                            "examples": [
+                                "AzureServices"
+                            ]
+                        },
+                        "default_action": {
+                            "type": "string"
+                        },
+                        "ip_rules": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "networks": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "network": {
+                                        "type": "string"
+                                    },
+                                    "subnets": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "private_endpoint": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "network_name": {
+                            "type": "string"
+                        },
+                        "subnet_name": {
+                            "type": "string"
+                        },
+                        "private_dns_zone": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "resource_group": {
+                                    "type": "string"
+                                },
+                                "dns_zone_name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "access_policies": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "key_permissions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "secret_permissions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "certificate_permissions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "dns_zone": {
+            "title": "DNS Zone",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "virtual_networks": {
+                    "title": "Virtual Networks",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "registration_enabled": {
+                                "type": "boolean",
+                                "default": false
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "vnet-prod": {
+                                "registration_enabled": false
+                            }
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {
+                    "virtual_networks": {}
+                }
+            ]
+        },
+        "automation_account": {
+            "title": "Automation Account",
+            "type": "object",
+            "properties": {
+                "diagnostics": {
+                    "$ref": "#/definitions/diagnostics"
+                },
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {
+                    "automation-account-scNN": {}
+                }
+            ]
+        },
+        "recovery_vault": {
+            "title": "Recovery Vault",
+            "description": "",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "policies": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/recovery_vault_policy"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "recovery_vault_policy": {
+            "type": "object",
+            "properties": {
+                "backup_frequency": {
+                    "type": "string",
+                    "examples": [
+                        "Daily"
+                    ]
+                },
+                "backup_time": {
+                    "type": "string",
+                    "examples": [
+                        "23:00"
+                    ]
+                },
+                "timezone": {
+                    "type": "string",
+                    "examples": [
+                        "UTC"
+                    ]
+                },
+                "retention_daily": {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                },
+                "retention_weekly": {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "type": "integer",
+                            "default": 42
+                        },
+                        "weekdays": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "Sunday",
+                                    "Monday",
+                                    "Tuesday",
+                                    "Wednesday",
+                                    "Thursday",
+                                    "Friday",
+                                    "Saturday"
+                                ]
+                            },
+                            "default": [
+                                "Sunday",
+                                "Wednesday",
+                                "Friday",
+                                "Saturday"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                },
+                "retention_monthly": {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "type": "integer",
+                            "default": 7
+                        },
+                        "weekdays": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "Sunday",
+                                    "Monday",
+                                    "Tuesday",
+                                    "Wednesday",
+                                    "Thursday",
+                                    "Friday",
+                                    "Saturday"
+                                ]
+                            },
+                            "default": [
+                                "Sunday",
+                                "Wednesday"
+                            ]
+                        },
+                        "weeks": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "examples": [
+                                    "First",
+                                    "Last"
+                                ]
+                            },
+                            "default": [
+                                "First",
+                                "Last"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                },
+                "retention_yearly": {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "type": "integer",
+                            "default": 77
+                        },
+                        "weekdays": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "Sunday",
+                                    "Monday",
+                                    "Tuesday",
+                                    "Wednesday",
+                                    "Thursday",
+                                    "Friday",
+                                    "Saturday"
+                                ]
+                            },
+                            "default": [
+                                "Sunday"
+                            ]
+                        },
+                        "weeks": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "examples": [
+                                    "First",
+                                    "Last"
+                                ]
+                            },
+                            "default": [
+                                "Last"
+                            ]
+                        },
+                        "months": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "January",
+                                    "February",
+                                    "March",
+                                    "April",
+                                    "May",
+                                    "June",
+                                    "July",
+                                    "August",
+                                    "September",
+                                    "October",
+                                    "November",
+                                    "December"
+                                ]
+                            },
+                            "default": [
+                                "January"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "resource_group": {
+            "title": "Resource Group",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "location": {
+                    "$ref": "#/definitions/location"
+                },
+                "lookup": {
+                    "$ref": "#/definitions/lookup"
+                },
+                "is_default": {
+                    "description": "defines if this is the default resource group for resources to use",
+                    "type": "boolean",
+                    "default": false
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "location"
+            ],
+            "examples": [
+                {
+                    "name": "example-rg-scNN",
+                    "location": "westus2"
+                }
+            ]
+        },
+        "resource_group_name": {
+            "title": "Resource Group Name",
+            "type": "string",
+            "examples": [
+                "example-rg-scNN"
+            ]
+        },
+        "location": {
+            "title": "Location",
+            "description": "Azure deployment region reference",
+            "type": "string",
+            "examples": [
+                "westus2",
+                "uksouth"
+            ]
+        },
+        "lookup": {
+            "title": "Lookup",
+            "description": "determines if a new resource should be created or if existing resource should be referenced",
+            "type": "boolean",
+            "default": false
+        },
+        "network": {
+            "title": "Network",
+            "description": "Azure network definition",
+            "type": "object",
+            "properties": {
+                "ddos_protection_plan": {
+                    "type": "string"
+                },
+                "ddos_protection_id": {
+                    "type": "string"
+                },
+                "use_inline_subnets": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "determines if subnets are created inline (helps when policy prevents subnet creation without nsg attachement)"
+                },
+                "lookup": {
+                    "$ref": "#/definitions/lookup"
+                },
+                "nat_gateway_required": {
+                    "title": "NAT Gateway Required",
+                    "description": "determines if a NAT gateway should be created for this network",
+                    "type": "boolean",
+                    "default": false
+                },
+                "subnets": {
+                    "title": "Subnets",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/subnet"
+                    },
+                    "examples": [
+                        {
+                            "app": {}
+                        }
+                    ]
+                },
+                "lookup_subnets": {
+                    "title": "lookup subnets",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "examples": [
+                        [
+                            "app"
+                        ]
+                    ]
+                },
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "address_space": {
+                    "title": "Address Space",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "examples": [
+                        [
+                            "10.1.0.0/16"
+                        ]
+                    ]
+                },
+                "diagnostics": {
+                    "$ref": "#/definitions/diagnostics"
+                },
+                "dns_servers": {
+                    "description": "Array of custom DNS servers",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "examples": [
+                        [],
+                        [
+                            "10.0.0.4",
+                            "10.0.0.5"
+                        ]
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "address_space"
+            ],
+            "examples": [
+                {
+                    "address_space": [
+                        "10.x.x.x/x"
+                    ]
+                }
+            ]
+        },
+        "network_gateway": {
+            "title": "Network Gateway",
+            "description": "TODO",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "public_cert_data": {
+                    "title": "Public Certtificate Data",
+                    "type": "string"
+                },
+                "client_address_space": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "10.x.x.x/x"
+                        ]
+                    },
+                    "examples": [
+                        [
+                            "172.168.0.0/24"
+                        ]
+                    ]
+                },
+                "network": {
+                    "type": "string",
+                    "examples": [
+                        "vnet-prod"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "network_peering": {
+            "title": "Network Peering",
+            "description": "TODO",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "bidirectional": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "allow_virtual_network_access": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "allow_forwarded_traffic": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "allow_gateway_transit": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "A": {
+                    "description": "Point A",
+                    "type": "object",
+                    "properties": {
+                        "vnet": {
+                            "type": "string",
+                            "examples": [
+                                "vnet-prod"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                },
+                "B": {
+                    "description": "Point A",
+                    "type": "object",
+                    "properties": {
+                        "vnet": {
+                            "type": "string",
+                            "examples": [
+                                "vnet-hub"
+                            ]
+                        },
+                        "resource_group_name": {
+                            "type": "string",
+                            "description": "Optional.  Specifies the B-side network's resource group.  Used when peering with a virtual network outside your resource group"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        },
+        "network_security_group": {
+            "title": "Network Security Group",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "use_inline_rules": {
+                    "title": "Use inline rules",
+                    "description": "determins if rules are created inline or as their own resources",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "rules": {
+                    "title": "Rules",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nsg_rule"
+                    }
+                },
+                "diagnostics": {
+                    "$ref": "#/definitions/diagnostics"
+                },
+                "network_watcher": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "examples": [
+                                "NetworkWatcher_westus2"
+                            ]
+                        },
+                        "storage_account_name": {
+                            "$ref": "#/definitions/storage_account_name"
+                        },
+                        "workspace_name": {
+                            "type": "string",
+                            "examples": [
+                                "example-la-sc99-3"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": []
+                },
+                "subnet_associations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "network": {
+                                "type": "string",
+                                "examples": [
+                                    "vnet-prod"
+                                ]
+                            },
+                            "subnets": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "examples": [
+                                    [
+                                        "app"
+                                    ]
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "nsg_rule": {
+            "title": "rule",
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "access": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "source_port_range": {
+                    "type": "string"
+                },
+                "source_port_ranges": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_port_range": {
+                    "type": "string"
+                },
+                "destination_port_ranges": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source_address_prefix": {
+                    "type": "string"
+                },
+                "source_address_prefixes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_address_prefix": {
+                    "type": "string"
+                },
+                "destination_address_prefixes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "network": {
+                    "type": "string"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_application_security_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source_application_security_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "diagnostics": {
+            "title": "Diagnostics",
+            "description": "defines diagnostics settings for the vnet",
+            "type": "object",
+            "properties": {
+                "log_analytics_workspace_name": {
+                    "$ref": "#/definitions/log_analytics_workspace_name"
+                },
+                "storage_account_name": {
+                    "$ref": "#/definitions/storage_account_name"
+                },
+                "retention": {
+                    "title": "Retention",
+                    "description": "numbers of days to retain data in storage account",
+                    "type": "integer",
+                    "default": 30
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {
+                    "log_analytics_workspace_name": ""
+                },
+                {
+                    "storage_account_name": ""
+                }
+            ]
+        },
+        "storage_account_name": {
+            "title": "Storage Account Name",
+            "type": "string",
+            "examples": [
+                "examplevmdiagsasc99"
+            ]
+        },
+        "log_analytics_workspace_name": {
+            "title": "Log Analytics Workspace Name",
+            "type": "string",
+            "examples": [
+                "example-la-sc99-la"
+            ]
+        },
+        "subnet": {
+            "title": "Subnet",
+            "type": "object",
+            "properties": {
+                "address_prefixes": {
+                    "title": "Address Prefixes",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "10.1.0.0/16"
+                        ]
+                    }
+                },
+                "service_endpoints": {
+                    "title": "Service End Points",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "Microsoft.AzureActiveDirectory",
+                            "Microsoft.AzureCosmosDB",
+                            "Microsoft.ContainerRegistry",
+                            "Microsoft.EventHub",
+                            "Microsoft.KeyVault",
+                            "Microsoft.ServiceBus",
+                            "Microsoft.Sql",
+                            "Microsoft.Storage",
+                            "Microsoft.Web"
+                        ]
+                    },
+                    "uniqueItems": true,
+                    "default": [
+                        "Microsoft.KeyVault",
+                        "Microsoft.Storage"
+                    ]
+                },
+                "delegations": {
+                    "title": "Delegation",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/delegation"
+                    },
+                    "default": []
+                },
+                "enable_nat_gateway": {
+                    "title": "determines if subnet should be added to networks NAT gateway",
+                    "type": "boolean",
+                    "default": false
+                },
+                "enforce_private_link_endpoint_network_policies": {
+                    "title": "Enable or Disable network policies for the private link endpoint on the subnet",
+                    "type": "boolean",
+                    "default": false
+                },
+                "enforce_private_link_service_network_policies": {
+                    "title": "Enable or Disable network policies for the private link service on the subnet",
+                    "type": "boolean",
+                    "default": false
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "address_prefixes"
+            ],
+            "examples": [
+                {
+                    "address_prefixes": [
+                        "10.1.0.0/16"
+                    ]
+                }
+            ]
+        },
+        "delegation": {
+            "title": "Delegation",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Name",
+                    "type": "string",
+                    "examples": [
+                        "exampledelegation"
+                    ]
+                },
+                "service_delegation": {
+                    "title": "Service Delegation",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "title": "Name",
+                            "type": "string",
+                            "enum": [
+                                "Microsoft.ApiManagement/service",
+                                "Microsoft.AzureCosmosDB/clusters",
+                                "Microsoft.BareMetal/AzureVMware",
+                                "Microsoft.BareMetal/CrayServers",
+                                "Microsoft.Batch/batchAccounts",
+                                "Microsoft.ContainerInstance/containerGroups",
+                                "Microsoft.Databricks/workspaces",
+                                "Microsoft.DBforMySQL/flexibleServers",
+                                "Microsoft.DBforMySQL/serversv2",
+                                "Microsoft.DBforPostgreSQL/flexibleServers",
+                                "Microsoft.DBforPostgreSQL/serversv2",
+                                "Microsoft.DBforPostgreSQL/singleServers",
+                                "Microsoft.HardwareSecurityModules/dedicatedHSMs",
+                                "Microsoft.Kusto/clusters",
+                                "Microsoft.Logic/integrationServiceEnvironments",
+                                "Microsoft.MachineLearningServices/workspaces",
+                                "Microsoft.Netapp/volumes",
+                                "Microsoft.Network/managedResolvers",
+                                "Microsoft.PowerPlatform/vnetaccesslinks",
+                                "Microsoft.ServiceFabricMesh/networks",
+                                "Microsoft.Sql/managedInstances",
+                                "Microsoft.Sql/servers",
+                                "Microsoft.StreamAnalytics/streamingJobs",
+                                "Microsoft.Synapse/workspaces",
+                                "Microsoft.Web/hostingEnvironments",
+                                "Microsoft.Web/serverFarms"
+                            ]
+                        },
+                        "actions": {
+                            "title": "Actions",
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "Microsoft.Network/networkinterfaces/*",
+                                    "Microsoft.Network/virtualNetworks/subnets/action",
+                                    "Microsoft.Network/virtualNetworks/subnets/join/action",
+                                    "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",
+                                    "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action"
+                                ]
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "application_security_group": {
+            "title": "Application Security Group",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        },
+        "route_table": {
+            "title": "Route Table",
+            "type": "object",
+            "properties": {
+                "use_inline_routes": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "determines if routes are created inline or as independent resources"
+                },
+                "routes": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "address_prefix": {
+                                "type": "string",
+                                "examples": [
+                                    "10.x.x.x/x"
+                                ]
+                            },
+                            "next_hop_type": {
+                                "type": "string",
+                                "enum": [
+                                    "VirtualNetworkGateway",
+                                    "VnetLocal",
+                                    "Internet",
+                                    "VirtualAppliance",
+                                    "None"
+                                ],
+                                "default": "VirtualNetworkGateway"
+                            },
+                            "next_hop_in_ip_address": {
+                                "description": "Optional.  Used in conjunction with next_hop_type VirtualAppliance.  Specifies an IPv4 address for the route table entry",
+                                "type": "string",
+                                "examples": [
+                                    "10.0.0.4"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "address_prefix"
+                        ],
+                        "examples": [
+                            {
+                                "address_prefix": "10.x.x.x/x"
+                            }
+                        ]
+                    },
+                    "examples": [
+                        {
+                            "prod-hubregion2-mgmt": {
+                                "address_prefix": "10.9.0.0/25"
+                            },
+                            "prod-drregion2-app": {
+                                "address_prefix": "10.10.0.0/27"
+                            }
+                        }
+                    ]
+                },
+                "subnet_associations": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "network": {
+                                "type": "string",
+                                "examples": [
+                                    "vnet-prod"
+                                ]
+                            },
+                            "subnets": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "mgmt",
+                                        "app",
+                                        "db"
+                                    ]
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [],
+                        "examples": [
+                            {
+                                "network": "vnet-prod",
+                                "subnets": [
+                                    "mgmt",
+                                    "app",
+                                    "db"
+                                ]
+                            }
+                        ]
+                    },
+                    "examples": [
+                        []
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "routes"
+            ],
+            "examples": [
+                {
+                    "routes": {},
+                    "subnet_associations": []
+                }
+            ]
+        },
+        "log_analytics_workspace": {
+            "title": "Log Analytics Workspace",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "solutions": {
+                    "title": "Solutions",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "enum": [
+                            {
+                                "solution_name": "ServiceMap",
+                                "publisher": "Microsoft",
+                                "product": "OMSGallery/ServiceMap"
+                            },
+                            {
+                                "solution_name": "AzureActivity",
+                                "publisher": "Microsoft",
+                                "product": "OMSGallery/AzureActivity"
+                            },
+                            {
+                                "solution_name": "KeyVaultAnalytics",
+                                "publisher": "Microsoft",
+                                "product": "OMSGallery/KeyVaultAnalytics"
+                            },
+                            {
+                                "solution_name": "AzureAppGatewayAnalytics",
+                                "publisher": "Microsoft",
+                                "product": "OMSGallery/AzureAppGatewayAnalytics"
+                            }
+                        ]
+                    }
+                },
+                "retention_in_days": {
+                    "title": "Retention in Days",
+                    "type": "integer",
+                    "default": 30
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        },
+        "storage_account": {
+            "title": "Storage Account",
+            "type": "object",
+            "properties": {
+                "diagnostics": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "log_analytics_workspace_name": {
+                            "type": "string",
+                            "examples": [
+                                "example-la-scNN"
+                            ]
+                        },
+                        "settings": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "account": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "default": []
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "blob": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "queue": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "table": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "file": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "default": false
+                                },
+                                "days": {
+                                    "type": "integer",
+                                    "default": 30
+                                }
+                            }
+                        }
+                    }
+                },
+                "blob_properties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "delete_retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        },
+                        "container_delete_retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        }
+                    }
+                },
+                "share_properties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        }
+                    }
+                },
+                "allow_nested_items_to_be_public": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "infrastructure_encryption_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "large_file_share_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "shared_access_key_enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "enable_https_traffic_only": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "create_rules_as_resources": {
+                    "description": "decides if rules are created within account, or as separate resources",
+                    "type": "boolean"
+                },
+                "network_rules": {
+                    "description": "definition of network rules",
+                    "type": "object",
+                    "additionalProperties": {
+                        "properties": {
+                            "default_action": {
+                                "type": "string",
+                                "examples": [
+                                    "Deny"
+                                ]
+                            },
+                            "ip_rules": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "N.N.N.N"
+                                    ]
+                                }
+                            },
+                            "bypass": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "AzureServices"
+                                    ]
+                                }
+                            },
+                            "subnets": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "vnet": {
+                                            "type": "string"
+                                        },
+                                        "subnet": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "examples": [
+                        {
+                            "rule1": {}
+                        }
+                    ]
+                },
+                "lookup": {
+                    "$ref": "#/definitions/lookup"
+                },
+                "account_tier": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "Standard",
+                        "Premium"
+                    ],
+                    "default": "Standard"
+                },
+                "account_kind": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "StorageV2",
+                        "BlobStorage",
+                        "BlockBlobStorage",
+                        "FileStorage",
+                        "Storage"
+                    ],
+                    "default": "StroageV2"
+                },
+                "account_replication_type": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "LRS",
+                        "GRS",
+                        "RAGRS",
+                        "ZRS",
+                        "GZRS",
+                        "RAGZRS"
+                    ],
+                    "default": "LRS"
+                },
+                "containers": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/storage_container"
+                    },
+                    "examples": [
+                        {
+                            "container1": {}
+                        }
+                    ]
+                },
+                "fileshares": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "fileshare1": {}
+                        }
+                    ]
+                },
+                "queues": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "queue1": {}
+                        }
+                    ]
+                },
+                "tables": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "table1": {}
+                        }
+                    ]
+                },
+                "data_lake_fss": {
+                    "description": "Data Lake Gen2 File System with optional file system path. Storage account must be upgraded to Data Lake Gen2",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "examples": [
+                                    "examplepath"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "datalakefs1": {}
+                        }
+                    ]
+                },
+                "management_policy": {
+                    "description": "TODO",
+                    "type": "object",
+                    "properties": {
+                        "rules": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "examples": [
+                                            "rule1"
+                                        ]
+                                    },
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "default": true
+                                    },
+                                    "filter": {
+                                        "prefix_match": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "examples": [
+                                                [
+                                                    "container1/prefix1"
+                                                ]
+                                            ]
+                                        },
+                                        "blob_types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "default": [
+                                                "blockBlob"
+                                            ]
+                                        }
+                                    },
+                                    "action": {
+                                        "type": "object",
+                                        "properties": {
+                                            "base_blob": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "tier_to_cool_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 10
+                                                    },
+                                                    "tier_to_archive_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 50
+                                                    },
+                                                    "delete_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 100
+                                                    }
+                                                }
+                                            },
+                                            "snapshot": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "delete_after_days_since_creation_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 30
+                                                    }
+                                                },
+                                                "additionalProperties": false,
+                                                "required": [],
+                                                "examples": [
+                                                    {
+                                                        "delete_after_days_since_creation_greater_than": 30
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [],
+                                        "examples": [
+                                            {}
+                                        ]
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [],
+                                "examples": []
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": [
+                        {}
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "storage_container": {
+            "description": "TODO",
+            "type": "object",
+            "properties": {
+                "blobs": {
+                    "type": "object",
+                    "additionalItems": {
+                        "type": "object",
+                        "properties": {
+                            "file": {
+                                "description": "path to local file",
+                                "type": "string",
+                                "examples": [
+                                    "./files/susesapconfig.sh"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "file"
+                        ],
+                        "examples": [
+                            {
+                                "file": "./files/myscript.sh"
+                            }
+                        ]
+                    },
+                    "examples": [
+                        {
+                            "1": {
+                                "file": ""
+                            }
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        },
+        "network_watcher": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location"
+                },
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "lookup": {
+                    "$ref": "#/definitions/lookup"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "azure_bastion": {
+            "title": "AzureBastion",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "#/definitions/resource_group_name"
+                },
+                "location": {
+                    "$ref": "#/definitions/location"
+                },
+                "network": {
+                    "description": "Specified network must have an AzureBastionSubnet defined",
+                    "type": "string",
+                    "examples": [
+                        "vnet-prod"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "network"
+            ]
+        }
+    },
+    "properties": {
+        "foundation": {
+            "title": "Foundation",
+            "description": "Azure foundation components definition",
+            "type": "object",
+            "properties": {
+                "traffic_manager_profiles": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/traffic_manager_profile"
+                    }
+                },
+                "ddos_protection_plans": {
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "lookup": {
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "location": {
+                                "$ref": "#/definitions/location"
+                            },
+                            "resource_group_name": {
+                                "$ref": "#/definitions/resource_group_name"
+                            }
+                        }
+                    }
+                },
+                "resource_groups": {
+                    "title": "Resource Groups",
+                    "description": "A list of resource groups to create or lookup - don't forget to mark one as 'is_defsult=true'",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resource_group"
+                    },
+                    "additionalItems": false,
+                    "minItems": 1,
+                    "examples": [
+                        [
+                            {
+                                "name": "example-rg-scNN",
+                                "location": "westus2",
+                                "is_default": true
+                            }
+                        ]
+                    ]
+                },
+                "networks": {
+                    "title": "Networks",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/network"
+                    },
+                    "examples": [
+                        {
+                            "vnet-prod": {}
+                        }
+                    ]
+                },
+                "application_security_groups": {
+                    "title": "Application Security Groups",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/application_security_group"
+                    },
+                    "examples": [
+                        {
+                            "asg-scNN": {}
+                        }
+                    ]
+                },
+                "log_analytics_workspaces": {
+                    "title": "Log Analytics Workspaces",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/log_analytics_workspace"
+                    },
+                    "examples": [
+                        {
+                            "example-la-scNN": {}
+                        }
+                    ]
+                },
+                "storage_accounts": {
+                    "title": "Storage Accounts",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/storage_account"
+                    },
+                    "examples": [
+                        {
+                            "examplevmdiagsascNN": {}
+                        }
+                    ]
+                },
+                "automation_accounts": {
+                    "title": "Automation Accounts",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/automation_account"
+                    },
+                    "examples": [
+                        {
+                            "automation-account-scNN": {}
+                        }
+                    ]
+                },
+                "dns_zones": {
+                    "title": "DNS Zones",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dns_zone"
+                    },
+                    "examples": [
+                        {
+                            "dns-zone-scNN.local": {}
+                        }
+                    ]
+                },
+                "route_tables": {
+                    "title": "Route Tables",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/route_table"
+                    },
+                    "examples": [
+                        {
+                            "rt-scNN": {}
+                        }
+                    ]
+                },
+                "network_peerings": {
+                    "title": "Network Peerings",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/network_peering"
+                    },
+                    "examples": [
+                        []
+                    ]
+                },
+                "recovery_vaults": {
+                    "title": "Recovery Vaults",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/recovery_vault"
+                    },
+                    "examples": [
+                        {
+                            "rsv-scNN": {}
+                        }
+                    ]
+                },
+                "network_gateways": {
+                    "title": "Network Gateways",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/network_gateway"
+                    },
+                    "examples": [
+                        {
+                            "vng-scNN": {}
+                        }
+                    ]
+                },
+                "key_vaults": {
+                    "title": "Key Vaults",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/key_vault"
+                    },
+                    "examples": [
+                        {
+                            "key-vault-scNN": {}
+                        }
+                    ]
+                },
+                "firewalls": {
+                    "title": "Firewalls",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/firewall"
+                    },
+                    "examples": [
+                        {
+                            "firewall-scNN": {}
+                        }
+                    ]
+                },
+                "virtual_wans": {
+                    "title": "Virtual WANs",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/virtual_wan"
+                    },
+                    "examples": [
+                        {
+                            "vw-sc99": {}
+                        }
+                    ]
+                },
+                "network_watchers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/network_watcher"
+                    },
+                    "examples": [
+                        {
+                            "NetworkWatcher_westus2": {}
+                        }
+                    ]
+                },
+                "network_security_groups": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/network_security_group"
+                    },
+                    "examples": [
+                        {
+                            "my-nsg": {}
+                        }
+                    ]
+                },
+                "azure_bastions": {
+                    "title": "Azure Bastions",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/azure_bastion"
+                    },
+                    "examples": [
+                        {
+                            "azurebastionscNN": {
+                                "network": "NETWORK NAME"
+                            }
+                        }
+                    ]
+                },
+                "firewall_policies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/firewall_policies"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "resource_groups"
+            ],
+            "examples": [
+                {
+                    "resource_groups": []
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "examples": [
+        {
+            "foundation": {}
+        }
+    ]
+}

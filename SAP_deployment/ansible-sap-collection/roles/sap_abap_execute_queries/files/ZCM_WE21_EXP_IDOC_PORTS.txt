@@ -1,0 +1,152 @@
+*&*******************************************************************&*
+* Report              :   ZCM_WE21_EXP_IDOC_PORTS                     *
+* Title               :   Logical Systems                             *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   04/09/2020                                  *
+* Purpose             :   This report is used to export IDOC ports    *
+*---------------------------------------------------------------------*
+REPORT ZCM_WE21_EXP_IDOC_PORTS.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input    TYPE tab512,
+        ls_output   TYPE tab512,
+        ls_prefinal TYPE string,
+        lv_action   TYPE char8.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+*EDIPOA
+*EDIPORT
+      DATA :lt_edipoa  TYPE TABLE OF edipoa,
+            ls_edipoa  TYPE edipoa,
+            lt_ediport TYPE TABLE OF ediport,
+            ls_ediport TYPE ediport.
+
+      "Table Name
+      ls_output = 'EDIPOA'.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM edipoa INTO TABLE lt_edipoa.
+      IF sy-subrc <> 0.
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      "Column headings
+      CONCATENATE  'MANDT' lc_sep
+                   'PORT' lc_sep
+                   'LOGDES' lc_sep
+                   'VERSIO' lc_sep
+                   'USEQUEUE' lc_sep
+                   'SENDSMALL' lc_sep
+                   'TARGETDOCREL'
+                  INTO ls_output.
+      APPEND ls_output TO lt_output.
+
+      "Table data
+      LOOP AT lt_edipoa INTO ls_edipoa.
+        CONCATENATE ls_edipoa-mandt lc_sep
+                   ls_edipoa-port lc_sep
+                   ls_edipoa-logdes lc_sep
+                   ls_edipoa-versio lc_sep
+                   ls_edipoa-use_queue lc_sep
+                   ls_edipoa-send_small lc_sep
+                   ls_edipoa-target_docrel
+                   INTO ls_prefinal.
+        PERFORM end_null_check CHANGING ls_prefinal.
+        ls_output = ls_prefinal.
+        APPEND ls_output TO lt_output.
+      ENDLOOP.
+
+
+*Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      "Table Name
+      ls_output = 'EDIPORT'.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM ediport INTO TABLE lt_ediport.
+      IF sy-subrc <> 0.
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      "Column headings
+      CONCATENATE  'MANDT' lc_sep
+                   'PORT' lc_sep
+                   'PORTTYP' lc_sep
+                   'DESCRI'
+                  INTO ls_output.
+      APPEND ls_output TO lt_output.
+
+      "Table data
+      LOOP AT lt_ediport INTO ls_ediport.
+        CONCATENATE ls_ediport-mandt lc_sep
+                   ls_ediport-port lc_sep
+                   ls_ediport-porttyp lc_sep
+                   ls_ediport-descri
+                   INTO ls_prefinal.
+        PERFORM end_null_check CHANGING ls_prefinal.
+        ls_output = ls_prefinal.
+        APPEND ls_output TO lt_output.
+      ENDLOOP.
+
+      PERFORM null_check TABLES  lt_output.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+
+
+FORM end_null_check CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

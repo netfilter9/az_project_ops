@@ -1,0 +1,39 @@
+---
+# tasks file for java_pas_post_steps
+- name: add content to default profile
+  blockinfile:
+   dest: /usr/sap/{{ sid }}/SYS/profile/DEFAULT.PFL
+   block: |
+        icm/server_port_0 = PROT=HTTPS,PORT=5$(SAPSYSTEM)01,TIMEOUT=60,PROCTIMEOUT=600
+        icm/server_port_1 = PROT=HTTP,PORT=50000,TIMEOUT=60,PROCTIMEOUT=600
+        icm/server_port_2 = PROT=P4,PORT=5$(SAPSYSTEM)04
+        icm/server_port_3 = PROT=IIOP, PORT=5$(SAPSYSTEM)07
+        icm/server_port_4 = PROT=TELNET,PORT=5$(SAPSYSTEM)08,HOST=localhost
+   backup: yes
+
+- name: add content to javapas profile
+  blockinfile:
+   dest: /usr/sap/{{ sid }}/SYS/profile/{{ sid }}_J{{ instance_number }}_{{ hostname }}
+   block: |
+        icm/server_port_0 = PROT=HTTPS,PORT=5$(SAPSYSTEM)01,TIMEOUT=60,PROCTIMEOUT=600
+        icm/server_port_1 = PROT=HTTP,PORT=50000,TIMEOUT=60,PROCTIMEOUT=600
+        icm/server_port_2 = PROT=P4,PORT=5$(SAPSYSTEM)04
+        icm/server_port_3 = PROT=IIOP, PORT=5$(SAPSYSTEM)07
+        icm/server_port_4 = PROT=TELNET,PORT=5$(SAPSYSTEM)08,HOST=localhost
+   backup: yes
+
+- name: Commenting a line using the regualr expressions in file
+  replace:
+      path: /usr/sap/{{ sid }}/SYS/global/security/data/icm_filter_rules.txt
+      regexp: '(.*?)((\@Comment\{Annotation: key:START;\})|$)'
+      replace: '# \1'
+
+- name: stop java pas server
+  command: su - "{{ sid|lower }}adm" -c "sapcontrol -nr {{ instance_number }}  -function Stop"
+
+- name: sleep for 180 seconds
+  wait_for:
+    timeout: 180
+
+- name: Start java pas server
+  command: su - "{{ sid|lower }}adm" -c "sapcontrol -nr {{ instance_number }}  -function Start"

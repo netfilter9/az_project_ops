@@ -1,0 +1,84 @@
+---
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- debug:
+    msg: "{{ domainName }}"
+    
+- name: Edit Default.PFL file(Profile Edit)
+  win_lineinfile:
+    path: "\\\\{{ sap.global_hostname }}\\{{ sap.profile_dir }}\\{{ sap.sid }}\\SYS\\profile\\DEFAULT.PFL"
+    regex: "{{ item.from }}"
+    line: "{{ item.to }}"
+  with_items: 
+    - { from: '^SAPDBHOST ='  , to: 'SAPDBHOST = {{ listenerName }}' } 
+    - { from: 'dbs/mss/server ='  , to: 'dbs/mss/server = {{ listenerName }}' } 
+ 
+- name: Edit Default.PFL file(Profile Edit)
+  win_lineinfile:
+    path: "\\\\{{ sap.global_hostname }}\\{{ sap.profile_dir }}\\{{ sap.sid }}\\SYS\\profile\\DEFAULT.PFL"
+    regex: "{{ item.from }}"
+    line: "{{ item.to }}"
+  with_items:  
+    - { from: '^j2ee/dbhost =' , to: 'j2ee/dbhost = {{ listenerName }}' }
+  when: sap.stack_type == "java"
+
+- name: Set an environment variable for sidadm in primary and secondary db
+  vars:
+    ansible_become_user: "{{ domainName }}\\{{ sap.sid | lower }}adm"
+    ansible_become_pass: "{{ passwords.sidadm }}"
+  win_environment:
+    state: present
+    name: "{{ item.name }}" 
+    value: "{{ item.value }}"
+    level: user
+  with_items: 
+    - { name: MSSQL_SERVER  , value: "{{ listenerName }}" }   
+    - { name: DBMS_TYPE  , value: "mss" }
+    - { name: SAPEXE , value: "\\\\{{ sap.global_hostname }}\\{{ sap.profile_dir }}\\{{ sap.sid }}\\SYS\\exe\\uc\\NTAMD64" }
+    - { name: SAPSYSTEMNAME , value: "{{ sap.sid }}" }
+  become: yes
+  become_method: runas
+
+- name: Set an environment variable for sidadm in primary
+  vars:
+    ansible_become_user: "{{ domainName }}\\{{ sap.sid | lower }}adm"
+    ansible_become_pass: "{{ passwords.sidadm }}"
+  win_environment:
+    state: present
+    name: "{{ item.name }}" 
+    value: "{{ item.value }}"
+    level: user
+  with_items: 
+    - { name: Path , value: "C:\\Users\\{{ sap.sid }}adm\\AppData\\Local\\Microsoft\\WindowsApps;\\\\{{ sap.global_hostname }}\\{{ sap.profile_dir }}\\{{ sap.sid }}\\SYS\\exe\\uc\\NTAMD64" }
+    - { name: SAPLOCALHOST , value: "{{ node1.split('.')[0] }}" }
+  become: yes
+  become_method: runas
+  when: inventory_hostname == node1
+
+- name: Set an environment variable for sidadm in secondary
+  vars:
+    ansible_become_user: "{{ domainName }}\\{{ sap.sid | lower }}adm"
+    ansible_become_pass: "{{ passwords.sidadm }}"
+  win_environment:
+    state: present
+    name: "{{ item.name }}" 
+    value: "{{ item.value }}"
+    level: user
+  with_items: 
+    - { name: SAPLOCALHOST , value: "{{ node2.split('.')[0] }}" }
+    - { name: Path , value: "%USERPROFILE%\\AppData\\Local\\Microsoft\\WindowsApps;\\\\{{ sap.global_hostname }}\\{{ sap.profile_dir }}\\{{ sap.sid }}\\SYS\\exe\\uc\\NTAMD64" }
+  become: yes
+  become_method: runas
+  when: inventory_hostname == node2
+
+- name: Add a sidadm user to administrator group
+  win_group_membership:
+    name: Administrators
+    members:
+      - "{{ sap.sid|lower }}adm"
+    state: present 
+    when: inventory_hostname == node2
+
+
+  

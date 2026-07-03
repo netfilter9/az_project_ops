@@ -1,0 +1,63 @@
+[Action]
+
+# Execution scenario
+action=add_hosts
+
+[AddHosts]
+
+# Skip all SAP Host Agent calls
+skip_hostagent_calls=n
+
+# Remote Execution
+remote_execution=ssh
+
+# Enable the installation or upgrade of the SAP Host Agent
+install_hostagent=y
+
+root_user =root
+root_password={{ passwords.master }}
+Password={{ passwords.master }}
+sapadm_password={{ passwords.master }}
+
+# Installation Path
+sapmnt=/hana/shared
+
+# SAP HANA System ID
+sid={{ sap.db.sid|upper }}
+
+# Auto Initialize Services
+auto_initialize_services=y
+
+# Additional Hosts
+
+skip_hostagent_password=n
+
+# Do not start added hosts and do not start SAP HANA Database System
+nostart=n
+
+# Certificate Host Names for Worker node
+{% for host in hana_scale_out.worker %}
+certificates_hostmap={{ host }}={{ host }}
+{% endfor %}
+
+# Certificate Host Names for Standby nodes
+{% if hana_scale_out.standby is defined %}
+{% for host in hana_scale_out.standby %}
+certificates_hostmap={{ host }}={{ host }}
+{% endfor %}
+{% endif %}
+
+# Do not Modify '/etc/sudoers' File
+skip_modify_sudoers=n
+
+# Additional Hosts 
+{% set addhosts_worker = [] %}
+{% for host in hana_scale_out.worker %}
+{{  addhosts_worker.append(host ~ ':role=worker:group=default:workergroup=default') }}
+{% endfor %}
+{% if hana_scale_out.standby is defined %}
+{% for host in hana_scale_out.standby %}
+{{  addhosts_worker.append(host ~ ':role=standby:group=default:workergroup=default') }}
+{% endfor %}
+{% endif %}
+addhosts = {{ addhosts_worker|join(',') }}

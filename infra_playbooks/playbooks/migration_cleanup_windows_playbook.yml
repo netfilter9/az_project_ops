@@ -1,0 +1,346 @@
+---
+- name: Cleanup
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become_method: enable
+  vars:
+    ansible_connection: ssh
+    ansible_remote_tmp: 'C:Windows\Temp\.ansible'
+    ansible_shell_type: cmd
+    netbackup_services:
+      - "NetBackup Client Service"
+      - "NetBackup Legacy Client Service"
+      - "NetBackup Legacy Network Service"
+    vmware_cleanup_force: true
+    vmware_tools_dir: 'C:\Program Files\VMware'
+    vmware_common_dir: 'C:\Program Files\Common Files\VMware'
+    vmware_startmenu_dir: 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\VMware'
+    vmware_programdata_dir: 'C:\ProgramData\VMware'
+    vmstats_provider_dll: 'C:\Program Files\VMware\VMware Tools\vmStatsProvider\win64\vmStatsProvider.dll'
+    vmware_legacy_registry_targets:
+      - 'HKCR:\CLSID\{D86ADE52-C4D9-4B98-AA0D-9B0C7F1EBBC8}'
+      - 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{9709436B-5A41-4946-8BE7-2AA433CAF108}'
+      - 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{FE2F6A2C-196E-4210-9C04-2B1BC21F07EF}'
+
+  tasks:
+    - name: Gather VMware Tools installer info from registry
+      ansible.windows.win_powershell:
+        error_action: stop
+        script: |
+          $result = @{
+            found = $false
+            reg_id = $null
+            msi_id = $null
+            local_package = $null
+          }
+
+          foreach ($item in Get-ChildItem 'Registry::HKEY_CLASSES_ROOT\Installer\Products' -ErrorAction SilentlyContinue) {
+            try {
+              if ($item.GetValue('ProductName') -eq 'VMware Tools') {
+                $result.found = $true
+                $result.reg_id = $item.PSChildName
+
+                $icon = $item.GetValue('ProductIcon')
+                if ($icon -and $icon -match '{(.*?)}') {
+                  $result.msi_id = $matches[1]
+                }
+
+                $installProps = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\$($result.reg_id)\InstallProperties"
+                if (Test-Path $installProps) {
+                  $lp = Get-ItemProperty -Path $installProps -ErrorAction SilentlyContinue
+                  if ($lp) {
+                    $result.local_package = $lp.LocalPackage
+                  }
+                }
+
+                break
+              }
+            }
+            catch {
+            }
+          }
+
+          $Ansible.Result = $result
+      register: vmware_tools_info_raw
+
+    - name: Set VMware Tools facts
+      ansible.builtin.set_fact:
+        vmware_tools_info: "{{ vmware_tools_info_raw.result | default({}) }}"
+
+    - name: Show VMware Tools info
+      ansible.builtin.debug:
+        var: vmware_tools_info
+
+    - name: Patch VMware Tools MSI custom actions before uninstall
+      ansible.windows.win_powershell:
+        error_action: stop
+        script: |
+          $localPackage = "{{ vmware_tools_info.local_package | default('') }}"
+          if (-not $localPackage -or -not (Test-Path $localPackage)) {
+            $Ansible.Result = "No LocalPackage found"
+            $Ansible.Changed = $false
+            return
+          }
+
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $database = $installer.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $installer, @($localPackage, 2))
+          $query = "DELETE FROM CustomAction WHERE Action='VM_LogStart' OR Action='VM_CheckRequirements'"
+          $view = $database.GetType().InvokeMember("OpenView", "InvokeMethod", $null, $database, @($query))
+          $view.GetType().InvokeMember("Execute", "InvokeMethod", $null, $view, $null)
+          $view.GetType().InvokeMember("Close", "InvokeMethod", $null, $view, $null)
+          [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($view)
+          $database.GetType().InvokeMember("Commit", "InvokeMethod", $null, $database, $null)
+          [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($database)
+
+          $Ansible.Result = "MSI patched"
+      when:
+        - vmware_tools_info.found | default(false)
+        - (vmware_tools_info.local_package | default('') | string | length) > 0
+
+    - name: Uninstall VMware Tools via MSI package
+      ansible.windows.win_package:
+        path: "{{ vmware_tools_info.local_package }}"
+        state: absent
+      register: vmware_uninstall
+      when:
+        - vmware_cleanup_force | bool
+        - vmware_tools_info.found | default(false)
+        - (vmware_tools_info.local_package | default('') | string | length) > 0
+
+    - name: Build registry cleanup target list
+      ansible.builtin.set_fact:
+        vmware_registry_targets: >-
+          {{
+            [
+              'HKCR:\\Installer\\Features\\' ~ vmware_tools_info.reg_id,
+              'HKCR:\\Installer\\Products\\' ~ vmware_tools_info.reg_id,
+              'HKLM:\\SOFTWARE\\Classes\\Installer\\Features\\' ~ vmware_tools_info.reg_id,
+              'HKLM:\\SOFTWARE\\Classes\\Installer\\Products\\' ~ vmware_tools_info.reg_id,
+              'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\' ~ vmware_tools_info.reg_id
+            ]
+            + (
+              ['HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{' ~ vmware_tools_info.msi_id ~ '}']
+              if (vmware_tools_info.msi_id | default('') | string | length) > 0
+              else []
+            )
+          }}
+      when:
+        - vmware_tools_info.found | default(false)
+        - (vmware_tools_info.reg_id | default('') | string | length) > 0
+
+    - name: Add legacy registry targets
+      ansible.builtin.set_fact:
+        vmware_registry_targets: "{{ (vmware_registry_targets | default([])) + vmware_legacy_registry_targets }}"
+
+    - name: Remove VMware registry keys
+      ansible.windows.win_regedit:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ vmware_registry_targets | default([]) }}"
+      ignore_errors: true
+
+    - name: Remove VMware Inc registry keys if present
+      ansible.windows.win_regedit:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - 'HKLM:\SOFTWARE\VMware, Inc.'
+        - 'HKLM:\SOFTWARE\WOW6432Node\VMware, Inc.'
+      ignore_errors: true
+
+    - name: Remove VMware User Process autorun value
+      ansible.windows.win_regedit:
+        path: 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
+        name: 'VMware User Process'
+        state: absent
+      ignore_errors: true
+
+    - name: Find VMware services
+      ansible.windows.win_powershell:
+        error_action: stop
+        script: |
+          $services = @()
+          $services += Get-Service -DisplayName 'VMware*' -ErrorAction SilentlyContinue
+          $gisvc = Get-Service -Name 'GISvc' -ErrorAction SilentlyContinue
+          if ($gisvc) {
+            $services += $gisvc
+          }
+
+          $Ansible.Result = @($services | Select-Object -ExpandProperty Name -Unique)
+      register: vmware_services_raw
+
+    - name: Set VMware services fact
+      ansible.builtin.set_fact:
+        vmware_services: "{{ vmware_services_raw.result | default([]) }}"
+
+    - name: Stop VMware services
+      ansible.windows.win_service:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ vmware_services | default([]) }}"
+      ignore_errors: true
+
+    - name: Delete VMware services
+      ansible.windows.win_command: sc.exe delete "{{ item }}"
+      loop: "{{ vmware_services | default([]) }}"
+      ignore_errors: true
+
+    - name: Check if vmStatsProvider exists
+      ansible.windows.win_stat:
+        path: "{{ vmstats_provider_dll }}"
+      register: vmstats_provider_file
+
+    - name: Unregister vmStatsProvider if present
+      ansible.windows.win_command: regsvr32 /s /u "{{ vmstats_provider_dll }}"
+      when: vmstats_provider_file.stat.exists
+      ignore_errors: true
+
+    - name: Remove VMware directories
+      ansible.windows.win_file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ vmware_tools_dir }}"
+        - "{{ vmware_common_dir }}"
+        - "{{ vmware_startmenu_dir }}"
+        - "{{ vmware_programdata_dir }}"
+      ignore_errors: true
+
+    - name: Stop Zabbix Agent 2 if present
+      ansible.windows.win_service:
+        name: Zabbix Agent 2
+        state: stopped
+      failed_when: false
+
+    - name: Check whether Zabbix Agent 2 folder exists
+      ansible.windows.win_stat:
+        path: 'C:\Program Files\Zabbix Agent 2'
+      register: zabbix_dir
+
+    - name: Copy zabbix_agent2.conf to zabbix_agent2.win.conf
+      ansible.windows.win_copy:
+        src: 'C:\Program Files\Zabbix Agent 2\zabbix_agent2.conf'
+        dest: 'C:\Program Files\Zabbix Agent 2\zabbix_agent2.win.conf'
+        remote_src: true
+      ignore_errors: true
+      when: zabbix_dir.stat.exists
+
+    - name: Uninstall Zabbix Agent 2 via executable
+      ansible.windows.win_command: >
+        "C:\Program Files\Zabbix Agent 2\zabbix_agent2.exe" --uninstall
+      register: zabbix_uninstall
+      when: zabbix_dir.stat.exists
+
+    - name: Delete Zabbix Agent 2 folder only if uninstall succeeded
+      ansible.windows.win_file:
+        path: 'C:\Program Files\Zabbix Agent 2'
+        state: absent
+      ignore_errors: true
+      when:
+        - zabbix_dir.stat.exists
+        - zabbix_uninstall.rc == 0
+
+    - name: Stop NetBackup services if present
+      ansible.windows.win_service:
+        name: "{{ item }}"
+        state: stopped
+        start_mode: disabled
+      loop: "{{ netbackup_services }}"
+      failed_when: false
+
+    - name: Discover installed NetBackup MSI products with CIM
+      ansible.windows.win_powershell:
+        script: |
+          $products = @(
+            Get-CimInstance Win32_Product |
+              Where-Object { $_.Name -match 'NetBackup' } |
+              Select-Object Name, IdentifyingNumber
+          )
+
+          $Ansible.Result = $products
+          $Ansible.Changed = $false
+      register: netbackup_products_raw
+      changed_when: false
+
+    - name: Normalize discovered NetBackup MSI products to a list
+      ansible.builtin.set_fact:
+        netbackup_products: >-
+          {{
+            []
+            if netbackup_products_raw.result is not defined or netbackup_products_raw.result in [None, '']
+            else
+            (
+              netbackup_products_raw.result
+              if netbackup_products_raw.result is iterable and netbackup_products_raw.result is not mapping
+              else [netbackup_products_raw.result]
+            )
+          }}
+
+    - name: Uninstall discovered NetBackup MSI products
+      ansible.windows.win_package:
+        product_id: "{{ item.IdentifyingNumber }}"
+        state: absent
+      loop: "{{ netbackup_products }}"
+      loop_control:
+        label: "{{ item.Name }} {{ item.IdentifyingNumber }}"
+      register: netbackup_uninstall_result
+      failed_when: false
+      when:
+        - (item.IdentifyingNumber | default('', true) | trim) != ''
+
+    - name: Detect MSI 1706 uninstall failure
+      ansible.builtin.set_fact:
+        netbackup_msi_1706_detected: >-
+          {{
+            (
+              (netbackup_uninstall_result.results | default([]))
+              | selectattr('msg', 'defined')
+              | selectattr('msg', 'search', '1706')
+              | list
+              | length > 0
+            )
+            or
+            (
+              (netbackup_uninstall_result.results | default([]))
+              | selectattr('log', 'defined')
+              | selectattr('log', 'search', '1706')
+              | list
+              | length > 0
+            )
+          }}
+
+    - name: Show uninstall result
+      ansible.builtin.debug:
+        var: netbackup_uninstall_result
+
+    - name: Report missing MSI source
+      ansible.builtin.debug:
+        msg: >-
+          NetBackup MSI uninstall failed with Error 1706.
+          The original installer source is missing or inaccessible.
+      when: netbackup_msi_1706_detected
+
+    - name: Get Zabbix Agent 2 service info
+      ansible.windows.win_service_info:
+        name: Zabbix Agent 2
+      register: zabbix2_info
+      failed_when: false
+
+    - name: Get VMware Tools service info
+      ansible.windows.win_service_info:
+        name: VMTools
+      register: vmtools_info
+      failed_when: false
+
+    - name: Get NetBackup Client Service info
+      ansible.windows.win_service_info:
+        name: NetBackup Client Service
+      register: netbackup_info
+      failed_when: false
+
+    - name: Show service status
+      ansible.builtin.debug:
+        msg:
+          - "Zabbix Agent 2: {{ zabbix2_info.services[0].state if (zabbix2_info.services | length > 0) else 'not installed' }}"
+          - "VMware Tools: {{ vmtools_info.services[0].state if (vmtools_info.services | length > 0) else 'not installed' }}"
+          - "NetBackup Client Service: {{ netbackup_info.services[0].state if (netbackup_info.services | length > 0) else 'not installed' }}"

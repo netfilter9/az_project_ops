@@ -1,0 +1,188 @@
+*&********************************************************************&*
+* Report              :   ZCM_WE02_EXP_FAILED_IDOCS                    *
+* Title               :   Capture Failed Idocs                         *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   16/09/2020                                   *
+* Purpose             :   This report is used to capture failed Idocs  *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+
+REPORT zcm_we02_exp_failed_idocs.
+
+CONSTANTS: lc_sep       TYPE c VALUE '|'                LENGTH 1,
+           lc_export    TYPE c VALUE 'EXPORT'           LENGTH 6,
+           lc_idocno    TYPE c VALUE 'IDocNo'           LENGTH 7,
+           lc_null      TYPE c VALUE 'Null'             LENGTH 4,
+           lc_status    TYPE c VALUE 'IDocStatus'       LENGTH 11
+           ##no_text,
+           lc_receiver  TYPE c VALUE 'Receiver'         LENGTH 8
+           ##no_text,
+           lc_msgtyp    TYPE c VALUE 'MessageType'      LENGTH 12
+           ##no_text,
+           lc_statustxt TYPE c VALUE 'StatusText'       LENGTH 11
+           ##no_text,
+           lc_createdon TYPE c VALUE 'CreatedOn'        LENGTH 10
+           ##no_text,
+           lc_createdat TYPE c VALUE 'CreatedAt'        LENGTH 10
+           ##no_text,
+           lc_basictyp  TYPE c VALUE 'BasicType'        LENGTH 10
+           ##no_text,
+           lc_records   TYPE c VALUE 'NoOfRecords'      LENGTH 11
+           ##no_text,
+           lc_partner   TYPE c VALUE 'PartnerNo'        LENGTH 14
+           ##no_text,
+           lc_title     TYPE c VALUE 'Idocs'            LENGTH 5,
+           lc_err_msg   TYPE c VALUE
+           'NoIdocsfoundinthesystem'                    LENGTH 35
+           ##no_text.
+
+DATA: lt_idoc        TYPE bdmon_disp1,
+      ls_idoc        TYPE bdmod1tp,
+      ls_input       TYPE tab512,
+      ls_output      TYPE tab512,
+      lv_action      TYPE char10,
+      lv_count       TYPE char2,
+      lt_istat       TYPE bdmon_stat,
+      ls_istat       TYPE bdmon_stat,
+      filter_docnum  TYPE bdrg_doc_tab,
+      filter_credat  TYPE bdrg_dat_tab,
+      filter_status  TYPE bdrg_sta_tab,
+      filter_cretim  TYPE bdrg_tim_tab,
+      filter_mestyp  TYPE bdrg_mes_tab,
+      filter_partner TYPE bdrg_par_tab,
+      filter_objtyp  TYPE bdrg_obj_tab,
+      filter_upddat  TYPE bdrg_dat_tab,
+      filter_updtim  TYPE bdrg_tim_tab,
+      filter_objkey  TYPE bdrg_oky_tab,
+      lr_bd_ls_mon   TYPE REF TO bd_ls_mon.
+
+LOAD-OF-PROGRAM.
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.                 " When action is EXPORT
+
+        " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      RANGES ls_docnum  FOR bdidocs-docnum.
+      RANGES ls_credat  FOR edidc-credat.
+      RANGES ls_cretim  FOR edidc-cretim.
+      RANGES ls_upddat  FOR edidc-upddat.
+      RANGES ls_updtim  FOR edidc-updtim.
+      RANGES ls_status  FOR edidc-status.
+      RANGES ls_partner FOR tbd05-sndsystem.
+      RANGES ls_mestyp  FOR tbd05-mestyp.
+
+      CREATE OBJECT lr_bd_ls_mon
+        EXCEPTIONS failed = 1.
+
+      IF sy-subrc NE 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+        INTO ls_output.
+        APPEND ls_output TO lt_output.
+        EXIT.
+      ENDIF.
+
+      ls_status-low = '53'.
+      ls_status-option = 'EQ'.
+      ls_status-sign = 'E'.
+      APPEND ls_status.
+
+      " Appending data from ranges to filter
+      APPEND LINES OF ls_docnum  TO filter_docnum.
+      APPEND LINES OF ls_credat  TO filter_credat.
+      APPEND LINES OF ls_cretim  TO filter_cretim.
+      APPEND LINES OF ls_upddat  TO filter_upddat.
+      APPEND LINES OF ls_updtim  TO filter_updtim.
+      APPEND LINES OF ls_status  TO filter_status.
+      APPEND LINES OF ls_partner TO filter_partner.
+
+      " Calling filter method
+      CALL METHOD lr_bd_ls_mon->set_filter
+        EXPORTING
+          filter_docnum  = filter_docnum
+          filter_credat  = filter_credat
+          filter_cretim  = filter_cretim
+          filter_mestyp  = filter_mestyp
+          filter_upddat  = filter_upddat
+          filter_updtim  = filter_updtim
+          filter_objtyp  = filter_objtyp
+          filter_partner = filter_partner
+          filter_objkey  = filter_objkey
+          filter_status  = filter_status.
+
+      " Calling method to fetch Idoc data
+      CALL METHOD lr_bd_ls_mon->get_doc_info
+        IMPORTING
+          display_info = lt_idoc
+        CHANGING
+          idoc_stat    = lt_istat.
+
+      IF lt_idoc IS NOT INITIAL.
+
+        " Adding headings to the output
+
+        CONCATENATE lc_idocno    lc_sep
+                    lc_status    lc_sep
+                    lc_msgtyp    lc_sep
+                    lc_statustxt lc_sep
+                    lc_partner   lc_sep
+                    lc_createdon lc_sep
+                    lc_createdat lc_sep
+                    lc_basictyp  lc_sep
+                    lc_records
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        PERFORM null_check TABLES lt_idoc.
+
+        LOOP AT lt_idoc INTO ls_idoc.
+
+          CONCATENATE ls_idoc-docnum    lc_sep
+                      ls_idoc-status    lc_sep
+                      ls_idoc-mestyp    lc_sep
+                      ls_idoc-statxt    lc_sep
+                      ls_idoc-partner   lc_sep
+                      ls_idoc-credat    lc_sep
+                      ls_idoc-cretim    lc_sep
+                      ls_idoc-idoctp    lc_sep
+                      ls_idoc-maxsegnum
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      PERFORM null_check TABLES lt_output.
+
+      ELSE.
+        " No Idocs found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+ENDFORM.
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+ENDFORM.

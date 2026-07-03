@@ -1,0 +1,130 @@
+{#
+  Select STONITH strategy
+#}
+{% if stonith_type == "gcp" %}
+{% for node in [node1,node2]  %}
+{# GCP STONITH #}
+primitive stonith-{{ node }} stonith:external/gcpstonith \
+  op monitor interval=300s timeout=60s on-fail=restart \
+  op start interval=0 timeout=60s onfail=restart \
+  params instance_name={{ node }} \
+  gcloud_path="/usr/bin/gcloud" \
+  logging=yes
+
+location loc_stonith_{{ node }} stonith-{{ node }} -inf: {{ node }}
+{% endfor %}
+{% endif %}
+
+{# 
+  create a local variable for the SAP instance reference 
+  e.g. D4H_HDB00
+#}
+{% set instance = sap.db.sid + "_HDB" + sap.instance_numbers.db %}
+
+{#
+    Add HANA Topology resource (monitors across both nodes)
+#}
+primitive rsc_SAPHanaTopology_{{ instance }} ocf:suse:SAPHanaTopology \	
+  operations $id="rsc_sap2_{{ instance }}-operations" \
+	op monitor interval="10" timeout="600" \
+	op start interval="0" timeout="600" \
+	op stop interval="0" timeout="300" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}"
+
+clone cln_SAPHanaTopology_{{ instance }} \
+  rsc_SAPHanaTopology_{{ instance }} \
+	meta clone-node-max="1" interleave="true"
+
+{#
+    Add HANA resource (monitors active instance)
+#}
+primitive rsc_SAPHana_{{ instance }} ocf:suse:SAPHana \
+	operations $id="rsc_sap_{{ instance }}-operations" \
+	op start interval="0" timeout="3600" \
+	op stop interval="0" timeout="3600" \
+	op promote interval="0" timeout="3600" \
+	op monitor interval="60" role="Master" timeout="700" \
+	op monitor interval="61" role="Slave" timeout="700" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}" \
+  PREFER_SITE_TAKEOVER="true" \
+	DUPLICATE_PRIMARY_TIMEOUT="7200" \
+  AUTOMATED_REGISTER="{{ primitives.db.automatic_register | default('true') }}"
+
+
+ms msl_SAPHana_{{ instance }} \
+  rsc_SAPHana_{{ instance }} \
+	meta clone-max="2" clone-node-max="1" \ 
+  interleave="true"
+  is-managed="true"
+
+{#
+    Add rsc resource
+#}
+{# GCP configure the VIP address in the operating system #}
+primitive rsc_ip_{{ instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.db.ip }} cidr_netmask=32 nic="eth0" op monitor interval=10s
+
+{#
+    Add appropriate "loadbalancer"
+#}
+{% if sap.lb_type == "gcp_alias" %}
+{# GCP Alias load balancer #}
+primitive nc_{{ instance }} ocf:gcp:alias \
+  op monitor interval="60s" timeout="60s" \
+  op start interval="0" timeout="180s" \
+  op stop interval="0" timeout="300s" \
+  params alias_ip="{{ sap.logical_hosts.db.ip }}/{{ sap.logical_hosts.db.cidr }}" \
+  hostlist="{{ node1 }} {{ node2 }}" \
+	gcloud_path="/usr/bin/gcloud" \
+  logging="yes" \
+  meta priority=10
+
+{% elif sap.lb_type == "gcp" %}
+{# Traditional GCP TCP Internal loadbalancer #}
+primitive nc_{{ instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:{{ hana_healthcheck_port }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+
+{#
+  Put network resources in group
+#}
+group g-primary-{{ sap.db.sid }} rsc_ip_{{ instance }} nc_{{ instance }}
+
+{#
+  Ensure that the network resources and HANA master run on the same server 
+#}
+colocation col_saphana_ip_{{ instance }} 4000: g-primary-{{ sap.db.sid }}:Started \
+        msl_SAPHana_{{ instance }}:Master
+
+{#
+  Ensure that the network resources and HANA master run on the same server 
+#}
+
+{#
+  Ensure hana topology is running before the hana master
+#}
+order ord_SAPHana 2000: \
+        cln_SAPHanaTopology_{{ instance }} \
+        msl_SAPHana_{{ instance }}
+
+{#
+  General configuration standards
+#}
+property cib-bootstrap-options: \
+        stonith-enabled=true \
+        stonith-action=off \                
+        stonith-timeout=600s \
+        last-lrm-refresh=1605184909 \
+        maintenance-mode=false \
+        dc-version=1.1.16-6.5.1-77ea74d
+
+rsc_defaults rsc-options: \
+        resource-stickiness=1000 \
+        migration-threshold=5000
+
+op_defaults op-options: \
+        timeout=600 

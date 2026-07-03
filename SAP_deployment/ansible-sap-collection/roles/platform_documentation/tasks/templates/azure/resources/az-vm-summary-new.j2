@@ -1,0 +1,21 @@
+{# 
+    generate vm summary 
+#}
+{% for resource in resource_json.data if resource.type=="microsoft.compute/virtualmachines" %}
+  {% if loop.first %}
+# VM Summary (All VMs)
+---
+|Hostname|Vm Size|Os Type|
+|-|-|-|
+  {% endif %}
+  
+  {%- set row = [
+      resource.name,
+      resource.properties.hardwareProfile.vmSize,
+      "Linux" if (resource.properties.osProfile.linuxConfiguration is defined) else "Windows"
+    ]
+  -%}
+
+|{{ row | join('|') }}|
+{% endfor %}
+

@@ -1,0 +1,256 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCM_STMS_EXP_TRANSPORT_ROUTES               *
+* Title               :   To display transport routes                 *
+* Purpose             :   This report is used to display transport    *
+*                     :   routes.                                     *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* STMS                                                                *
+*---------------------------------------------------------------------*
+*Tables              :   SELECT    UPDATE      INSERT      DELETE     *
+* XXXXX                                                               *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*11-25-2020  Initial   Yasaswini K   NA          To get transport     *
+*                                                routes configured    *
+*01-20-2020  V001     Yasaswini K    NA          To add message type  *
+*                                                in output along with *
+*                                                message              *
+*---------------------------------------------------------------------*
+REPORT zcm_stms_exp_transport_routes.
+
+FORM get_config        ##CALLED
+                TABLES lt_input STRUCTURE tab512
+                       lt_output STRUCTURE tab512.
+
+  CONSTANTS : lc_source       TYPE char20 VALUE
+              'SourceSystem',
+              lc_nodata       TYPE char80 VALUE
+              'Domain of transport route not found',
+              lc_null         TYPE char4  VALUE
+              'NULL',
+              lc_sep          TYPE c   VALUE
+              '|',
+              lc_title        TYPE char20 VALUE
+              'Transport Routes',
+              lc_tittle       TYPE char80 VALUE
+              'Delivery Transport Route',
+              lc_trlayer      TYPE char20 VALUE
+              'TransportLayer',
+              lc_targetgroup  TYPE char20 VALUE
+              'TargetGroup',
+              lc_targetsystem TYPE char20 VALUE
+              'Targetsystem',
+* Begin of changes V001
+              lc_msgtitle     TYPE c      VALUE
+                                'Listofmessages' LENGTH 14,
+              lc_msgtype      TYPE c      VALUE
+                                'Messagetype'    LENGTH 11,
+              lc_message      TYPE c      VALUE
+                                'Message'        LENGTH 7,
+              lc_err          TYPE c      VALUE
+                                'Error'          LENGTH 5,
+              lc_success      TYPE c      VALUE
+                                'Success'        LENGTH 7,
+              lc_warning1     TYPE c      VALUE
+                                'Warning'        LENGTH 7.
+* End of changes V001
+
+  DATA: lv_targgroup TYPE char10,
+        ls_output    TYPE tab512,
+        lv_targsm    TYPE char10.
+
+  DATA: BEGIN OF gs_conf,
+          invers     LIKE tcevers-version,    " memory input version
+          source     LIKE tcesyst-sysname,    " loaded systemconfig
+          domname    LIKE tmscdom-domnam,
+* transport layer
+          trlayer    TYPE triwb_t_trlayer,
+          laytext    TYPE triwb_t_laytext,
+* system list
+          system     TYPE triwb_t_dsysts,
+          systext    TYPE triwb_t_systext,
+* new integration control
+          release    TYPE triwb_t_release,
+* deliveries
+          deliver    TYPE triwb_t_deliver,
+* targets
+          target     TYPE triwb_t_target,
+          tartext    TYPE triwb_t_tartext,
+* client control
+          clientc    TYPE triwb_t_clientc,
+* deploy targets
+          dpltargets TYPE triwb_t_dpltarg,
+* versions
+          version    TYPE triwb_s_version,
+          vertext    TYPE triwb_t_vertext,
+        END OF gs_conf.
+
+  DATA: lt_system TYPE triwb_t_system,
+        lv_error  TYPE string.
+
+  FREE gs_conf.
+
+  CALL FUNCTION 'TMS_WBO_CONFIG_READ'
+    EXPORTING
+      iv_language             = sy-langu
+      iv_version              = 0
+    IMPORTING
+      et_release              = gs_conf-release
+      et_deliver              = gs_conf-deliver
+      et_target               = gs_conf-target
+    EXCEPTIONS
+      configuration_not_found = 1
+      OTHERS                  = 2.
+  IF sy-subrc <> 0.
+*    Begin of changes V001
+
+    "Tittle
+    ls_output = lc_msgtitle.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    "Column heading
+    CONCATENATE lc_msgtype
+                lc_message
+                INTO ls_output
+                SEPARATED BY lc_sep.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    "Messsage
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+                        INTO lv_error.
+
+    CONCATENATE lc_err
+                lv_error
+                INTO ls_output
+                SEPARATED BY lc_sep.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+    RETURN.
+*   End of changes V001
+  ENDIF.
+
+  "Title
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  IF gs_conf-release IS NOT INITIAL.
+
+    "Column Heading
+    DATA(ls_output1) = |{ lc_source }| & |{ lc_sep }| &
+                      |{ lc_trlayer }| & |{ lc_sep }| &
+                      |{ lc_targetgroup }| & |{ lc_sep }| &
+                      |{ lc_targetsystem }|.
+    APPEND ls_output1 TO lt_output.
+    CLEAR ls_output1.
+
+    LOOP AT gs_conf-release INTO DATA(ls_release).
+      TRY.
+          DATA(ls_targroup) =
+               gs_conf-target[ targ_group = ls_release-consys ].
+        CATCH cx_sy_itab_line_not_found.
+          lv_targgroup = lc_null.
+          lv_targsm    = ls_release-consys.
+      ENDTRY.
+      IF ls_targroup IS NOT INITIAL.
+        lv_targgroup = ls_targroup-targ_group.
+        lv_targsm    = ls_targroup-tarsystem.
+      ENDIF.
+      CONDENSE lv_targgroup.
+      CONDENSE lv_targsm.
+      ls_output1 =   |{ ls_release-intsys }| & |{ lc_sep }| &
+                    |{ ls_release-translayer }| & |{ lc_sep }| &
+                    |{ lv_targgroup }| & |{ lc_sep }| &
+                    |{ lv_targsm }|.
+      CONDENSE ls_output1.
+      APPEND ls_output1 TO lt_output.
+      CLEAR: ls_output1,
+             ls_release,
+             ls_targroup,
+             lv_targgroup,
+             lv_targsm.
+    ENDLOOP.
+  ELSE.
+*    Begin of changes V001
+    "Tittle
+    ls_output = lc_msgtitle.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    "Column headings
+    CONCATENATE lc_msgtype
+                lc_message
+                INTO ls_output
+                SEPARATED BY lc_sep.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    "Message
+    CONCATENATE lc_err
+                lc_nodata
+                INTO ls_output
+                SEPARATED BY lc_sep.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+*   End of changes V001
+  ENDIF.
+
+  "Delivery details
+  IF gs_conf-deliver IS NOT INITIAL.
+
+    "Blank Line
+    CLEAR ls_output.
+    APPEND ls_output TO lt_output.
+
+    "Title
+    ls_output =  lc_tittle.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output1.
+
+    "Column Heading
+    CLEAR ls_output1.
+    ls_output1 = |{ lc_source }| & |{ lc_sep }| &
+                      |{ lc_targetgroup }| & |{ lc_sep }| &
+                      |{ lc_targetsystem }|.
+    APPEND ls_output1 TO lt_output.
+    CLEAR ls_output1.
+
+    LOOP AT gs_conf-deliver INTO DATA(ls_deliver).
+      lv_targsm = ls_deliver-fromsystem.
+      TRY.
+          ls_targroup =
+      gs_conf-target[ targ_group = ls_deliver-tosystem ].
+        CATCH cx_sy_itab_line_not_found.
+          lv_targgroup = lc_null.
+          DATA(lv_targsm1)    = ls_deliver-tosystem.
+      ENDTRY.
+
+      IF ls_targroup IS NOT INITIAL.
+        lv_targgroup = ls_targroup-targ_group.
+        lv_targsm1   = ls_targroup-tarsystem.
+      ENDIF.
+      CONDENSE lv_targgroup.
+      CONDENSE lv_targsm1.
+
+      ls_output1 =   |{ lv_targsm }| & |{ lc_sep }| &
+                    |{ lv_targgroup }| & |{ lc_sep }| &
+                    |{ lv_targsm1 }|.
+      CONDENSE ls_output1.
+      APPEND ls_output1 TO lt_output.
+      CLEAR: ls_output1,
+             ls_deliver,
+             ls_targroup,
+             lv_targgroup,
+             lv_targsm,
+             lv_targsm1.
+    ENDLOOP.
+  ENDIF.
+ENDFORM.

@@ -1,0 +1,8 @@
+---
+
+- name: install ssms
+  vars:
+    arguments: >-
+      /install
+      /quiet
+  win_command: "{{ sql_source_path }}\\SSMS-Setup-ENU.exe {{ arguments }}"

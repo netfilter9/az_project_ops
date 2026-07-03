@@ -1,0 +1,88 @@
+---
+
+- name: command to check the storage type
+  shell: az vm show --resource-group {{ rg }} --name {{ ansible_hostname }} --query "storageProfile.dataDisks[][{Name:name,StorgaeAccountType:managedDisk.storageAccountType}]"
+  become: yes
+  register: output_storage
+  ignore_errors: true
+  delegate_to: localhost
+
+- name: debug the disks
+  debug:
+    msg: "{{ output_storage.stdout }}"
+
+- name: set disk list as a fact
+  set_fact: 
+    disk_list: "{{ output_storage.stdout }}"
+
+- name: output of disk list
+  debug:
+    msg: "{{ item.Name }}:{{ item.StorgaeAccountType }}"
+  with_items: "{{ disk_list }}"
+
+- name: main | db-checks
+  block: 
+    - name: Command to check vmsize
+      command: az vm show --resource-group {{ rg }} --name {{ ansible_hostname }} --query "hardwareProfile.vmSize" --out tsv
+      become: yes
+      register: output_vmsize
+      delegate_to: localhost
+      
+    - debug: 
+        var: "{{ output_vmsize.stdout }}"
+
+    - name: azure.yml | convert stdout to a fact
+      set_fact:
+        app_vmsize_list: "{{ output_vmsize.stdout }}"
+
+    - debug:
+        var: app_vmsize_list 
+
+    - name: Certification checks
+      template:
+        src: "certification-checks-app.j2"
+        dest: "{{ input_path }}/Platform-checks/{{ ansible_hostname }}_certification-checks-app.{{ output }}"
+      delegate_to: localhost  
+  when: "'db' not in group_names"
+
+- name: main | db-checks
+  block: 
+    - name: Command to check vmsize
+      command: az vm show --resource-group {{ rg }} --name {{ ansible_hostname }} --query "hardwareProfile.vmSize" --out tsv
+      become: yes
+      register: output_vmsize_db
+      delegate_to: localhost  
+
+    - debug: 
+        var: "{{ output_vmsize_db.stdout }}" 
+
+    - name: azure.yml | convert stdout to a fact
+      set_fact:
+        db_vmsize_list: "{{ output_vmsize_db.stdout }}" 
+
+    - name: Certification checks
+      template:
+        src: "certification-checks-db.j2"
+        dest: "{{ input_path }}/Platform-checks/{{ ansible_hostname }}_certification-checks-db.{{ output }}"
+      delegate_to: localhost 
+  when: "'db' in group_names"
+
+- name: command to check the storage type
+  shell: az vm show --resource-group {{ rg }} --name {{ ansible_hostname }} --query "storageProfile.dataDisks[][{Name:name,StorgaeAccountType:managedDisk.storageAccountType}]"
+  become: yes
+  register: output_storage
+  ignore_errors: true
+  delegate_to: localhost
+
+- name: debug the disks
+  debug:
+    msg: "{{ output_storage.stdout }}"
+
+- name: set disk list as a fact
+  set_fact: 
+    disk_list: "{{ output_storage.stdout }}"
+
+- name: output of storage account type
+  debug:
+    msg: "{{ item.Name }}:{{ item.StorgaeAccountType }}"
+  with_items: "{{ disk_list }}"

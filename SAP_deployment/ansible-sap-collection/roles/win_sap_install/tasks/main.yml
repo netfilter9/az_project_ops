@@ -1,0 +1,119 @@
+--- 
+
+- name: check for additional install items
+  win_shell: (Get-Childitem –Path {{ downloads.download_drive }}:\SilentInstall\EXPORT\ -Include *LABEL*.ASC -Recurse | Select-Object -Property Directory -unique).Directory.FullName
+  register: sap_exports_folders
+
+- name: check for additional install items
+  win_shell: (Get-Childitem –Path {{ downloads.download_drive }}:\SilentInstall\sybase -Include "*.ZIP" -Recurse | Select-Object -Property FullName).FullName
+  register: sybase_software_path
+  when: sybase is defined
+
+- name: main | set installation directory facts
+  set_fact:
+    sybase_zip_path: "{{ sybase_software_path.stdout_lines[0] }}"
+  when: sybase is defined
+
+- name: create sapinst.params
+  template:
+    src: sapinst.params.j2
+    dest: "{{ downloads.download_drive }}:\\SilentInstall\\{{ role }}.{{ansible_hostname}}.params"
+
+- name: set sapinst command line arguments
+  set_fact:
+    win_sap_install_arguments: >-
+      SAPINST_INPUT_PARAMETERS_URL={{ downloads.download_drive }}:\SilentInstall\{{ role }}.{{ansible_hostname}}.params
+      SAPINST_CWD={{ downloads.download_drive }}:\SilentInstall\{{ role }}Logs
+      SAPINST_EXECUTE_PRODUCT_ID={{ sap.product_ids[role] }}
+      SAPINST_SKIP_DIALOGS=true
+      SAPINST_START_GUISERVER=false
+      SAPINST_START_GUI=false
+    win_sap_install_sapinst_path: "{{ downloads.download_drive }}:\\SilentInstall\\SWPM\\sapinst.exe"
+      
+- name: add virtual hostname to parameters if set
+  set_fact:
+    win_sap_install_arguments: "{{ win_sap_install_arguments +
+                                ' SAPINST_USE_HOSTNAME=' + virtual_hostname }}"
+  when:
+    - virtual_hostname is defined
+    - virtual_hostname | length
+
+- name: validate the required win_sap_install_arguments variable
+  assert:
+    that:
+      - win_sap_install_arguments is defined
+      - win_sap_install_arguments | length
+
+- name: validate that the path to sapinst.exe has been passed
+  assert:
+    that:
+      - win_sap_install_sapinst_path is defined
+      - win_sap_install_sapinst_path is regex('^.+sapinst.exe$')
+
+- name: stat the sapinst.exe path
+  win_stat:
+    path: "{{ win_sap_install_sapinst_path }}"
+  register: win_sap_install_sapinst_stat
+
+- name: validate that the sapinst.exe file exists
+  assert:
+    that:
+      - win_sap_install_sapinst_stat.stat.exists
+
+  # due to a known error the sap installation can fail in the initial attempt
+  # however a subsequent installation can be successfully performed
+  # based on the actions of the first installation attempt
+  # therefor ignore_errors on install attempt one
+- name: install sap
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_sap_install:
+    arguments: "{{ win_sap_install_arguments }}"
+    checks: "{{ win_sap_install_checks }}"
+    delay: "{{ win_sap_install_delay }}"
+    path: "{{ win_sap_install_sapinst_path }}"
+    sleep: "{{ win_sap_install_sleep }}"
+    timeout: "{{ win_sap_install_timeout }}"
+  register: win_sap_inst
+  become: yes
+  become_method: runas
+  ignore_errors: yes
+
+- name: debug win_sap_inst
+  debug:
+    var: win_sap_inst
+    verbosity: "{{ verbosity_level }}"
+
+- name: fail if the installation failed other than the known issue
+  fail:
+    msg: "SAP installation failed"
+  when:
+    - win_sap_inst is failed
+    - win_sap_inst.msg != 'The sapinst process was forcibly stopped'
+
+  # retry the installation only if the first attempt failed
+  # and failed in the condition of the know issue
+  # do not ignore errors as we expect this to work
+- name: retry sap installation
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_sap_install:
+    arguments: "{{ win_sap_install_arguments }}"
+    checks: "{{ win_sap_install_checks }}"
+    delay: "{{ win_sap_install_delay }}"
+    path: "{{ win_sap_install_sapinst_path }}"
+    sleep: "{{ win_sap_install_sleep }}"
+    timeout: "{{ win_sap_install_timeout }}"
+  register: win_sap_inst_retry
+  become: yes
+  become_method: runas
+  when:
+    - win_sap_inst is failed
+    - win_sap_inst.msg == 'The sapinst process was forcibly stopped'
+
+- name: debug win_sap_inst
+  debug:
+    var: win_sap_inst_retry
+    verbosity: "{{ verbosity_level }}"

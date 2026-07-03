@@ -1,0 +1,505 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "server_group": {
+            "type": "object",
+            "examples": [
+                {
+                    "os_type": "",
+                    "sku": "",
+                    "subnet": "",
+                    "image_details": {},
+                    "hosts": {}
+                }
+            ],
+            "properties": {
+                "patch_mode": {
+                    "enum": [
+                        "Manual",
+                        "AutomaticByOS",
+                        "AutomaticByPlatform"
+                    ],
+                    "default": "AutomaticByOS"
+                },
+                "enable_automatic_updates": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "legacy": {
+                    "description": "WARNING: only use this if you know what you are doing.  it will use the old style azurerm_virtual_machine resource but it does support building from images with multiple disks",
+                    "type": "boolean",
+                    "default": false
+                },
+                "nsg": {
+                    "type": "string",
+                    "examples": [
+                        "nsg1"
+                    ]
+                },
+                "asgs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "asg1",
+                            "asg2"
+                        ]
+                    },
+                    "examples": [
+                        ["asg1"]
+                    ]
+                },
+                "os_type": {
+                    "title": "OS Type",
+                    "description": "(Required) Target operating system type: windows or linux",
+                    "type": "string",
+                    "enum": [
+                        "windows",
+                        "linux"
+                    ]
+                },
+                "license_type": {
+                    "description": "(Optional) Type of license to apply",
+                    "type": "string",
+                    "enum": [
+                        null,
+                        "RHEL_BYOS",
+                        "SLES_BYOS",
+                        "None",
+                        "Windows_Client",
+                        "Windows_Server"
+                    ]
+                },
+                "install_mssql": {
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "sku": {
+                    "title": "SKU",
+                    "description": "(Required) Defines the the size for the VMs in this group",
+                    "type": "string",
+                    "examples": [
+                        "Standard_D2s_v3",
+                        "Standard_D16s_v3"
+                    ]
+                },
+                "location": {
+                    "$ref": "fields.json#/definitions/location"
+                },
+                "availability_set": {
+                    "title": "Availability Set",
+                    "description": "(Optional) The name of the associated availability set for the VMs in this group (defined above)",
+                    "type": "string",
+                    "examples": [
+                        "ascs",
+                        "app",
+                        "hana"
+                    ]
+                },
+                "ppg_name": {
+                    "title": "Proximity Placement Group",
+                    "description": "(Optional) The name of the associated proximity placement group for the VMs in this group (defined above)",
+                    "type": "string",
+                    "examples": [
+                        "example-ppg-scNN-app"
+                    ]
+                },
+                "backup_policy": {
+                    "title": "Backup Policy",
+                    "description": "(Optional) the name of the backup policy to be used for the servers in this group (see foundation block)",
+                    "type": "string",
+                    "examples": [
+                        "Default"
+                    ]
+                },
+                "os_disk_size": {
+                    "title": "OS Disk Size(GB)",
+                    "description": "(Required) size of the OS disk in GB",
+                    "type": "integer",
+                    "examples": [
+                        64,
+                        128
+                    ]
+                },
+                "os_disk_caching": {
+                    "title": "OS Disk Caching",
+                    "description": "OS disk caching",
+                    "type": "string",
+                    "default": "ReadWrite",
+                    "enum": [
+                        "ReadWrite",
+                        "ReadOnly",
+                        "None"
+                    ]
+                },
+                "os_disk_storage_account_type": {
+                    "title": "OS Disk Storage Account Type",
+                    "description": "n/a",
+                    "type": "string",
+                    "default": "Premium_LRS",
+                    "enum": [
+                        "Premium_LRS",
+                        "Standard_LRS",
+                        "StandardSSD_LRS"
+                    ]
+                },
+                "subnet": {
+                    "title": "Subnet",
+                    "description": "default subnet to use for all host network interfaces in this group",
+                    "type": "string",
+                    "examples": [
+                        "app",
+                        "db"
+                    ]
+                },
+                "enable_accelerated_networking": {
+                    "title": "Enable Accelerated Networking",
+                    "description": "(Optional) enable or disable accelerated networking. Defaults to true and must be defined and set to false if VM size does not support accelerated networking",
+                    "type": "boolean",
+                    "default": true
+                },
+                "enable_boot_diagnostics": {
+                    "title": "Enable Boot Diagnostics",
+                    "description": "(Optional) Determines if boot diagnostics are enabled or not. Defaults to false.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "zone": {
+                    "$ref": "fields.json#/definitions/zone"
+                },
+                "tags": {
+                    "$ref": "tags.json#/definitions/tags"
+                },
+                "extensions": {
+                    "title": "extensions",
+                    "description": "list of machine extensions to enable",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "OmsAgentForLinux",
+                            "MonitorX64Linux",
+                            "LinuxDiagnostic",
+                            "NetworkWatcherAgentLinux",
+                            "DependencyAgentLinux",
+                            "DomainJoin",
+                            "MicrosoftMonitoringAgent",
+                            "MonitorX64Windows",
+                            "VMDiagnosticsSettings",
+                            "AzureNetworkWatcherExtension",
+                            "DependencyAgentWindows"
+                        ]
+                    }
+                },
+                "image_details": {
+                    "type": "object",
+                    "title": "Image details",
+                    "description": "resource_id of the image",
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "resource_id": {
+                                    "title": "Resourece ID",
+                                    "description": "(Optional) The absolute resource id reference for a machine image to use in provisioning",
+                                    "type": "string",
+                                    "examples": [
+                                        "/subscriptions/911df94d-12e9-4695-a90f-943a1bef518d/resourceGroups/stu-rg-images/providers/Microsoft.Compute/galleries/stuimages/images/suse15/versions/1.0.0"
+                                    ]
+                                },
+                                "plan": {
+                                    "$ref": "plan.json#/definitions/plan"
+                                }
+                            },
+                            "required": [
+                                "resource_id"
+                            ]
+                        },
+                        {
+                            "properties": {
+                                "marketplace_reference": {
+                                    "title": "Marketplace Reference",
+                                    "description": "(Required if resource_id not set) The reference for a market place image to use for deployment, defined with the following attributes:",
+                                    "type": "object",
+                                    "properties": {
+                                        "publisher": {
+                                            "title": "Publisher",
+                                            "description": "(Required) publisher reference for the image",
+                                            "type": "string",
+                                            "examples": [
+                                                "SUSE"
+                                            ]
+                                        },
+                                        "offer": {
+                                            "title": "Offer",
+                                            "description": "(Required) offer reference for the image",
+                                            "type": "string",
+                                            "examples": [
+                                                "sles-sap-15-sp1-byos"
+                                            ]
+                                        },
+                                        "sku": {
+                                            "title": "SKU",
+                                            "description": "(Required) sku reference for the image",
+                                            "type": "string",
+                                            "examples": [
+                                                "gen2"
+                                            ]
+                                        },
+                                        "version": {
+                                            "title": "Version",
+                                            "description": "(Required) version reference for the image",
+                                            "type": "string",
+                                            "examples": [
+                                                "2020.06.10"
+                                            ]
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "publisher",
+                                        "offer",
+                                        "sku",
+                                        "version"
+                                    ]
+                                },
+                                "plan": {
+                                    "$ref": "plan.json#/definitions/plan"
+                                }
+                            },
+                            "required": [
+                                "marketplace_reference"
+                            ]
+                        }
+                    ]
+                },
+                "lb_refs": {
+                    "$ref": "fields.json#/definitions/lb_refs"
+                },
+                "disks": {
+                    "title": "Disks",
+                    "description": "List of required disks",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "examples": [
+                            {
+                                "name": "",
+                                "disk_size": 100,
+                                "number_of_disks": 1
+                            }
+                        ],
+                        "properties": {
+                            "storage_account_type": {
+                                "title": "Storage Account Type",
+                                "description": "type of storage account",
+                                "type": "string",
+                                "default": "Premium_LRS",
+                                "enum": [
+                                    "Standard_LRS",
+                                    "Premium_LRS",
+                                    "StandardSSD_LRS",
+                                    "UltraSSD_LRS"
+                                ]
+                            },
+                            "caching": {
+                                "title": "Caching",
+                                "description": "caching requirement, leave blank for default based on disk type",
+                                "type": "string",
+                                "enum": [
+                                    "None",
+                                    "ReadOnly",
+                                    "ReadWrite"
+                                ],
+                                "default": "None"
+                            },
+                            "write_accelerator_enabled": {
+                                "title": "Enable write accelerator",
+                                "description": "only available on certain vms sizes, recommended for hana log",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "name": {
+                                "title": "Name",
+                                "description": "base name for disks - instance numbers will be added",
+                                "type": "string",
+                                "examples": [
+                                    "usrsap",
+                                    "hanadata",
+                                    "hanalog",
+                                    "sapinst",
+                                    "hanashared",
+                                    "hanabackup"
+                                ]
+                            },
+                            "create_option": {
+                                "title": "Create Option",
+                                "description": "Use empty unless you know what you are doing",
+                                "type": "string",
+                                "default": "Empty",
+                                "enum": [
+                                    "Empty",
+                                    "FromImage"
+                                ]
+                            },
+                            "disk_size": {
+                                "title": "Disk Size",
+                                "description": "disk size in GB",
+                                "type": "integer"
+                            },
+                            "zone": {
+                                "$ref": "fields.json#/definitions/zone"
+                            },
+                            "number_of_disks": {
+                                "title": "Number of disks (alternative to luns)",
+                                "description": "number of disks to create of this type",
+                                "type": "integer"
+                            },
+                            "lun": {
+                                "description": "only used for legacy vms",
+                                "type": "integer"
+                            },
+                            "luns": {
+                                "description": "alternative to number_of_disks",
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "tier": {
+                                "enum": [
+                                    "P1",
+                                    "P2",
+                                    "P3",
+                                    "P4",
+                                    "P6",
+                                    "P10",
+                                    "P15",
+                                    "P20",
+                                    "P30",
+                                    "P40",
+                                    "P50",
+                                    "P60",
+                                    "P70",
+                                    "P80"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name",
+                            "disk_size"
+                        ]
+                    }
+                },
+                "cluster_name": {
+                    "title": "Cluster Name",
+                    "description": "Name for cluster - used as prefix for shared disks",
+                    "type": "string"
+                },
+                "shared_lun_offset": {
+                    "title": "Shared Disks LUN Offset",
+                    "description": "starting LUN number for shared disks",
+                    "type": "integer"
+                },
+                "shared_disks": {
+                    "title": "Disks",
+                    "description": "List of shared disks for cluster",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "examples": [
+                            {
+                                "name": "",
+                                "disk_size": 100,
+                                "number_of_disks": 1
+                            }
+                        ],
+                        "properties": {
+                            "storage_account_type": {
+                                "title": "Storage Account Type",
+                                "description": "type of storage account",
+                                "type": "string",
+                                "default": "Premium_LRS",
+                                "enum": [
+                                    "Standard_LRS",
+                                    "Premium_LRS",
+                                    "StandardSSD_LRS",
+                                    "UltraSSD_LRS"
+                                ]
+                            },
+                            "caching": {
+                                "title": "Caching",
+                                "description": "caching requirement, leave blank for default based on disk type",
+                                "type": "string",
+                                "enum": [
+                                    "None",
+                                    "ReadOnly",
+                                    "ReadWrite"
+                                ],
+                                "default": "None"
+                            },
+                            "write_accelerator_enabled": {
+                                "title": "Enable write accelerator",
+                                "description": "only available on certain vms sizes, recommended for hana log",
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "name": {
+                                "title": "Name",
+                                "description": "base name for disks - instance numbers will be added",
+                                "type": "string",
+                                "examples": [
+                                    "usrsap",
+                                    "hanadata",
+                                    "hanalog",
+                                    "sapinst",
+                                    "hanashared",
+                                    "hanabackup"
+                                ]
+                            },
+                            "create_option": {
+                                "title": "Create Option",
+                                "description": "(Fixed Value)",
+                                "type": "string",
+                                "default": "Empty",
+                                "const": "Empty"
+                            },
+                            "disk_size": {
+                                "title": "Disk Size",
+                                "description": "disk size in GB",
+                                "type": "integer"
+                            },
+                            "zone": {
+                                "$ref": "fields.json#/definitions/zone"
+                            },
+                            "number_of_disks": {
+                                "title": "Number of disks",
+                                "description": "number of disks to create of this type",
+                                "type": "integer"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name",
+                            "disk_size",
+                            "number_of_disks"
+                        ]
+                    }
+                },
+                "hosts": {
+                    "$ref": "hosts.json#/definitions/hosts"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "os_type",
+                "sku",
+                "image_details",
+                "subnet"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

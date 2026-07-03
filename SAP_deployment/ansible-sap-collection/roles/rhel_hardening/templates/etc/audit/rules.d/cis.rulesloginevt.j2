@@ -1,0 +1,5 @@
+{% if rhel7cis_level2 %}
+# Ensure login and logout events are collected
+-w /var/log/faillog -p wa -k logins
+-w /var/log/lastlog -p wa -k logins
+{% endif %}

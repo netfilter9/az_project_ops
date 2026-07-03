@@ -1,0 +1,29 @@
+#*** ASE fault manager profile ***
+ha/syb/version = 1
+
+SAPSYSTEMNAME = {{ sap.db.sid | upper }}
+ha/syb/primary_dbhost = {{ primary_virtual_hostname }}
+ha/syb/primary_dbname = {{ sap.db.sid | upper }}
+ha/syb/primary_dbport = 4901
+ha/syb/primary_site = Site1
+ha/syb/primary_hbport = 13777
+
+ha/syb/standby_dbhost = {{ secondary_virtual_hostname }}
+ha/syb/standby_dbname = {{ sap.db.sid | upper }}
+ha/syb/standby_dbport = 4901
+ha/syb/standby_site = Site2
+ha/syb/standby_hbport = 13787
+
+ha/syb/dbfmhost = {{ sap.logical_hosts.ascs.hostname }}
+ha/syb/h2hport = 13797
+ha/syb/support_floating_ip = 0
+
+ha/syb/support_cluster = 1
+ha/syb/failover_if_unresponsive = 1 
+ha/syb/allow_restart_companion = 1 
+ha/syb/set_standby_available_after_failover = 1 
+ha/syb/chk_restart_repserver = 1 
+ha/syb/use_boot_file_always = 1 
+
+ha/syb/cluster_fmhost1 = {{ node1 }}
+ha/syb/cluster_fmhost2 = {{ node2 }}

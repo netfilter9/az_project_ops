@@ -1,0 +1,12 @@
+---
+
+- name: disk config
+  include_tasks: disk-config-drive-letter.yml
+  tags:
+    - disk_config
+  loop: "{{ disk_config }}"
+
+- name: configure pagefile
+  include_tasks: pagefile-change.yml
+  tags:
+    - pagefile

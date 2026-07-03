@@ -1,0 +1,16 @@
+{%- set ns = namespace(servernode_port_ds='') %}
+{% for i in sap.db.tenants %}
+{% if  bods.ds.dbserver ==  i  %}
+{%- set ns.servernode_port_ds = '3'+sap.instance_numbers.db+'41' %}
+{% endif %}
+{% endfor %}
+{% if bods.ds.dbserver == sap.db.sid %}
+{%- set ns.servernode_port_ds = '3'+sap.instance_numbers.db+'15' %}
+{% elif  bods.ds.dbserver == "SYSTEMDB" %}
+{%- set ns.servernode_port_ds = '3'+sap.instance_numbers.db+'13' %}
+{% endif %}
+[{{ ds_dsnname }}]
+DRIVER=/usr/sap/hdbclient/libodbcHDB.so
+SERVERNODE={{ sap.logical_hosts.db.hostname | default (ansible_hostname) }}:{{ ns.servernode_port_ds }}
+DATABASENAME={{ bods.ds.dbserver }}
+DESCRIPTION=DSDB

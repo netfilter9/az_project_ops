@@ -1,0 +1,147 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCC_ST22_EXP_DUMPS_PERDAY                   *
+* Title               :   Export ST22 Dumps                           *
+* Purpose             :   This report is used to Export ST22 Dumps    *
+*                     :   per day.                                    *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* ST22                                                                *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* SNAP                     X                                          *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-03-2020  Initial  Soumya Ray     NA          To export st22 dumps *
+*                                                per day              *
+*---------------------------------------------------------------------*
+REPORT zcc_st22_exp_dumps_perday.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep     TYPE c VALUE '|'                    LENGTH 1,
+             lc_export  TYPE c VALUE 'EXPORT'               LENGTH 6,
+             lc_sysid   TYPE c VALUE 'System ID'            LENGTH 9,
+             lc_date    TYPE c VALUE 'Date'                 LENGTH 15,
+             lc_count   TYPE c VALUE 'ST22 Dump Count'      LENGTH 15,
+             lc_title   TYPE c VALUE 'RuntimeErrorsCounts'  LENGTH 35,
+             lc_ninput  TYPE c VALUE 'No input passed'      LENGTH 15,
+             lc_action  TYPE c VALUE 'Input Correct Action' LENGTH 35,
+             lc_err_msg TYPE c VALUE
+            'No Runtime Errors found in the system'         LENGTH 40,
+             lc_between TYPE c VALUE 'BT'                   LENGTH 2,
+             lc_include TYPE c VALUE 'I'                    LENGTH 1,
+             lc_seqno   TYPE sychar03 VALUE '000'.
+
+  TYPES: BEGIN OF lty_count,
+           date  TYPE sy-datum,
+           count TYPE i,
+         END OF lty_count.
+
+  DATA : ls_input     TYPE tab512,
+         ls_output    TYPE tab512,
+         lv_action    TYPE char10,
+         lt_snap      TYPE TABLE OF snap,
+         ls_snap      TYPE snap,
+         lv_count     TYPE string,
+         lv_date_from TYPE datum,
+         ls_count     TYPE lty_count,
+         ls_datum     TYPE rsdsselopt,
+         lt_datum     TYPE rseloption,
+         lt_count     TYPE STANDARD TABLE OF lty_count.
+
+  " Clearing variables and tables
+  CLEAR: lv_action, ls_output, ls_input, ls_snap, ls_count,
+         ls_datum, lv_date_from.
+
+  FREE: lt_count,lt_snap, lt_datum.
+
+  " Constructing title and headings to the output
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  "Read the input
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  IF sy-subrc NE 0.
+    ls_output = lc_ninput."No input passed
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  lv_action = ls_input.
+
+*If the user has specifed a date range only those entries else
+*return the last week's data
+  ls_datum-sign    = lc_include.
+  ls_datum-option  = lc_between.
+  lv_date_from = sy-datum - 3.
+  ls_datum-low = lv_date_from.
+  ls_datum-high = sy-datum.
+  APPEND ls_datum TO lt_datum.
+
+  CASE lv_action.
+
+    WHEN lc_export. "EXPORT
+
+      " To fetch dumps from the system
+      SELECT * FROM snap
+        INTO TABLE lt_snap
+        WHERE seqno = lc_seqno
+        AND   datum IN lt_datum.
+
+      IF sy-subrc NE 0.
+        " No Runtime Errors found in the system
+        CLEAR: ls_output.
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR: ls_output.
+        RETURN.
+      ENDIF.
+
+      " To delete dumps post current date
+      SORT lt_snap BY datum ASCENDING.
+
+      " Coloumn heading
+      CONCATENATE lc_sysid lc_date lc_count INTO ls_output
+      SEPARATED BY lc_sep.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+      " Logic to count the no of records on daily basis
+      LOOP AT lt_snap INTO ls_snap.
+        MOVE: ls_snap-datum TO ls_count-date,
+              1 TO ls_count-count.
+
+        COLLECT ls_count INTO lt_count.
+        CLEAR: ls_snap, ls_count.
+      ENDLOOP.
+
+      " Data output of error records and date
+      LOOP AT lt_count INTO ls_count.
+        lv_count = ls_count-count.
+        CONCATENATE sy-sysid ls_count-date lv_count INTO ls_output
+        SEPARATED BY lc_sep.
+        APPEND ls_output TO lt_output.
+        CLEAR: lv_count,ls_output.
+      ENDLOOP.
+      CLEAR: ls_snap, ls_count, lv_count, lv_date_from.
+      FREE: lt_count,lt_snap.
+
+    WHEN OTHERS.
+      "Input Correct Action
+      CLEAR ls_output.
+      ls_output = lc_action.
+      APPEND ls_output TO lt_output.
+      CLEAR: ls_output.
+
+  ENDCASE.
+
+ENDFORM.

@@ -1,0 +1,45 @@
+# We should probably put in a crm_mon check here instead.  
+- name: pcs_ha_cluster | set hacluster password
+  user:
+    name: hacluster
+    password: "{{ passwords.admin | password_hash('sha512') }}"
+
+- name: pcs_ha_cluster | create ha cluster
+  command: "{{ item }}"
+  with_items: 
+    - pcs cluster auth {{ node1 }} {{ node2 }} -u hacluster -p {{ passwords.admin }}
+    - pcs cluster setup --name {{ sap.sid|lower }}-{{ platform }} {{ node1 }} {{ node2 }} --token 30000
+    - pcs cluster start --all
+  when: 
+   - ansible_hostname == node1
+   - ansible_distribution_major_version < '8'
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("node is already in a cluster")) 
+
+- name: pcs_ha_cluster | create ha cluster
+  command: "{{ item }}"
+  with_items: 
+    - pcs host auth {{ node1 }} {{ node2 }} -u hacluster -p {{ passwords.admin }}
+    - pcs cluster setup {{ sap.sid|lower }}-{{ platform }} {{ node1 }} {{ node2 }} totem token=30000
+    - pcs cluster start --all   
+  when: 
+   - ansible_hostname == node1
+   - ansible_distribution_major_version >= '8'
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("node is already in a cluster"))
+
+- name: pcs_ha_cluster | set quorum votes
+  command: pcs quorum expected-votes 2
+  when: platform == 'azure'
+
+- name: Start and enable corosync, pacemaker Service
+  command: "{{ item }}"
+  with_items: 
+    - systemctl start corosync.service
+    - systemctl enable corosync.service
+    - systemctl start pacemaker.service
+    - systemctl enable pacemaker.service

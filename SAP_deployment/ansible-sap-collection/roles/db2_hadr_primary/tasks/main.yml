@@ -1,0 +1,8 @@
+---
+
+- name: add firewall probe port
+  include_tasks: hadr_prereqs_{{ platform }}.yml
+
+- name: run hadr commands on primary and take backup
+  include_tasks: primary_db2_hadr_{{ platform }}.yml
+  when: ansible_hostname == node1

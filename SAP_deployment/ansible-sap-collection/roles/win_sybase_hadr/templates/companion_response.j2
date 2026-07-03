@@ -1,0 +1,306 @@
+###############################################################################
+# Setup HADR sample responses file
+#
+# This sample responses file setup ASE HADR on
+# hosts "host1" (primary) and "host2" (companion).
+#
+# Prerequisite :
+# - New SAP ASE and Backup servers setup and started on "host1" and "host2".
+#   See HADR User Guide for requirements on SAP ASE servers.
+# - Replication Management Agent (RMA) started on "host1" and "host2".
+#
+# Usage :
+# 1. On host1 (primary), run:
+#       $SYBASE/$SYBASE_ASE\bin\setuphadr <this_responses_file>
+#
+# 2. Change this responses file properties:
+#       setup_site=COMP
+#       is_secondary_site_setup=true
+#
+# 3. On host2 (companion), run
+#       $SYBASE/$SYBASE_ASE\bin\setuphadr <responses_file_from_step_2>
+#
+###############################################################################
+
+
+# ID that identifies this cluster
+#
+# Value must be unique,
+# begin with a letter and
+# 3 characters in length.
+# Note: Set value to your SID incase of HADR on SAP Business Suite Installations
+cluster_id={{ sap.sid | upper }}
+
+# Which site being configured
+#
+# Note:
+# You need to set "<setup_site_value>.*"
+# properties in this responses file.
+setup_site=COMP
+
+# Set installation_mode
+#
+# Valid values: true, false
+#
+# If set to true, installation_mode will be set to "BS". 
+# If set to false, installation_mode will be set to "nonBS"
+# Note: Set value to true for HADR on SAP Business Suite installations
+setup_bs=true
+
+# Note: Set enable_ssl to false for HADR on SAP Business Suite Installations 
+# 
+# true OR false
+enable_ssl=false
+# common name, take SYBASE for example
+#ssl_common_name=SYBASE
+# private key file
+#ssl_private_key_file=/tmp\hadr.key
+# public key file
+#ssl_public_key_file=/tmp\hadr.crt
+# root CA cert
+# NOTE: if you're using self-signed cert, put your public key file here
+#ssl_ca_cert_file=/tmp\rootCA.pem
+# ssl password
+#ssl_password=Sybase
+
+# Has the secondary site prepared for ASE HADR
+#
+# Valid values: true, false
+#
+# If set to true, "<secondary_setup_site_value>.*"
+# properties must set in this responses file.
+is_secondary_site_setup=true
+
+# How data is replicated
+#
+# Valid values: sync, async
+synchronization_mode=sync
+
+# SAP ASE system administrator user\password
+#
+# setuphadr will prompt from standard input if not specified
+ase_sa_user=sa
+ase_sa_password={{ sybase_db_password }}
+
+# ASE HADR maintenance user\password
+#
+# For a Business Suite installation, name the user <custer_id>_maint.
+# Password must have at least 6 characters
+# setuphadr will prompt from standard input if not specified
+hadr_maintenance_user={{ sap.sid | upper }}_maint
+hadr_maintenance_password={{ sybase_db_password }}
+
+# Replication Management Agent administrator user\password
+#
+# Password must have at least 6 characters
+# setuphadr will prompt from standard input if not specified
+rma_admin_user=DR_admin
+rma_admin_password={{ sybase_db_password }}
+     
+#If need to disable the checks for reference constraints
+#
+#Valid values: true, false
+disable_referential_constraints=false
+
+# If we need to config and start Replication Management Agent
+#
+# Valid values: true, false
+config_start_rma=true
+
+# If we need to create Replication Management Agent windows service
+# Only affects windows
+#
+# Valid values: true, false
+# If set to true, rma_service_user and rma_service_password will be used
+create_rma_windows_service=true
+
+# Replication Management Agent Service user\password
+# Only needed for windows instllations.
+# Note: Set value of rma_service_user to syb<sid> user incase of HADR on SAP Business Suite Installations
+rma_service_user={{ domainName }}\syb{{ sap.sid | lower }}
+rma_service_password={{ sybase_db_password }}
+
+# Databases that will participate in replication
+# and "auto" materialize.
+#
+# ASE HADR requires SAP ASE to have a database
+# with cluster ID name (see "cluster_id" above).
+
+# cluster ID database
+participating_database_1={{ sap.sid | upper }}
+materialize_participating_database_1=true
+
+
+###############################################################################
+# Site "PRIM" on host host1 with primary role
+###############################################################################
+
+# Host name where SAP ASE run
+#
+# Enter fully qualified domain name (FQDN)
+# if your sites are on different subnet.
+PRIM.ase_host_name={{ node1 }}
+
+# We don't support ASE and SRS on different hosts yet
+# This is virtual host name for SRS\RMA
+# Optional property
+#
+# Enter fully qualified domain name (FQDN)
+# if your sites are on different subnet.
+PRIM.rma_host_name={{ node1 }}
+
+# Site name
+#
+# Enter value that identifies this site,
+# like a geographical location.
+# Value must be unique.
+PRIM.site_name=Site1
+
+# Site role
+#
+# Enter the role of this site.
+# Valid values: primary, companion
+PRIM.site_role=primary
+
+# directory where SAP ASE installed
+PRIM.ase_release_directory={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}
+
+# Directory that stored SAP ASE user data files
+# (interfaces, RUN_<server>, error log, etc. files).
+# Do not set value if your user data files are in
+# SAP ASE installed directory (ase_release_directory).
+PRIM.ase_user_data_directory=
+
+PRIM.ase_server_name={{ sap.sid | upper }}
+PRIM.ase_server_port=4901
+
+PRIM.backup_server_name={{ sap.sid | upper }}_BS
+
+PRIM.backup_server_port=4902
+
+# Directory to store database dumps
+# in materialzation
+#
+# Backup server must able to access this directory
+PRIM.backup_server_dump_directory={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+
+
+# Port numbers for Replication Server and Replication Management Agent on host1
+#
+# In remote topology, these are the companion Replication Server and
+# Replication Management Agent.
+#
+# See "rsge.bootstrap.tds.port.number" properties in
+# <SAP ASE installed directory>\DM\RMA-16_0\instances\AgentContainer\config\bootstrap.prop
+# for value
+PRIM.rma_tds_port=4909
+PRIM.rma_rmi_port=7000
+# RMA RMI occupies five consecutive ports, with the configured port occupying the highest number.
+#
+# Starting port number to use when setup Replication Server.
+# Make sure next two ports (+1 and +2) are also available for use.
+PRIM.srs_port=4905
+
+# Device buffer for Replication Server on host1
+# Recommend size = 128 * N
+#       where N is the number of databases to replicate,
+#       including the master and cluster ID databases.
+#
+PRIM.device_buffer_dir={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+PRIM.device_buffer_size=20000
+
+# Persistent queue directory for Replication Server running on host1
+#
+# For synchronous replication (synchronization_mode=sync),
+# enter directory to an SSD (solid state drive) or other
+# type of fast read\write storage device
+PRIM.simple_persistent_queue_dir={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+PRIM.simple_persistent_queue_size=20000
+
+###############################################################################
+# Site "COMP" on host host2 with companion role
+###############################################################################
+
+# Host name where SAP ASE run
+#
+# Enter fully qualified domain name (FQDN)
+# if your sites are on different subnet.
+COMP.ase_host_name={{ node2 }}
+
+# We don't support ASE and SRS on different hosts yet
+# This is virtual host name for SRS\RMA
+# Optional property
+#
+# Enter fully qualified domain name (FQDN)
+# if your sites are on different subnet.
+COMP.rma_host_name={{ node2 }}
+
+# Site name
+#
+# Enter value that identifies this site,
+# like a geographical location.
+# Value must be unique.
+COMP.site_name=Site2
+
+# Site role
+#
+# Enter the role of this site.
+# Valid values: primary, companion
+COMP.site_role=companion
+
+# directory where SAP ASE installed
+COMP.ase_release_directory={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}
+
+# Directory that stored SAP ASE user data files
+# (interfaces, RUN_<server>, error log, etc. files).
+# Do not set value if your user data files are in
+# SAP ASE installed directory (ase_release_directory).
+COMP.ase_user_data_directory=
+
+COMP.ase_server_name={{ sap.sid | upper }}
+COMP.ase_server_port=4901
+
+COMP.backup_server_name={{ sap.sid | upper }}_BS
+COMP.backup_server_port=4902
+
+# Directory to store database dumps
+# in materialzation
+#
+# Backup server must able to access this directory
+COMP.backup_server_dump_directory={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+
+
+# Port numbers for Replication Server and Replication Management Agent on host2
+#
+# In remote topology, these are the companion Replication Server and
+# Replication Management Agent.
+#
+# See "rsge.bootstrap.tds.port.number" properties in
+# <SAP ASE installed directory>\DM\RMA-16_0\instances\AgentContainer\config\bootstrap.prop
+# for value
+COMP.rma_tds_port=4909
+COMP.rma_rmi_port=7000
+# RMA RMI occupies five consecutive ports, with the configured port occupying the highest number.
+
+
+# Starting port number to use when setup Replication Server.
+# Make sure next two ports (+1 and +2) are also available for use.
+COMP.srs_port=4905
+
+# Device buffer for Replication Server on host2
+# Recommend size = 128 * N
+#       where N is the number of databases to replicate,
+#       including the master and cluster ID databases.
+#
+# Note: For HADR on SAP Business Suite Installations use SID database logsize * 1.5
+COMP.device_buffer_dir={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+COMP.device_buffer_size=20000
+
+# Persistent queue directory for Replication Server running on host2
+#
+# For synchronous replication (synchronization_mode=sync),
+# enter directory to an SSD (solid state drive) or other
+# type of fast read\write storage device
+# Note: For HADR on SAP Business Suite Installations use SID database logsize * 1.5
+COMP.simple_persistent_queue_dir={{ sap.install_drive}}:\\sybase\\{{ sap.sid }}\\data
+COMP.simple_persistent_queue_size=20000

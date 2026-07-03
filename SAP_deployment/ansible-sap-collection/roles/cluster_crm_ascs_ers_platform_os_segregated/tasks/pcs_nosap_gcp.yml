@@ -1,0 +1,42 @@
+---
+- name: pcs_resource_nosap_gcp | pcs fs resource create
+  command: pcs resource create fs_{{ sap.sid|upper }}_{{ sap.ascs_type }} Filesystem device='{{ sap.nfs.server }}:/{{ sap.nfs.ascs_device }}' directory='/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}' fstype='nfs' force_unmount=safe options='sec=sys,vers=3' op start interval=0 timeout=60 op stop interval=0 timeout=120 op monitor interval=200 timeout=40 --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: pcs_resource_nosap_gcp | pcs fs resource create
+  command: pcs resource create fs_{{ sap.sid|upper }}_ERS Filesystem device='{{ sap.nfs.server }}:/{{ sap.nfs.ers_device }}' directory='/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }}' fstype='nfs' force_unmount=safe options='sec=sys,vers=3' op start interval=0 timeout=60 op stop interval=0 timeout=120 op monitor interval=200 timeout=40 --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: pcs_resource_nosap_gcp | pcs vip resource create
+  command: pcs resource create vip_{{ sap.sid|upper }}_{{ sap.ascs_type }} IPaddr2 ip={{ sap.logical_hosts.ascs.ip }} nic=eth0 cidr_netmask={{ sap.logical_hosts.ascs.cidr }} --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: pcs_resource_nosap_gcp | pcs vip resource create
+  command: pcs resource create vip_{{ sap.sid|upper }}_ERS IPaddr2 ip={{ sap.logical_hosts.ers.ip }} nic=eth0 cidr_netmask={{ sap.logical_hosts.ers.cidr }} --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: pcs_resource_nosap_gcp | pcs healthcheck resource create
+  command: pcs resource create rsc_healthcheck_{{ sap.sid|upper }}_{{ sap.ascs_type }} service:haproxy --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: pcs_resource_nosap_gcp | pcs healthcheck resource create
+  command: pcs resource create rsc_healthcheck_{{ sap.sid|upper }}_ERS service:haproxy_ers --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 

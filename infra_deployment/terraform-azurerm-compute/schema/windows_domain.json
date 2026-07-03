@@ -1,0 +1,47 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "windows_domain": {
+            "title": "Windows Domain",
+            "description": "(Optional) A windows_domain block as defined below",
+            "type": "object",
+            "examples": [
+                {
+                    "domain_name": "",
+                    "ou_path": "",
+                    "domain_user": ""
+                }
+            ],
+            "properties": {
+                "domain_name": {
+                    "title": "Domain Name",
+                    "description": "(Required) the windows domain name",
+                    "type": "string",
+                    "examples": [
+                        "example.local"
+                    ]
+                },
+                "ou_path": {
+                    "title": "OU Path",
+                    "description": "(Required) the ou path for computer registrations",
+                    "type": "string",
+                    "examples": [
+                        "CN=Computers,DC=example,DC=com"
+                    ]
+                },
+                "domain_user": {
+                    "title": "Domain User",
+                    "description": "(Required) the domain user which is used to register computers",
+                    "type": "string",
+                    "examples": [
+                        "srv-example@example.local"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

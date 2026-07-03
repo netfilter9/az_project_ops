@@ -1,0 +1,22 @@
+# - name: rpcbind-config | disable service rpcbind and ensure it is masked
+#   systemd:
+#     name: rpcbind
+#     enabled: no
+#     masked: yes
+#     state: stopped
+
+# - name: rpcbind-config | stop services
+#   service:
+#     name: "{{ item }}"
+#     state: stopped
+#     enabled: no
+#   loop:
+#     - rpc-statd
+#     - rpcbind.socket
+
+- name: rpcbind-config | disable service rpcbind and ensure it is masked
+  systemd:
+    name: rpcbind
+    enabled: yes
+    masked: no
+    state: started

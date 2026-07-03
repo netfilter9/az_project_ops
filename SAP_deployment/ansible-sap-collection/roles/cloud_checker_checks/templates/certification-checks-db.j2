@@ -1,0 +1,72 @@
+
+[
+{%- set datafound = namespace(isdatapresent=false) -%}
+{% set usageval = [] %}
+{% for i in imported_var.hanavmchecks %}
+{% if db_vmsize_list == i.Solution %}
+{% set datafound.isdatapresent = true %}
+{{ usageval.append( i.usage + '' ) }}
+{% endif %}
+{% endfor %}
+{% if  db_vmsize_list in hanavm_list %}
+{
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",
+        "Description": "checking whether HANA VM is Certified or not",
+        "Current Value": "{{ db_vmsize_list }} is certified",
+        "Recommended Value": "VM must be SAP Certified"
+}
+{% else %}
+{ 
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",   
+        "Description": "checking whether HANA VM is Certified or not",
+        "Current Value": "{{ db_vmsize_list }} not supported for SAP",
+        "Recommended Value": "Best practise to  use supported VM's. Refer note -1928533"
+}
+{% endif %},
+{% if datafound.isdatapresent == true %}
+{
+        "HostName" : "{{ ansible_hostname }}",
+        "Category" : "OS",
+        "Description": "checking for the HANA Machine Certified for (OLAP/OLTP/scale out)",
+        "Current Value": "VM is certified {{ usageval }}"
+}
+{% else %}
+{ 
+        "HostName" : "{{ ansible_hostname }}",
+        "Category" : "OS",   
+        "Description": "checking for the HANA Machine Certified for (OLAP/OLTP/scale out)",
+        "Current Value": "VM not supported for SAP",
+        "Recommended Value": "Best practise to  use supported VM's. Refer note -1928533"
+}
+{% endif %},
+{% for disk in disk_list %}
+{% for item in disk %}
+{% if disk_list == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the disk storage account type",
+    "Current Value": "Error: {{ output_storage.stderr }}",
+    "Recommended Value": "Upgrade to Premium disks as Premium SSDs are high-performance Solid-State Drive (SSD) based Storage designed to support I/O intensive workloads"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the disk storage account type",
+    "Current Value": "{{ item.Name }}: {{ item.StorgaeAccountType }}",
+    "Recommended Value": "Upgrade to Premium disks as Premium SSDs are high-performance Solid-State Drive (SSD) based Storage designed to support I/O intensive workloads"
+}
+{% endif %}
+{% endfor %}
+{% if not loop.last %}
+,
+{% endif %}
+{% endfor %} 
+]

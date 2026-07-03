@@ -1,0 +1,50 @@
+--- 
+- name: download Packages
+  get_url:
+    url: "{{ item }}"
+    dest: ~/
+  with_items: 
+     - https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip 
+
+- name: packages | install packages
+  package:
+     name:
+       - wget
+       - lvm*
+       - sysstat
+       - libsss_sudo
+       - libgcc_s*
+       - libstdc++*
+       - libatomic*
+       - libltdl.so.*
+       - libnsl.so*
+       - csh
+       - unzip
+       - compat-sap-c++-9*
+       - nfs-utils
+     state: present
+     
+- name: Extract awscliv2.zip into /home/ec2-user
+  unarchive:
+    src: ~/awscli-exe-linux-x86_64.zip
+    dest: ~/
+    remote_src: yes
+
+- name: sudo ./aws/install
+  command: ./aws/install --update
+  become: yes
+  args: 
+   chdir: ~/
+ 
+- name: Create a symbolic link for awscli
+  file:
+    src: /usr/local/bin/aws
+    dest: /usr/bin/aws
+    state: link
+
+- name: systemctl start 
+  command: systemctl start nfs-server.service
+
+- name: systemctl enable 
+  command: systemctl enable nfs-server.service
+

@@ -1,0 +1,31 @@
+---
+
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+    audit_dbserver: "{{ bods.ips.audit.dbserver | default(default_audit_dbserver) }}"    
+    cms_dbserver: "{{ bods.ips.cms.dbserver | default(default_cms_dbserver) }}"
+    audit_user: "{{ bods.ips.audit.dbuser | default(default_audit_dbuser) }}"
+    cms_user: "{{ bods.ips.cms.dbuser | default(default_cms_dbuser) }}"
+
+- name: main | install ase
+  import_tasks: ase_install.yml
+  tags:
+    - ase_install
+
+- name: main | create db 
+  import_tasks: create_db_ips.yml
+  tags:
+    - create_db
+  when: bods.ips is defined
+
+- name: main | create users
+  import_tasks: create_users_ips.yml
+  tags:
+    - create_users
+  when: bods.ips is defined
+
+- name: main | post config
+  import_tasks: post_sybase.yml
+  tags:
+    - post_sybase_config

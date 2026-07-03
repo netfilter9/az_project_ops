@@ -1,0 +1,80 @@
+    
+-  name: Execute db2 queries
+   shell: sudo su - db2{{ db_sid | lower }} -c "{{ item.query }}"
+   register: output
+   with_items:
+     - "{{ db2_queries }}"    
+
+- debug: var=output 
+
+- name: Write ouptut
+  template: 
+    src: "{{ item.name }}.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/{{ item.name }}_outputs.json'
+  become: yes
+  delegate_to: localhost
+  with_items:
+      - "{{ db2_queries }}" 
+  loop_control:
+      index_var: index
+
+-  name: Execute db2 log mode queries
+   shell: sudo su - db2{{ db_sid | lower }} -c 'db2 get database configuration for $DB2DBDFT | grep LOGARCHMETH1'
+   register: logmode_output 
+
+- debug: var=logmode_output  
+
+- name: Write log mode ouptut
+  template: 
+    src: "get-db2-log-mode.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/get-db2-log-mode_outputs.json'
+  become: yes
+  delegate_to: localhost
+
+- name: copy db2 scripts from local to target nodes for last log backup
+  copy:
+    src: "../files/get_db2_last-log-backup.sql"
+    dest: "/tmp/"
+    mode: '0777'
+
+-  name: Execute db2 for last log backup queries
+   shell: sudo su - db2{{ db_sid | lower }} -c "/tmp/get_db2_last-log-backup.sql"
+   register: lastlogbackup_output 
+
+- debug: var=lastlogbackup_output
+
+- name: Write last log backup ouptut
+  template: 
+    src: "get_db2_last-log-backup.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/get-db2-log-mode_outputs.json'
+  become: yes
+  delegate_to: localhost
+
+- name: create empty file for db2 consistency check
+  file:
+     path: "/tmp/db2_consistency_check.sql"
+     state: touch
+     mode: 0777   
+
+- name: line insert
+  lineinfile:
+     path: /tmp/db2_consistency_check.sql
+     line: db2 connect to {{ db_sid }}
+
+- name: line insert
+  lineinfile:
+     path: "/tmp/db2_consistency_check.sql"
+     line: db2 'inspect check database for error state all results keep inspect_{{ ansible_date_time.iso8601 }}.out'
+
+-  name: Execute db2 query for consistency check
+   shell: sudo su - db2{{ sid | lower }} -c "/tmp/db2_consistency_check.sql"
+   register: db2_consistency_output 
+
+- debug: var=db2_consistency_output
+
+- name: Write last log backup ouptut
+  template: 
+    src: "db2_consistency_check.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/db2_consistency_check.json'
+  become: yes
+  delegate_to: localhost

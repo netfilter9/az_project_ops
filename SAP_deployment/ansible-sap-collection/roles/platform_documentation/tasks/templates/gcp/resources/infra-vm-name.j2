@@ -1,0 +1,11 @@
+{# 
+    constructing VM variables from input json
+#}
+{% if spec.server_groups is defined %}
+{% for group_k, group_v in spec.server_groups.items() -%}
+{% for host_k, host_v in group_v.hosts.items() %}
+{%- set vm_row =host_k -%}
+{{ vm_row }}
+{% endfor %}
+{% endfor %}
+{% endif %}

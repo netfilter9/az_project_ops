@@ -1,0 +1,10 @@
+- name: cluster | register second node
+  command: "{{ item }}"
+  loop:
+    - su - {{ sap.db.sid|lower }}adm -c "hdbnsutil -sr_register --remoteHost={{  sap.db.site.primary_hostname | default (hostvars[node1].virtual_hostname) | default (node1) }} --remoteInstance={{ sap.instance_numbers.db }} --replicationMode=sync --name={{ sap.db.site.secondary_name | default ('SITE2') }}"
+    - sleep 20
+  when: ansible_hostname == node2
+  register: result
+  failed_when: 
+    - result.rc != 0 
+    - not "this site is already enabled as source site" in result.stdout

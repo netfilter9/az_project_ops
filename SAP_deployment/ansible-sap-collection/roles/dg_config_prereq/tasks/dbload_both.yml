@@ -1,0 +1,108 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    db_user: "{{ sap.db.db_user | default('sysdba') }}"
+
+- name: dg config for primary db  
+  block:
+    - name: template the sql file
+      template:
+        src: "dg_pre_primary.j2"
+        dest: /home/oracle/dg-pre-primary.sql
+
+    - command : "sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/dg-pre-primary.sql"
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args:
+        chdir: $ORACLE_HOME/bin
+        creates: "{{ root_dir }}/{{ sap.db.sid }}/origlogA/standby_redo*.log"
+      environment:
+        path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+      register: output
+
+    - name: tidy up the dg-pre-primary file
+      file:
+        path: /home/oracle/dg-pre-primary.sql
+        state: absent
+
+  when: ansible_hostname == dbnode1
+
+- name: dg config for secondary db  
+  block:
+      - name: template the sql file
+        template:
+          src: "dg_pre_secondary.j2"
+          dest: /home/oracle/dg-pre-secondary.sql
+
+      - command : "sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/dg-pre-secondary.sql"
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        args:
+          chdir: $ORACLE_HOME/bin
+        environment:
+          path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+          ORACLE_SID: "{{ sap.db.sid|upper }}"
+          ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+          ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+        register: output
+
+      - name: tidy up the dg-pre-secondary file
+        file:
+          path: /home/oracle/dg-pre-secondary.sql
+          state: absent
+
+      - name: tidy up data and log files
+        become: yes
+        become_user: "{{ oracle_installation_user }}"
+        shell: 
+          cmd: rm -rf *
+          chdir: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ item }}/"
+        loop:
+          - sapdata1
+          - sapdata2
+          - sapdata3
+          - sapdata4
+          - origlogA
+          - origlogB
+          - mirrlogA
+          - mirrlogB
+        register: shellout
+
+      - name: template the sql file
+        template:
+          src: "startup-db2.j2"
+          dest: /home/oracle/startup-db2.sql
+
+      - name: startup with nomount
+        command:  "sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/startup-db2.sql"
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        args:
+          chdir: $ORACLE_HOME/bin
+        environment:
+          path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+          ORACLE_SID: "{{ sap.db.sid|upper }}"
+          ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+          ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+
+      - name: tidy up the startup-db2 file
+        file:
+          path: /home/oracle/startup-db2.sql
+          state: absent
+          
+  when: ansible_hostname == dbnode2
+
+
+
+
+
+
+
+
+
+  
+
+

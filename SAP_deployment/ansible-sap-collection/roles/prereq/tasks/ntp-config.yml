@@ -1,0 +1,49 @@
+- name: ntp-config | disable value in /etc/chrony.conf
+  replace:
+    path: /etc/chrony.conf
+    regexp: (#)?include /etc/chrony\.d/\*\.conf
+    replace: "#include /etc/chrony.d/*.conf"
+
+- name: ntp-config | disable value in /etc/chrony.conf
+  replace:
+    path: /etc/chrony.conf
+    regexp: (#)?refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0
+    replace: "#refclock PHC /dev/ptp0 poll 3 dpoll -2 offset 0"
+
+#SUSE SLES 12
+- block: 
+
+  - name: ntp-config | Update NTP Servers
+    lineinfile:
+      line: "{{ item }}"
+      dest: /etc/ntp.conf
+    with_items:
+      - server {{ ntpserver1 }} iburst
+      - server {{ ntpserver2 }} iburst
+
+  - name: ntp-config | Enable and restart NTP Service
+    service:
+      name: ntpd
+      enabled: yes
+      state: restarted
+
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "12"
+
+#SUSE SLES 15 and RHEL
+- block:
+
+  - name: ntp-config | Configure Time Servers
+    lineinfile:
+      line: "{{ item }}"
+      dest: /etc/chrony.conf
+    with_items:
+      - server {{ ntpserver1 }} iburst
+      - server {{ ntpserver2 }} iburst
+
+  - name: ntp-config |  Enable and restart NTP Service
+    service:
+      name: chronyd.service
+      enabled: yes
+      state: restarted
+
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "15" or ansible_facts['distribution'] == "RedHat"

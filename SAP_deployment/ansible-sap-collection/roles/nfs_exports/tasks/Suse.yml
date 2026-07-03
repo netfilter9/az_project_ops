@@ -1,0 +1,43 @@
+---
+- name: main | disable nfsv3
+  lineinfile:
+    path: /etc/sysconfig/nfs
+    regexp: "^NFS3_SERVER_SUPPORT="
+    line: NFS3_SERVER_SUPPORT="no"
+
+- name: main | change default mount options to disable nfs2 and nfs3
+  lineinfile:
+    path: /etc/sysconfig/nfs
+    regexp: "^MOUNTD_OPTIONS="
+    line: MOUNTD_OPTIONS="--no-nfs-version 2 --no-nfs-version 3"
+
+# - name: main | install nfs-server
+#   package:
+#     name: nfs-utils
+#     state: present
+
+- name: main | populating exports entries
+  lineinfile:
+    path: /etc/exports
+    line: "{{ item }}"
+  loop: "{{ nfs_exports }}"
+
+- name: main | stop unwanted services
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+    state: stopped
+  loop:
+    - rpc-statd
+    - rpcbind
+    - rpcbind.socket
+
+- name: main | nfs service restarted
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: restarted
+  loop:
+    - nfs
+    - nfsserver
+    - nfs-idmapd

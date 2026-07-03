@@ -1,0 +1,940 @@
+*&********************************************************************&*
+* Report              :   ZCM_SLDCHECK_CHK_SLDCONNECTION               *
+* Title               :   Run SLDCHECK                                 *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   22/09/2020                                   *
+* Purpose             :   This report is to Run SLDCHECK and capture   *
+*                         logs during Cloud Migration                  *
+*----------------------------------------------------------------------*
+REPORT zcm_sldcheck_chk_sldconnection.
+"This code has been referred from Standard Report RLCR_XI_STAYING_ALIVE
+
+CONSTANTS: lc_sep          TYPE c VALUE '|'          LENGTH 1,
+           lc_error        TYPE c VALUE 'E'          LENGTH 1,
+           lc_warning      TYPE c VALUE 'W'          LENGTH 1,
+           lc_export       TYPE c VALUE 'EXPORT'     LENGTH 6,
+           lc_tcode        LIKE sy-tcode VALUE 'LCRCHECK',
+           lc_tcode20      LIKE sy-tcode VALUE 'SLDCHECK',
+           lc_dest         TYPE string   VALUE 'SAPSLDAPI',
+           lc_xipr_dest    TYPE string   VALUE 'LCRSAPRFC',
+           lc_xipr_section TYPE string   VALUE 'Connections',
+           lc_xipr_name    TYPE string   VALUE
+           'com.sap.aii.ib.server.connect.webas.r3.ashost',
+           lc_output       TYPE c VALUE
+           'Output'  LENGTH 10,
+           lc_title        TYPE c VALUE
+           'Exchange Infrastructure: Test LCR Interface'  LENGTH 60.
+
+DATA : ls_input              TYPE tab512,
+       ls_output             TYPE tab512,
+       lv_action             TYPE char20,
+       lv_use_wbem_client    TYPE c,
+       ls_rfcdes             TYPE rfcdes,
+       lv_status             TYPE c,
+       lv_errors             TYPE i,
+       lv_rfc_mess(80)       TYPE c,
+       ls_rfcdisplay         TYPE rfcdisplay,
+       lv_bypassing_cache    TYPE char1 VALUE 'X',
+       lv_subrc              TYPE char3,
+       lv_nlines             TYPE i,
+       lv_boolean            TYPE char1,
+       lv_sld_loopup_stopped TYPE char1,
+       bs_id                 TYPE text60,
+       bs_role               TYPE lcr_bs_role,
+       sldui                 TYPE char1 VALUE 'X',
+       sldcache              TYPE char1,
+       text                  TYPE string,
+       url                   TYPE string,
+       xipr_value            TYPE string,
+       t_bsys                TYPE lcr_t_bsysprod,
+       s_bsys                TYPE lcrs_bsysprod,
+       ls_slddest            TYPE sld_s_accessdata_display.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+     " Adding title to the output
+
+      ls_output = lc_output.
+      APPEND ls_output TO lt_output.
+
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      PERFORM sld_run TABLES lt_output.
+
+      PERFORM sld_check TABLES lt_output.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM sld_run TABLES lt_output.
+
+
+      PERFORM config_selection TABLES lt_output.
+
+    CALL METHOD cl_sld_accessor_wbem_client=>load_srvr_access_setting
+        IMPORTING
+          flg_use_wbem_client = lv_use_wbem_client.
+
+      IF lv_use_wbem_client IS INITIAL.
+
+        ls_output = 'Communication mode: RFC + HTTP (deprecated)'.
+        APPEND ls_output TO lt_output.
+        SKIP.
+*   retrieve RFC destination settings:
+        SELECT SINGLE * FROM rfcdes INTO ls_rfcdes
+               WHERE rfcdest = lc_dest.
+
+        IF sy-subrc NE 0.
+
+          CONCATENATE 'RFC destination' lc_dest 'does not exist'
+                      INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          CONCATENATE '=> Create the RFC destination by using'
+              'transaction SM59!'
+              INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          lv_status = lc_error.
+*          RETURN.
+
+        ELSE.
+
+          IF ls_rfcdes-rfctype NE 'T'.
+            ADD 1 TO lv_errors.
+
+            CONCATENATE 'RFC destination' lc_dest
+                   'is of wrong type' ls_rfcdes-rfctype
+                   INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE '=> Change type to TCP/IP by using'
+                'transaction SM59!'
+                INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            lv_status = lc_error.
+            RETURN.
+          ELSE.
+            CALL FUNCTION 'RFCDES2RFCDISPLAY'
+              EXPORTING
+                import_rfcdes     = ls_rfcdes
+              IMPORTING
+                export_rfcdisplay = ls_rfcdisplay
+              EXCEPTIONS
+                OTHERS            = 1.
+
+            IF sy-subrc NE 0.
+              ls_output = 'Fatal error in function RFCDES2RFCDISPLAY'.
+              APPEND ls_output TO lt_output.
+              lv_status = lc_error.
+              RETURN.
+            ENDIF.
+
+            CONCATENATE 'Properties of RFC destination'
+                       ls_rfcdisplay-rfcdest
+                       INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'RFC host:       ' ls_rfcdisplay-rfchost
+                INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE  'program id:     ' ls_rfcdisplay-rfcexec
+                        INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'gateway host:   '
+                ls_rfcdisplay-rfcgwhost
+                INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+
+            CONCATENATE 'gateway service:'
+                 ls_rfcdisplay-rfcgwserv
+                 INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+            SKIP.
+
+            CONCATENATE 'Testing the RFC connection to the SLD java'
+                        'client...'
+                        INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+
+            CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+              EXPORTING
+     text = 'Testing the RFC connection to the SLD java client...'.
+
+            CALL FUNCTION 'RFC_PING'
+              DESTINATION ls_rfcdisplay-rfcdest
+              EXCEPTIONS
+                system_failure        = 1 MESSAGE lv_rfc_mess
+                communication_failure = 2 MESSAGE lv_rfc_mess
+                OTHERS                = 99.
+
+            CASE sy-subrc.
+              WHEN 0.
+
+                ls_output = 'RFC ping was successful'.
+                APPEND ls_output TO lt_output.
+
+              WHEN 1 OR 2.
+                ADD 1 TO lv_errors.
+
+                CONCATENATE 'RFC ping returned exception with'
+                    'message:' lv_rfc_mess
+                    INTO ls_output SEPARATED BY space.
+                APPEND ls_output TO lt_output.
+
+                lv_status = lc_error.
+                RETURN.
+              WHEN OTHERS.
+                ADD 1 TO lv_errors.
+
+                ls_output =  'RFC ping returned unknown exception'.
+                APPEND ls_output TO lt_output.
+                lv_status = lc_error.
+                RETURN.
+            ENDCASE.
+          ENDIF.
+        ENDIF.
+
+      ELSE.
+        ls_output = 'Communication mode: HTTP only (WBEM client)'.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+      SKIP.
+
+      CALL FUNCTION 'SLDAPI_GET_PRIMARY_DEST'
+        IMPORTING
+          dest                 = ls_slddest
+        EXCEPTIONS
+          no_primary_available = 1.
+
+      IF sy-subrc = 1.
+        ADD 1 TO lv_errors.
+        ls_output = 'No SLD server access data maintained'.
+        APPEND ls_output TO lt_output.
+
+        CONCATENATE '=> Use transaction SLDAPICUST to maintain'
+                  'the SLD server access data'
+                  INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+        lv_status = lc_error.
+        RETURN.
+      ENDIF.
+
+      ls_output = 'SLD destination settings:'.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'Alias:      ' ls_slddest-alias
+                  INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'Host name:  ' ls_slddest-host
+                   INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'Port number:' ls_slddest-port
+                  INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'User:       ' ls_slddest-user
+                  INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'Use transaction SLDAPICUST if you wish to'
+                  'maintain the SLD server access data'
+                   INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+
+      IF sldui = 'X'.
+        CONCATENATE 'Launching the SLD GUI in a separate browser'
+            'window...'
+            INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+        CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+          EXPORTING
+      text = 'Launching the SLD GUI in a separate browser window...'.
+
+        CONCATENATE '=> Verify in the browser GUI that the SLD is'
+                 'in a healthy running state!'
+                 INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+
+      ls_output = 'Calling function LCR_LIST_BUSINESS_SYSTEMS'.
+      APPEND ls_output TO lt_output.
+
+      ls_output =  'Retrieving data from the SLD server...'.
+      APPEND ls_output TO lt_output.
+
+      CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+          text = 'SLD lookup: get list of business systems'.
+
+
+      IF lv_bypassing_cache = 'X'.
+        lv_boolean = 'X'.
+        ls_output = 'Delete Cache and import again from SLD'.
+        APPEND ls_output TO lt_output.
+      ELSE.
+        PERFORM test_lcr_list_business_systems  USING lv_boolean.
+        ls_output = 'Read data from Cache'.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+
+      IF lv_boolean = 'X'.
+        CALL FUNCTION 'LCR_LIST_BUSINESS_SYSTEMS'
+          EXPORTING
+            give_roles             = ' '
+            give_products          = ' '
+            bypassing_cache        = lv_bypassing_cache
+          IMPORTING
+            bus_systems            = t_bsys
+          EXCEPTIONS
+            no_rfc_destination     = 1
+            no_landscape_directory = 2
+            communication_error    = 3
+            ld_error               = 4
+            OTHERS                 = 5.
+      ELSE.
+
+        ls_output = 'Currently no business systems in cache'.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+      CASE sy-subrc.
+
+        WHEN 0.
+
+          ls_output = 'Function call terminated sucessfully'.
+          APPEND ls_output TO lt_output.
+
+        WHEN OTHERS.
+
+          lv_subrc = sy-subrc.
+
+          CONCATENATE 'Function call returned exception code'
+             lv_subrc INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          ls_output = '=> Check whether the SLD is running!'.
+          APPEND ls_output TO lt_output.
+
+          lv_status = lc_error.
+          IF lv_bypassing_cache = 'X'.
+            RETURN.
+          ENDIF.
+
+      ENDCASE.
+
+      DESCRIBE TABLE t_bsys LINES lv_nlines.
+      IF lv_nlines = 0.
+
+        ls_output = 'No business systems maintained in the SLD'.
+        APPEND ls_output TO lt_output.
+
+        ls_output = '=> Check data integrity within the SLD!'.
+        APPEND ls_output TO lt_output.
+
+        lv_status = lc_warning.
+        IF lv_bypassing_cache = 'X'.
+          RETURN.
+        ENDIF.
+      ENDIF.
+
+      ls_output = 'List of business systems maintained in the SLD:'.
+      APPEND ls_output TO lt_output.
+
+
+      LOOP AT t_bsys INTO s_bsys.
+        IF sy-tabix = 8.
+          ls_output = '(...more...)'.
+          APPEND ls_output TO lt_output.
+          EXIT.
+        ENDIF.
+        ls_output = s_bsys-bs_key_name.
+        APPEND ls_output TO lt_output.
+      ENDLOOP.
+
+      PERFORM test_sld_cachestatus  TABLES lt_output
+        USING lv_sld_loopup_stopped.
+
+      SKIP.
+
+      ls_output = 'Calling function LCR_GET_OWN_BUSINESS_SYSTEM'.
+      APPEND ls_output TO lt_output.
+
+      ls_output = 'Retrieving data from the SLD server...'.
+      APPEND ls_output TO lt_output.
+
+      CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+          text = 'SLD lookup: get own business system name & type'.
+
+
+      IF lv_bypassing_cache = ' ' OR lv_sld_loopup_stopped =  'X'.
+        DATA l_s_cache TYPE lcrt_clntcache.
+        PERFORM  test_lcr_get_own_bs USING l_s_cache.
+        bs_id = l_s_cache-bs_key_name.
+        bs_role = l_s_cache-bs_role.
+        IF bs_id IS NOT INITIAL.
+          CONCATENATE 'Read from cache, date = ' l_s_cache-aedat
+          INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+        ENDIF.
+      ELSE.
+        CALL FUNCTION 'LCR_GET_OWN_BUSINESS_SYSTEM'
+          EXPORTING
+            bypassing_cache        = lv_bypassing_cache
+          IMPORTING
+            bs_key_name            = bs_id
+            bs_role                = bs_role
+          EXCEPTIONS
+            no_business_system     = 1
+            no_rfc_destination     = 2
+            no_landscape_directory = 3
+            illegal_arguments      = 4
+            communication_error    = 5
+            ld_error               = 6
+            OTHERS                 = 7.
+      ENDIF.
+
+      CASE sy-subrc.
+
+        WHEN 0.
+
+          ls_output = 'Function call terminated sucessfully'.
+          APPEND ls_output TO lt_output.
+
+        WHEN 1.
+          CONCATENATE 'No corresponding business system found'
+               'for system' sy-sysid 'client' sy-mandt
+               INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          CONCATENATE '=>'
+           'Check and maintain the SLD content for the current'
+               'client'
+               INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          lv_status = lc_warning.
+          RETURN.
+
+        WHEN OTHERS.
+          CLEAR lv_subrc.
+          lv_subrc = sy-subrc.
+
+          CONCATENATE 'Function call returned exception code'
+              lv_subrc INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          ls_output = '=> Check whether the SLD is running!'.
+          APPEND ls_output TO lt_output.
+          lv_status = lc_error.
+          RETURN.
+
+      ENDCASE.
+
+      CONCATENATE 'Properties of own business system associated'
+             'to system' sy-sysid 'client' sy-mandt
+             INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'id   =' bs_id
+      INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'role =' bs_role
+      INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      SKIP.
+
+      ls_output = 'Calling function LCR_GET_BS_DETAILS'.
+      APPEND ls_output TO lt_output.
+
+      ls_output = 'Retrieving data from the SLD server...'.
+      APPEND ls_output TO lt_output.
+
+      CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+          text = 'SLD lookup: get business system details'.
+
+
+      text = bs_id.
+      lv_boolean = 'X'.
+      IF lv_bypassing_cache = ' '.
+        DATA l_aedat TYPE sydats.
+        PERFORM test_lcr_get_bs_details
+           USING text url t_bsys l_aedat.
+        CONCATENATE 'Read from cache, date = ' l_aedat
+                    INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+        IF t_bsys[] IS INITIAL.
+          sy-subrc = 1.  "no_business_system
+        ENDIF.
+      ELSE.
+        CALL FUNCTION 'LCR_GET_BS_DETAILS'
+          EXPORTING
+            bs_key_name            = text
+            bypassing_cache        = lv_bypassing_cache
+          IMPORTING
+            integr_server_url      = url
+            bs_details             = t_bsys
+          EXCEPTIONS
+            no_business_system     = 1
+            no_rfc_destination     = 2
+            no_landscape_directory = 3
+            communication_error    = 4
+            ld_error               = 5
+            OTHERS                 = 6.
+      ENDIF.
+
+
+      CASE sy-subrc.
+
+        WHEN 0.
+
+          ls_output = 'Function call terminated sucessfully'.
+          APPEND ls_output TO lt_output.
+
+        WHEN OTHERS.
+          CLEAR lv_subrc.
+          lv_subrc = sy-subrc.
+          CONCATENATE 'Function call returned exception code'
+             lv_subrc INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          ls_output = '=> Check whether the SLD is running!'.
+          APPEND ls_output TO lt_output.
+
+          ADD 1 TO lv_errors.
+          RETURN.
+
+      ENDCASE.
+
+      DESCRIBE TABLE t_bsys LINES lv_nlines.
+      IF lv_nlines = 0.
+
+        CONCATENATE 'No details available for own business'
+            'system' bs_id INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+        lv_status = lc_warning.
+        RETURN.
+      ENDIF.
+      CONCATENATE 'Details of own business system' bs_id
+                  INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      READ TABLE t_bsys INDEX 1 INTO s_bsys.
+
+      CONCATENATE 'caption =' s_bsys-bs_caption
+      INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'product =' s_bsys-pr_name
+      INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+      CONCATENATE 'IS-URL  =' url
+      INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+
+
+ENDFORM.
+
+
+FORM sld_check TABLES lt_output.
+
+ IF lv_status = lc_warning.
+
+        CONCATENATE 'Summary: Connection to SLD works technically,'
+                 'but the SLD content may need maintenance'
+                 INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+        ls_output = '=> Check and maintain the SLD data content'.
+        APPEND ls_output TO lt_output.
+      ELSEIF lv_status = lc_error.
+
+        ls_output = 'Summary: Connection to SLD does not work'.
+        APPEND ls_output TO lt_output.
+
+        ls_output = '=> Check SLD function and configurations'.
+        APPEND ls_output TO lt_output.
+      ELSE.
+
+        ls_output = 'Summary: Connection to SLD works correctly'.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+      IF bs_role EQ 'HUB'.
+
+        ls_output = 'Now checking access to the XI Profile'.
+        APPEND ls_output TO lt_output.
+        SKIP.
+
+* retrieve RFC destination settings:
+        SELECT SINGLE * FROM rfcdes INTO ls_rfcdes
+               WHERE rfcdest = lc_xipr_dest.
+
+        IF sy-subrc NE 0.
+
+
+          CONCATENATE 'RFC destination' lc_xipr_dest
+              'does not exist'
+              INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+
+          CONCATENATE '=> Create the RFC destination by using'
+               'transaction SM59!'
+               INTO ls_output SEPARATED BY space.
+          APPEND ls_output TO lt_output.
+
+          RETURN.
+
+        ELSE.
+
+          IF ls_rfcdes-rfctype NE 'T'.
+
+            ADD 1 TO lv_errors.
+
+            CONCATENATE 'RFC destination' lc_xipr_dest
+                    'is of wrong type' ls_rfcdes-rfctype
+                    INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE '=> Change type to TCP/IP by using'
+                   'transaction SM59!'
+                   INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            RETURN.
+
+          ELSE.
+
+            CALL FUNCTION 'RFCDES2RFCDISPLAY'
+              EXPORTING
+                import_rfcdes     = ls_rfcdes
+              IMPORTING
+                export_rfcdisplay = ls_rfcdisplay
+              EXCEPTIONS
+                OTHERS            = 1.
+            IF sy-subrc NE 0.
+
+      ls_output = 'Fatal error in function RFCDES2RFCDISPLAY'.
+        APPEND ls_output TO lt_output.
+         RETURN.
+            ENDIF.
+
+            CONCATENATE 'Properties of RFC destination'
+                 ls_rfcdisplay-rfcdest
+                 INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'RFC host:       ' ls_rfcdisplay-rfchost
+            INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'program id:     ' ls_rfcdisplay-rfcexec
+            INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'gateway host:   '
+                    ls_rfcdisplay-rfcgwhost
+             INTO ls_output SEPARATED BY space.
+
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'gateway service:'
+                   ls_rfcdisplay-rfcgwserv
+            INTO ls_output SEPARATED BY space.
+
+            APPEND ls_output TO lt_output.
+
+            SKIP.
+            CONCATENATE 'Testing the RFC connection to the SLD java'
+                    'client...'
+             INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+     CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+       text = 'Testing the RFC connection to the SLD java client...'.
+
+      CALL FUNCTION 'RFC_PING' DESTINATION ls_rfcdisplay-rfcdest
+          EXCEPTIONS
+           system_failure        = 1 MESSAGE lv_rfc_mess
+           communication_failure = 2 MESSAGE lv_rfc_mess
+           OTHERS                = 99.
+
+            CASE sy-subrc.
+              WHEN 0.
+
+                ls_output = 'RFC ping was successful'.
+                APPEND ls_output TO lt_output.
+
+              WHEN 1 OR 2.
+                ADD 1 TO lv_errors.
+
+                CONCATENATE 'RFC ping returned exception with'
+               'message:' INTO ls_output SEPARATED BY space.
+                APPEND ls_output TO lt_output.
+
+                ls_output = lv_rfc_mess.
+                APPEND ls_output TO lt_output.
+
+                RETURN.
+              WHEN OTHERS.
+                ADD 1 TO lv_errors.
+
+                ls_output = 'RFC ping returned unknown exception'.
+                APPEND ls_output TO lt_output.
+
+                RETURN.
+            ENDCASE.
+
+          ENDIF.
+
+        ENDIF.
+
+        SKIP.
+
+        ls_output = 'Calling function EXCHANGE_PROFILE_GET_PARAMETER'.
+        APPEND ls_output TO lt_output.
+
+        ls_output = 'Retrieving data from the XI Profile...'.
+        APPEND ls_output TO lt_output.
+
+        CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+          EXPORTING
+            text = 'Retrieving data from the XI Profile...'.
+
+        CALL FUNCTION 'EXCHANGE_PROFILE_GET_PARAMETER'
+          EXPORTING
+            section             = lc_xipr_section
+            name                = lc_xipr_name
+          IMPORTING
+            value               = xipr_value
+          EXCEPTIONS
+            no_rfc_destination  = 1
+            communication_error = 2
+            ep_error            = 3
+            OTHERS              = 4.
+
+        CASE sy-subrc.
+
+          WHEN 0.
+
+            ls_output = 'Function call terminated sucessfully'.
+            APPEND ls_output TO lt_output.
+
+          WHEN OTHERS.
+            CLEAR lv_subrc.
+            lv_subrc = sy-subrc.
+
+            CONCATENATE 'Function call returned exception code'
+                   lv_subrc INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            CONCATENATE 'Access to the XI Profile is currently'
+                  'disrupted.' INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+
+            CONCATENATE '=> Check whether you can access the'
+                 'XI Profile using a web browser!'
+                       INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+
+            ADD 1 TO lv_errors.
+            RETURN.
+
+        ENDCASE.
+
+        CONCATENATE 'Retrieved value of'
+                 'section   =' lc_xipr_section
+                 'parameter =' lc_xipr_name
+                 INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+        CONCATENATE  '-> value  =' xipr_value
+        INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+
+        CONCATENATE 'Summary: Connection to the XI Profile'
+              'works correctly'
+              INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+
+      ENDIF.
+
+ENDFORM.
+
+
+form config_selection TABLES lt_output.
+  IF sy-tcode <> 'SLDCHECK' and sy-tcode <> 'LCRCHECK'.
+*    CALL SCREEN 100.
+  ELSE.
+    sldcache = ' '.
+    sldui = 'X'.
+  ENDIF.
+  IF sldcache = 'X'.
+    lv_bypassing_cache  = ' '.
+    ls_output =  'Read data only from SLD-Cache, no SLD-Lookup'.
+            APPEND ls_output TO lt_output.
+  ELSE.
+    lv_bypassing_cache  = 'X'.
+   ls_output =  'Read data only from SLD'.
+           APPEND ls_output TO lt_output.
+  ENDIF.
+  if sldui = ' '.
+   ls_output = 'Launching of the SLD GUI is disabled'.
+           APPEND ls_output TO lt_output.
+  endif.
+endform.
+
+FORM test_lcr_list_business_systems
+                  USING lv_boolean TYPE char1.
+
+  CONSTANTS:
+        c_bus_systems_list TYPE indx_srtfd VALUE 'BUS_SYSTEM_LIST2'.
+  TYPES:
+    BEGIN OF ty_sld_s_bskey,
+      bs_key_name TYPE sld_bskey,
+      bs_caption  TYPE string,
+    END OF ty_sld_s_bskey.
+  TYPES:
+        ty_sld_t_bskey        TYPE STANDARD TABLE OF ty_sld_s_bskey.
+  DATA  t_bslist              TYPE ty_sld_t_bskey.
+  DATA  t_bslist_cache        TYPE ty_sld_t_bskey.
+  DATA  s_indx                TYPE lcrt_indx.
+
+  IMPORT bs_list2  TO t_bslist_cache
+         FROM DATABASE lcrt_indx(xi)
+         ID c_bus_systems_list TO s_indx.
+  IF sy-subrc = 0.
+    lv_boolean = 'X'.
+  ELSE.
+    lv_boolean = ' '.
+    sy-subrc = 0.
+  ENDIF.
+
+ENDFORM.
+
+FORM test_sld_cachestatus TABLES lt_output
+                       USING l_flag TYPE char1.
+
+  DATA text    TYPE string.
+  DATA srtfd   TYPE indx_srtfd.
+  DATA l_cache TYPE lcrt_clntcache.
+
+  l_flag = ' '.
+  CONCATENATE sy-sysid sy-mandt 'CACHESTATUS' INTO text.
+  srtfd = text.
+  SELECT SINGLE * FROM lcrt_clntcache
+    INTO l_cache WHERE srtfd = srtfd.
+  IF sy-subrc = 0 AND l_cache-bs_role > 4.
+    l_flag = 'X'.
+
+*    write: / .
+    ls_output = 'SLD update deactivated'.
+    APPEND ls_output TO lt_output.
+
+  ENDIF.
+
+ENDFORM.
+
+FORM test_lcr_get_own_bs
+        USING s_cache TYPE lcrt_clntcache.
+  DATA text    TYPE string.
+  DATA srtfd   TYPE indx_srtfd.
+  DATA l_cache TYPE lcrt_clntcache.
+
+
+  CONCATENATE sy-sysid sy-mandt INTO text.
+  srtfd = text.
+  SELECT SINGLE * FROM lcrt_clntcache
+    INTO s_cache WHERE srtfd = srtfd.
+  IF sy-subrc <> 0.
+    CLEAR s_cache.
+    EXIT.
+  ENDIF.
+ENDFORM.
+
+FORM test_lcr_get_bs_details
+    USING bs_key_name       TYPE string
+          integr_server_url TYPE  string
+          bs_details        TYPE  lcr_t_bsysprod
+          l_aedat           TYPE sydats.
+
+  CONSTANTS:
+      c_bus_system_details TYPE indx_srtfd VALUE 'BUS_SYSTEM_DETAIL2'.
+
+  TYPES:
+    BEGIN OF ty_s_bsysinfo,
+      bs_key_name TYPE sld_bskey,
+      url         TYPE string,
+      logsys      TYPE logsys,
+    END OF ty_s_bsysinfo.
+
+  DATA  t_details         TYPE lcr_t_bsysprod.
+  DATA  t_details_cache   TYPE lcr_t_bsysprod.
+  DATA  t_info_cache      TYPE STANDARD TABLE OF ty_s_bsysinfo.
+  DATA s_indx            TYPE lcrt_indx.
+  DATA bs_details_cache  TYPE lcr_t_bsysprod.
+  DATA s_info            TYPE ty_s_bsysinfo.
+  DATA rc                TYPE i.
+
+  FIELD-SYMBOLS:
+        <fs_detail>  TYPE lcrs_bsysprod.
+
+  IMPORT bs_details TO t_details_cache
+         is_infos   TO t_info_cache
+         FROM DATABASE lcrt_indx(xi)
+         ID c_bus_system_details TO s_indx.
+
+  IF sy-subrc = 0.
+*   find relevant entries:
+    LOOP AT t_details_cache ASSIGNING <fs_detail>
+                      WHERE bs_key_name = bs_key_name.
+      APPEND <fs_detail> TO bs_details_cache.
+    ENDLOOP.
+    rc = sy-subrc.
+    READ TABLE t_info_cache WITH KEY bs_key_name = bs_key_name
+                            INTO s_info.
+    IF rc = 0 AND sy-subrc = 0.
+      l_aedat = s_indx-aedat.
+      integr_server_url = s_info-url.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.

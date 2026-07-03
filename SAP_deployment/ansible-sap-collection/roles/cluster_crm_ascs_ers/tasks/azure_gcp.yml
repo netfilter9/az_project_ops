@@ -1,0 +1,125 @@
+- name: main | install sap-suse-cluster-connector
+  package:
+    name: sap-suse-cluster-connector
+    
+- name: main | adding values in /etc/init.d/after.local
+  lineinfile:
+    path: /etc/init.d/after.local
+    line: "{{ item }}"
+  with_items:
+    - ip route del local {{ sap.logical_hosts.ascs.ip }}
+    - ip route del local {{ sap.logical_hosts.ers.ip }}
+  when: platform == 'gcp' 
+
+- name: main | reboot servers
+  reboot: 
+  when: platform == 'gcp'
+
+- name: main | ascs
+  block: 
+
+    - name: main | set up cluster (if required)
+      include_role: 
+        name: cluster_crm_apply_config
+      vars:
+        cluster_type: ascs_nosap
+
+    - name: main | put ers node into standby 
+      command: crm node standby {{ node2 }}
+
+    - name: main | install ascs
+      include_role: 
+        name: sap_install
+      vars:
+        role: ascs
+
+    - name: main | bring ers back online 
+      command: crm node online {{ node2 }}
+
+  when: ansible_hostname == node1  
+
+- name: main | ers
+  block:
+  
+    - name: main | put ascs node into standby 
+      command: crm node standby {{ node1 }}
+
+    - name: main | install ers
+      include_role: 
+        name: sap_install
+      vars:
+        role: ers
+
+    - name: main | bring ascs back online 
+      command: crm node online {{ node1 }}
+
+    - name: main | set profile id facts
+      set_fact:
+        ascs_instance_profile_name: "{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}_{{ sap.logical_hosts.ascs.hostname }}"
+        ers_instance_profile_name: "{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}_{{ sap.logical_hosts.ers.hostname }}"
+
+    - name: main | (A)SCS profile additional lines
+      lineinfile:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ascs_instance_profile_name }}
+        line: "{{ item }}"
+      loop:
+        - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+        - service/halib_cluster_connector = /usr/bin/sap_suse_cluster_connector
+        - enque/encni/set_so_keepalive = true
+
+    - name: main | ERS profile additional lines
+      lineinfile:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ers_instance_profile_name }}
+        line: "{{ item }}"
+      loop:
+        - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+        - service/halib_cluster_connector = /usr/bin/sap_suse_cluster_connector
+
+  when: ansible_hostname == node2 
+
+- name: main | adding sidadm in haclient group
+  user:
+    name: "{{ sap.sid|lower }}adm"
+    groups: haclient
+    append: yes
+
+- name: main | copy ascs service content
+  shell: cat /usr/sap/sapservices | grep "{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}"
+  register: ascs_content
+  when: ansible_hostname == node1
+
+- name: main | share ascs service content
+  delegate_to: "{{ node2 }}"
+  lineinfile:
+    line: "{{ ascs_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node1
+
+- name: main | copy ers service content
+  shell: cat /usr/sap/sapservices | grep "ERS{{ sap.instance_numbers.ers }}"
+  register: ers_content
+  when: ansible_hostname == node2
+
+- name: main | share ascs service content
+  delegate_to: "{{ node1 }}"
+  lineinfile:
+    line: "{{ ers_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node2
+
+- name: main | set up cluster (if required)
+  include_role: 
+    name: cluster_crm_apply_config
+  vars:
+    cluster_type: ascs_sap
+  when: ansible_hostname == node1 
+
+- name: main | tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: net.ipv4.tcp_keepalive_time, value: 120}

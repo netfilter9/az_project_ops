@@ -1,0 +1,18 @@
+---
+- name: get disk facts
+  win_disk_facts:
+  register: disk_facts
+
+- set_fact:
+    disk_info: "{{ disk_facts }}"
+
+- name: copying the output in server
+  win_copy:
+    dest: C:\disk_facts.json
+    content: "{{ disk_facts }}"
+    
+- name: fetching the json file from server to remote_src
+  fetch: 
+    src: C:\disk_facts.json
+    dest: "disk_facts.json"
+    remote_src: yes

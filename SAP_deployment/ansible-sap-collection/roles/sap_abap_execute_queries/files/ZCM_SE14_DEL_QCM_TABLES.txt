@@ -1,0 +1,163 @@
+*&********************************************************************&*
+* Report              :   ZCM_SE14_DEL_QCM_TABLES                      *
+* Title               :   Invalid Temporary Tables                     *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   28/09/2020                                   *
+* Purpose             :   This report is to Capture & Delete Invalid   *
+*                         Temporary Tables during Cloud Migration      *
+*----------------------------------------------------------------------*
+REPORT zcm_se14_del_qcm_tables.
+
+DATA BEGIN OF lt_iqcm  OCCURS 80.
+INCLUDE STRUCTURE ddsymtab.
+DATA END OF lt_iqcm.
+
+DEFINE define_table.
+  DATA: BEGIN OF &1 OCCURS &3.
+          INCLUDE STRUCTURE &2.
+  DATA: END OF &1.
+END-OF-DEFINITION.
+
+CONSTANTS: lc_sep         TYPE c VALUE '|'              LENGTH 1,
+           lc_export      TYPE c VALUE 'EXPORT'         LENGTH 6,
+           lc_delete      TYPE c VALUE 'DELETE'         LENGTH 6,
+           lc_object_name TYPE c VALUE 'Objectname'     LENGTH 10,
+           lc_title       TYPE c VALUE
+           'Temporary tables from update without restart log'
+                                                        LENGTH 50,
+           lc_err_msg     TYPE c VALUE 'List is empty'  LENGTH 20
+           ##NO_TEXT,
+           lc_del_msg     TYPE c VALUE
+           'Invalid temporary tables deleted are'       LENGTH 40
+           ##NO_TEXT.
+
+DATA: ls_input   TYPE tab512,
+      ls_output  TYPE tab512,
+      lv_action  TYPE char20,
+      lv_subrc   TYPE sy-subrc,
+      lv_tabname TYPE x030l-tabname,
+      ls_iqcm    LIKE LINE OF lt_iqcm.
+
+define_table lt_all_tables dbobject 20000.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      FREE lt_iqcm.
+      CALL FUNCTION 'DB_GET_ALL_TABLES'
+        IMPORTING
+          subrc      = lv_subrc
+        TABLES
+          all_tables = lt_all_tables
+        EXCEPTIONS
+          OTHERS     = 1.
+
+      LOOP AT lt_all_tables.
+        IF lt_all_tables-objname(3) EQ 'QCM'.
+
+          lv_tabname = lt_all_tables-objname.
+          PERFORM qcm_nametab_verify(saplsddd)
+          USING lv_tabname 'X' lv_subrc.
+          IF lv_subrc EQ 4.
+            lt_iqcm-name = lt_all_tables-objname.
+            APPEND lt_iqcm.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      IF lt_iqcm IS NOT INITIAL.
+
+        " Adding heading to the output
+        ls_output = lc_object_name.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_iqcm INTO ls_iqcm.
+
+          ls_output = ls_iqcm-name.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        " List is empty
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+    WHEN lc_delete.               " When action is DELETE
+
+      FREE lt_iqcm.
+      CALL FUNCTION 'DB_GET_ALL_TABLES'
+        IMPORTING
+          subrc      = lv_subrc
+        TABLES
+          all_tables = lt_all_tables
+        EXCEPTIONS
+          OTHERS     = 1.
+      LOOP AT lt_all_tables.
+        IF lt_all_tables-objname(3) EQ 'QCM'.
+
+          lv_tabname = lt_all_tables-objname.
+          PERFORM qcm_nametab_verify(saplsddd)
+          USING lv_tabname 'X' lv_subrc.
+          IF lv_subrc EQ 4.
+            lt_iqcm-name = lt_all_tables-objname.
+            APPEND lt_iqcm.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+
+      IF lt_iqcm IS NOT INITIAL.
+
+        " Invalid temporary tables deleted are
+        ls_output = lc_del_msg.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_iqcm INTO ls_iqcm.
+
+          CALL 'DB_RM_NTAB' ID 'TABNAME' FIELD ls_iqcm-name.
+          CALL FUNCTION 'DB_DROP_TABLE'
+            EXPORTING
+              tabname               = ls_iqcm-name
+            EXCEPTIONS
+              program_not_generated = 1
+              program_not_written   = 2
+              table_not_dropped     = 3
+              OTHERS                = 4.
+
+          IF sy-subrc EQ 0.
+
+            ls_output = ls_iqcm-name.
+            APPEND ls_output TO lt_output.
+            CLEAR: ls_output, ls_iqcm.
+
+          ENDIF.
+
+        ENDLOOP.
+
+      ELSE.
+        " List is empty
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.

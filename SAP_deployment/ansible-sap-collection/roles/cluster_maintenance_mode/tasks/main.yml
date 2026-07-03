@@ -1,0 +1,9 @@
+---
+- name: main | modify cluster maintenance mode
+  command: crm -F configure property maintenance-mode="{{ maintenance_mode | default('false') }}"
+  when: ansible_os_family == 'Suse'
+
+
+- name: main | modify cluster maintenance mode
+  command: pcs property set maintenance-mode="{{ maintenance_mode | default('false') }}"
+  when: ansible_os_family == 'RedHat'

@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "proximity_placement_groups": {
+            "title": "Proximity Placement Groups",
+            "description": "This is a list group. Each declared item with have a key that defines the name for the proximity placement group. Within each item, the following arguments are supported:",
+            "type": "object",
+            "examples": [
+                {
+                    "example-ppg-scNN-app": {}
+                }
+            ],
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "lookup_rg_name": {
+                        "$ref": "fields.json#/definitions/lookup_rg_name"
+                    },
+                    "location": {
+                        "$ref": "fields.json#/definitions/location"
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    },
+    "additionalProperties": false
+}

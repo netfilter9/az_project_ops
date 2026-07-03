@@ -1,0 +1,83 @@
+platform: azure
+create_dirs: false
+dbtype: db2
+
+  #hostname: vm-vcsi-dev-weu-sapecc-001
+  #virtual hostname: SAPDEVDB01
+
+sap:
+  load_type: STD #HBR
+  tune: NETWEAVER #BOBJ,MAXDB,NETWEAVER,NETWEAVER+HANA,S4HANA-APP+DB,S4HANA-APPSERVER,S4hana_dbSERVER,SAP-ASE
+  product_ids:    
+    std: "NW_ABAP_OneHost:BS2013SR2.ERP607SR2.DB6.PD"
+  logical_hosts:
+    db:
+      hostname: SAPDEVDB01
+      ip: 10.130.96.4
+      netmask: "255.255.255.0"
+      cidr: 28
+    ascs: 
+      hostname: SAPDEVDB01
+      ip: 10.130.96.4
+      netmask: "255.255.255.0"
+      cidr: 28
+    pas: 
+      hostname: SAPDEVDB01
+      ip: 10.130.96.4
+      netmask: "255.255.255.0"
+      cidr: 28
+  sid: D01
+  instance_numbers:
+    ascs: "02"
+    pas: "01"    
+    db: "00"
+    # daa: "98"
+  dbname: sapd01      # added for an issue in sap_install role
+  db:
+    # tune: HANA
+    sid: D01
+    # schema_name: SAPABAP1
+    tenants:
+      - D01
+  # daa:
+  #   sid: DAA
+  sld:
+    connection: sld #sld,no
+    use_https: false #true,false
+    solman_connection: none #solman,none
+    use_ssl: false #true,false
+    
+      #kevin: fix this
+fqdn: ""
+
+  #anf_volume_ip: "10.0.5.5"
+
+downloads:
+  - url: "https://sapdatastorage.blob.core.windows.net/sap-export-data/SAPV2/Vinci/SWPM/*"
+    token: "{{ vault_sas_tokens.token1 }}"
+    dest: "./sapinst/SWPM"
+  - url: "https://sapdatastorage.blob.core.windows.net/sap-export-data/SAPV2/Vinci/KERNEL/*"
+    token: "{{ vault_sas_tokens.token1 }}"
+    dest: "./sapinst/KERNEL"    
+  - url: "https://sapdatastorage.blob.core.windows.net/sap-export-data/SAPV2/Vinci/EXPORTS/*"
+    token: "{{ vault_sas_tokens.token1 }}"
+    dest: "./sapinst/EXPORTS"
+  - url: "https://sapdatastorage.blob.core.windows.net/sap-export-data/SAPV2/Vinci/EXPORT/db2/*"
+    token: "{{ vault_sas_tokens.token1 }}"
+    dest: "./sapinst/EXPORTS/db2"
+  - url: "https://sapdatastorage.blob.core.windows.net/sap-export-data/SAPV2/Vinci/EXPORT/DBRDBMS/*"
+    token: "{{ vault_sas_tokens.token1 }}"
+    dest: "./sapinst/EXPORTS/DBRDBMS"
+
+passwords:
+    master: "{{ vault_passwords.master }}"
+    admin: "{{ vault_passwords.admin }}"
+    db_admin: "{{ vault_passwords.db_admin }}"
+    sapadm: "{{ vault_passwords.sapadm }}"
+    schema: "{{ vault_passwords.schema }}"
+    sidadm: "{{ vault_passwords.sidadm }}"
+    system: "{{ vault_passwords.system }}"
+    systemdb: "{{ vault_passwords.systemdb }}"
+    javaschema: "{{ vault_passwords.javaschema }}"
+    abapschema: "{{ vault_passwords.abapschema }}"
+    ddic: "{{ vault_passwords.ddic }}"

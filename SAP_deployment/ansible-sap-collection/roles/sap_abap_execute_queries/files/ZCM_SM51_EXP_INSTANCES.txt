@@ -1,0 +1,183 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM51_EXP_INSTANCES                       *
+* Title               :   Export SAP Instances                         *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   18/08/2020                                   *
+* Purpose             :   This report is for exporting SAP Instances   *
+*                         data during Cloud Migration                  *
+*----------------------------------------------------------------------*
+
+REPORT zcm_sm51_exp_instances.
+
+TYPES: BEGIN OF lty_imsxxlist_alv,
+         name                      TYPE  msname2,
+         host                      TYPE  mshost2,
+         serv                      TYPE  msserv,
+         msgtypes                  TYPE  mstypes,
+         hostadr                   TYPE  mshostadr,
+         servno                    TYPE  msservno,
+         state                     TYPE  msstate,
+         hostnamelong              TYPE  mshostname,
+         hostaddr_v4_str           TYPE  ni_ipv4addr,
+         hostaddr_v6_str           TYPE  ni_nodeaddr,
+         sysservice0               TYPE  mssysservice,
+         sysservice1               TYPE  mssysservice,
+         sysservice2               TYPE  mssysservice,
+         sysservice3               TYPE  mssysservice,
+         services(80),
+         servstr(10),
+         status(10),
+         kernel_update_pending(30),
+         server_suspended(50),
+       END OF lty_imsxxlist_alv,
+
+       BEGIN OF lty_result,
+         name     TYPE  msname2,
+         host     TYPE  mshost2,
+         services TYPE  char80,
+         status   TYPE  char10,
+       END OF lty_result.
+
+
+CONSTANTS: lc_sep      TYPE c VALUE '|'                LENGTH 1,
+           lc_export   TYPE c VALUE 'EXPORT'           LENGTH 6,
+           lc_active   TYPE c VALUE 'Active'           LENGTH 6,
+           lc_passive  TYPE c VALUE 'Passive'          LENGTH 7,
+           lc_shutdown TYPE c VALUE 'Shutdown'         LENGTH 8,
+           lc_stop     TYPE c VALUE 'Stop'             LENGTH 4,
+           lc_starting TYPE c VALUE 'Starting'         LENGTH 8,
+           lc_initial  TYPE c VALUE 'Initial'          LENGTH 7,
+           lc_host     TYPE c VALUE 'Host'             LENGTH 4,
+           lc_services TYPE c VALUE 'InstanceServices' LENGTH 20,
+           lc_state    TYPE c VALUE 'State'            LENGTH 6,
+           lc_instance TYPE c VALUE
+           'ApplicationServerInstance'                 LENGTH 35,
+           lc_title    TYPE c VALUE
+           'AS Instances of SAP System'                LENGTH 30,
+           lc_err_msg  TYPE c VALUE
+           'No Instances found in the system'          LENGTH 40
+           ##NO_TEXT.
+
+DATA : ls_input                     TYPE tab512,
+       ls_output                    TYPE tab512,
+       lv_action                    TYPE char20,
+       lv_loc_kernel_update_pending TYPE i,
+       lv_loc_server_suspended      TYPE i,
+       lv_loc_reconnect_pending     TYPE i,
+       lt_imsxxlist                 TYPE TABLE OF msxxlist_v6
+                                    WITH HEADER LINE,
+       lt_imsxxlist_alv             TYPE TABLE OF lty_imsxxlist_alv
+                                    WITH HEADER LINE,
+       lt_result                    TYPE TABLE OF lty_result,
+       ls_result                    TYPE lty_result.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.                     " If action is EXPORT
+
+      " To get the instance in the system
+      PERFORM get_instance.
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      IF lt_result IS NOT INITIAL.
+
+        " Adding headings to the output
+        CONCATENATE lc_instance lc_sep
+                    lc_host     lc_sep
+                    lc_services lc_sep
+                    lc_state
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_result INTO ls_result.
+
+          CONCATENATE ls_result-name     lc_sep
+                      ls_result-host     lc_sep
+                      ls_result-services lc_sep
+                      ls_result-status
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+      ENDIF.
+  ENDCASE.
+
+ENDFORM.
+
+FORM get_instance.
+
+  " FM to get server list
+  CALL FUNCTION 'TH_SERVER_LIST'
+    EXPORTING
+      active_server  = 0
+    TABLES
+      list           = lt_imsxxlist
+    EXCEPTIONS
+      no_server_list = 1
+      OTHERS         = 2.
+
+  IF sy-subrc EQ 0.
+
+    SORT lt_imsxxlist BY name.
+
+    REFRESH lt_imsxxlist_alv.
+
+    LOOP AT lt_imsxxlist.
+
+      MOVE-CORRESPONDING lt_imsxxlist TO lt_imsxxlist_alv.
+
+      " Retrive server details( Services , update_pending...)
+      CALL FUNCTION 'TH_SERVER_TYPE'
+        EXPORTING
+          services              = lt_imsxxlist_alv-msgtypes
+          sysservice0           = lt_imsxxlist_alv-sysservice0
+          sysservice1           = lt_imsxxlist_alv-sysservice1
+          sysservice2           = lt_imsxxlist_alv-sysservice2
+          sysservice3           = lt_imsxxlist_alv-sysservice3
+        IMPORTING
+          service_text          = lt_imsxxlist_alv-services
+          kernel_update_pending = lv_loc_kernel_update_pending
+          server_suspended      = lv_loc_server_suspended
+          reconnect_pending     = lv_loc_reconnect_pending.
+
+      " Populate status field
+      CASE lt_imsxxlist_alv-state.
+        WHEN 1.
+          lt_imsxxlist_alv-status = lc_active.
+        WHEN 2.
+          lt_imsxxlist_alv-status = lc_passive.
+        WHEN 3.
+          lt_imsxxlist_alv-status = lc_shutdown.
+        WHEN 4.
+          lt_imsxxlist_alv-status = lc_stop.
+        WHEN 5.
+          lt_imsxxlist_alv-status = lc_starting.
+        WHEN 6.
+          lt_imsxxlist_alv-status = lc_initial.
+        WHEN OTHERS.
+          lt_imsxxlist_alv-status = lc_active.
+      ENDCASE.
+
+      ls_result-name     = lt_imsxxlist_alv-name.
+      ls_result-host     = lt_imsxxlist_alv-host.
+      ls_result-services = lt_imsxxlist_alv-services.
+      ls_result-status   = lt_imsxxlist_alv-status.
+      APPEND ls_result TO lt_result.
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.

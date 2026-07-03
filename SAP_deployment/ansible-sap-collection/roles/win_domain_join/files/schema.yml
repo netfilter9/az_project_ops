@@ -1,0 +1,15 @@
+---
+
+infra:
+  type: dict
+  required: true
+  empty: false
+  schema:
+    fqdn:
+      type: string
+      empty: false
+    domain_controllers:
+      type: list
+      schema:
+        type: string
+        regex: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'

@@ -1,0 +1,30 @@
+---
+- name: Vinci Create Linux User and to Group
+  remote_user: root
+  become: true
+  hosts: 10.130.65.8
+  vars_files:
+    - vault.yml
+  
+  tasks:
+
+    - name: Ensure user exists
+      user:
+        name: euradm
+        comment: "euradm User"
+        shell: /bin/bash
+        password: "{{ vault_password | password_hash('sha512') }}"
+        create_home: yes
+
+    - name: Add user to sudoers
+      copy:
+        dest: /etc/sudoers.d/euradm
+        content: |
+          euradm ALL=(ALL) NOPASSWD: ALL
+        mode: '0440'
+
+    - name: Add user to group
+      user:
+        name: euradm
+        groups: sapsys
+        append: yes

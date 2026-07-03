@@ -1,0 +1,53 @@
+*&********************************************************************&*
+* Report              :  ZBASIS_R_BASIS_COMPONENT                      *
+* Title               :  Release and Support Patch level - SAP_BASIS   *
+* Created by          :  Fathima Hussain                               *
+* Created on          :  14/10/2020                                    *
+* Purpose             :  This report is used to read the release and   *
+*                        support patch level of SAP_BASIS in order to  *
+*                        handle code change across versions            *
+*----------------------------------------------------------------------*
+REPORT zbasis_r_basis_component.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config TABLES lt_input  STRUCTURE tab512
+                       lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep      TYPE c     VALUE '|'.
+
+  DATA: ls_input          TYPE tab512,
+        ls_output         TYPE tab512,
+        lv_comp_rel       TYPE   spam_cvers-release,
+        lv_comp_spp_level TYPE  spam_fpdef-version.
+
+  CALL FUNCTION 'OCS_GET_COMPONENT_STATE'
+    EXPORTING
+      iv_component      = 'SAP_BASIS'
+      iv_buffered       = ' '
+    IMPORTING
+      ev_comp_rel       = lv_comp_rel
+      ev_comp_spp_level = lv_comp_spp_level
+    EXCEPTIONS
+      unknown_component = 1
+      OTHERS            = 2.
+  IF sy-subrc <> 0.
+    MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+               WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+               INTO ls_output.
+    APPEND ls_output TO lt_output.
+    RETURN.	
+  ENDIF.
+
+    ls_output = 'Basis Component Version'.
+    APPEND ls_output TO lt_output.
+    ls_output = 'Release|SupportPackage'.
+    APPEND ls_output TO lt_output.
+
+
+  CONCATENATE lv_comp_rel lv_comp_spp_level
+  INTO ls_output SEPARATED BY lc_sep.
+  APPEND ls_output TO lt_output.
+
+
+ENDFORM.

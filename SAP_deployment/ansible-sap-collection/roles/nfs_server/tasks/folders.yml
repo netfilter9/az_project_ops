@@ -1,0 +1,14 @@
+- name: folders | force primary to node1
+  command: drbdadm primary --force {{ share.ref }}-nfs
+  retries: 5
+  delay: 10
+  when: node2 is defined
+
+- name: folders | create base folders
+  file:
+    dest: "{{ share.mount }}/{{ folder }}"
+    state: directory
+    mode: "{{ share.mode | default('0755')}}"
+  loop: "{{ share.sub_folders | default ([]) }}"
+  loop_control:
+    loop_var: folder

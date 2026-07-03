@@ -1,0 +1,10 @@
+---
+
+win_disable_uac: yes
+win_disable_guest_account: yes
+win_guest_account_name: "Guest"
+dsc_modules: 
+  - ComputerManagementDsc
+  - StorageDsc
+  - NetworkingDsc
+  - ServerManager

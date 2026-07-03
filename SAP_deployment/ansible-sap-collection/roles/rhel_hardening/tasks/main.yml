@@ -1,0 +1,30 @@
+---
+- import_tasks: prior.yml
+  become: yes
+  tags:
+    - prior_tasks
+    - always
+
+- import_tasks: 01_initial.yml
+  become: yes
+  when: rhel7cis_01_initial
+
+- import_tasks: 02_services.yml
+  become: yes
+  when: rhel7cis_02_services
+
+- import_tasks: 03_network.yml
+  become: yes
+  when: rhel7cis_03_network
+
+- import_tasks: 04_logging.yml
+  become: yes
+  when: rhel7cis_04_logging
+
+- import_tasks: 05_access.yml
+  become: yes
+  when: rhel7cis_05_access
+
+- import_tasks: 06_system.yml
+  become: yes
+  when: rhel7cis_06_system

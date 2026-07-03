@@ -1,0 +1,31 @@
+---
+- name: set output format
+  set_fact:
+    output: "{{ output | default('md') }}"
+
+- name: create folder to store outputs
+  file:
+    path: ../final-report
+    mode: '0755'
+    recurse: yes
+    state: directory
+  become: yes
+
+- name: merge the files and provide delimiter
+  assemble:
+    src: ../../../documentation/ansible/md-collection
+    dest: ../../../documentation/ansible/final-report/final_documentation.{{ output }}
+    delimiter: '-----------------------'
+  become: yes
+
+- name: tidy up md-collection folder
+  file:
+    path: ../../../documentation/ansible/md-collection
+    state: absent  
+  when: cleanup | default('true')
+
+- name: tidy up input-files folder
+  file:
+    path: ../../../documentation/ansible/input-files
+    state: absent  
+  when: cleanup | default('true')

@@ -1,0 +1,11 @@
+use master
+go
+disk init name='{{ sybase_enterprise.cms.data.filename }}',physname='{{ sybase_enterprise.cms.data.path }}/{{ sybase_enterprise.cms.data.filename }}.dat',SIZE='{{ sybase_enterprise.cms.data.size }}'
+go
+disk init name='{{ sybase_enterprise.cms.log.filename }}',physname='{{ sybase_enterprise.cms.log.path }}/{{ sybase_enterprise.cms.log.filename }}.dat',SIZE='{{ sybase_enterprise.cms.log.size }}'
+go
+sp_configure 'enable compression', 1
+go
+create database {{ cms_dbserver }} on {{ sybase_enterprise.cms.data.filename }}='{{ sybase_enterprise.cms.data.size }}' log on {{ sybase_enterprise.cms.log.filename }}='{{ sybase_enterprise.cms.log.size }}' with COMPRESSION = page, LOB_COMPRESSION = 100,INROW_LOB_LENGTH = 1000
+go
+quit

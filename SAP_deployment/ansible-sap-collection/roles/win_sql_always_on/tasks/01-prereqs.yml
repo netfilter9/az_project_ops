@@ -1,0 +1,21 @@
+---
+
+- name: add SqlServerDsc module
+  win_psmodule:
+    name: xSQLServer
+    state: present
+
+- name: SQL Server Memory setup
+  win_dsc:
+      resource_name: xSQLServerMemory
+      Ensure: Present
+      DynamicAlloc: True
+      SQLInstanceName: "{{ mssql_params.install.instance_name }}"
+
+- name: SQL Server Maximum Dop
+  win_dsc:
+      resource_name: xSQLServerMaxDop
+      Ensure: Present
+      DynamicAlloc: True
+      SQLInstanceName: "{{ mssql_params.install.instance_name }}"
+

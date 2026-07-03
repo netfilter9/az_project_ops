@@ -1,0 +1,95 @@
+{%- set ns = namespace(servernode_port_is='') %}
+{% for i in sap.db.tenants %}
+{% if  bods.is.dbserver ==  i  %}
+{%- set ns.servernode_port_is = '3'+sap.instance_numbers.db+'41' %}
+{% endif %}
+{% endfor %}
+{% if bods.is.dbserver == sap.db.sid %}
+{%- set ns.servernode_port_is = '3'+sap.instance_numbers.db+'15' %}
+{% elif  bods.is.dbserver == "SYSTEMDB" %}
+{%- set ns.servernode_port_is = '3'+sap.instance_numbers.db+'13' %}
+{% endif %}
+### #property.CMSAuthMode.description#
+iscmsauth=Enterprise
+
+### CMS administrator password
+iscmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### #property.CMSSystemStr.description#
+iscmssystemstr={{ ansible_hostname }}:6400
+
+### #property.CMSUser.description#
+iscmsuser=Administrator
+
+### #property.ISHANAJDBCOption.description#
+ishanajdbcoption=bundle #specify
+
+### #property.ISInstallType.description#
+isinstalltype=First
+
+### #property.ISJDBCDriverFileList.description#
+isjdbcdriverfilelist=/usr/sap/hdbclient/ngdbc.jar
+
+### #property.ISLocalCMS.description#
+islocalcms=true
+
+### #property.RepoDBHost.description#
+isrepodbhost={{ sap.logical_hosts.db.hostname }}
+
+### #property.RepoDBName.description#
+isrepodbname=SYSTEM #System
+
+### #property.RepoDBPasswd.description#
+isrepodbpasswd={{ passwords.isrepodbuser | default(passwords.master) }}
+
+### #property.RepoDBPort.description#
+isrepodbport={{ ns.servernode_port_is }}
+
+### #property.RepoDBType.description#
+isrepodbtype=NewDB #{{ dbtype | default('hana') }}
+
+### #property.RepoDBUser.description#
+isrepodbuser={{ sap.is.repodbuser | default('SYSTEM') }}
+
+### #property.ICCRepoOption.description#
+isrepooption=New
+
+### Product Keycode
+productkey={{ passwords.isproductkey | default('CCG0Z-Z3YZD8F-00MS5EP-7DYH') }}
+
+installdir={{ IS_dir }}
+
+requiredspace=2691
+
+### Language Packs Selected to Install
+selectedlanguagepacks=en
+
+### Available features
+### ------------------
+### root
+###   WebTier
+###   TaskServer
+###   DataReviewTaskJobServer
+###   ISServices
+###     SearchServer
+###     ApplicationService
+###     CPBServices
+###     CpData
+###     DataReviewService
+###   Integrators
+###     BOEIntegrator
+###     BWIntegrator
+###     BODIIntegrators
+###     CWMIntegrators
+###     RDBMSIntegrators
+###     HANAIntegrators
+###     ExcelIntegrator
+###     SAPEccIntegrator
+###     HDPIntegrator
+###     RedshiftIntegrator
+
+features={{ feature | default('WebTier,TaskServer,DataReviewTaskJobServer,SearchServer,ApplicationService,CPBServices,CpData,DataReviewService,ISServices,B
+OEIntegrator,BWIntegrator,BODIIntegrators,CWMIntegrators,RDBMSIntegrators,HANAIntegrators,ExcelIntegrator,SAPEccIntegrator,HDPIntegra
+tor,RedshiftIntegrator,Integrators,root') }}
+
+

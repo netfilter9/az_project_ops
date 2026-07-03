@@ -1,0 +1,5 @@
+sap_set_replication_service {{ site }}
+{{ domainName }}\syb{{ sap.sid }}
+{{ sybase_db_password }}
+sap_set_replication_service {{ site }}
+restart

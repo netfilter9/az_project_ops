@@ -1,0 +1,21 @@
+#----------------------
+RUN_SILENT=true
+
+#Choose Install Folder
+#---------------------
+USER_INSTALL_DIR=/sybase/SDK
+
+#Install older version
+#---------------------
+
+#Choose Install Set
+#------------------
+CHOSEN_FEATURE_LIST=fdblib,fopen_client,fesql_c_lang,fesql_cobol_lang,fxa,fodbcl,fconn_add_lm,fjconnect160,fconn_python,fconn_perl,fconn_php,fdbisql
+CHOSEN_INSTALL_FEATURE_LIST=fdblib,fopen_client,fesql_c_lang,fesql_cobol_lang,fxa,fodbcl,fconn_add_lm,fjconnect160,fconn_python,fconn_perl,fconn_php,fdbisql
+CHOSEN_INSTALL_SET=Full
+
+#Install
+#-------
+-fileOverwrite_/ds/SDK/sybuninstall/SDKSuite/uninstall.lax=Yes
+
+AGREE_TO_SAP_LICENSE=TRUE

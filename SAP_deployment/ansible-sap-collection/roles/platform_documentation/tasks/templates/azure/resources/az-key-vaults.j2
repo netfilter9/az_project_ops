@@ -1,0 +1,22 @@
+{# 
+    generate key vault entries 
+#}
+{% for resource in resource_json if resource.type=="microsoft.keyvault/vaults" %}
+    {% if loop.first %}
+# Key vault
+---
+The environment level key vault will be used to store secrets which specific to this environment only:
+|Name|Location|Sku|
+|-|-|-|
+    {% endif -%}
+
+    {%- set row = [ 
+        resource.name,
+        resource.location,
+        resource.properties.sku.name
+      ] 
+    %}
+|{{ row | join('|') }}|
+{% endfor %}
+
+

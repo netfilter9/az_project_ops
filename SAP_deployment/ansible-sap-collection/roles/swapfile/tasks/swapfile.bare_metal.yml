@@ -1,0 +1,22 @@
+#TODO: investigate use of filesystem to do the swap file bits
+- name: swapfile.bare_metal | create swapfile
+  command: "{{ item }}"
+  with_items:
+   - dd if=/dev/zero of=/mnt/resource/4GB.swap bs=1024K count=4000
+   - mkswap /mnt/resource/4GB.swap
+
+- name: swapfile.bare_metal | change swapfile permissions
+  file:
+    path: /mnt/resource/4GB.swap
+    mode: '600'
+
+- name: swapfile.bare_metal | create swapfile
+  command: "{{ item }}"
+  with_items:
+   - swapon /mnt/resource/4GB.swap
+
+- name: swapfile.bare_metal | update fstab
+  lineinfile:
+    state: present
+    line: /mnt/resource/4GB.swap  none  swap  sw 0  0
+    path: /etc/fstab

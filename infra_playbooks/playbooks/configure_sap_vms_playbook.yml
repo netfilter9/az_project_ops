@@ -1,0 +1,22 @@
+---
+- name: Vinci Baseline Configurations
+  remote_user: root
+  become: true
+  hosts: ecc_uat
+  vars:
+  tasks:
+
+  - name: Set timezone to Central Europe (CET/CEST)
+    community.general.timezone:
+      name: Europe/Berlin
+
+  - name: Configuring netconfig with kherty.local domain
+    lineinfile:
+      path: /etc/sysconfig/network/config
+      regexp: '^NETCONFIG_DNS_STATIC_SEARCHLIST'
+      line: 'NETCONFIG_DNS_STATIC_SEARCHLIST="kherty.local"'
+    register: dns_change
+
+  - name: Recreate resolv.conf if there are changes or skip when there's none.
+    command: /sbin/netconfig update -f
+    when: dns_change.msg != ""

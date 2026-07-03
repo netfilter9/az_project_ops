@@ -1,0 +1,21 @@
+---
+- name: Get Uptime
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become_method: enable
+  vars:
+    ansible_connection: ssh
+    ansible_remote_tmp: 'C:Windows\Temp\.ansible'
+    ansible_shell_type: cmd
+
+  tasks:
+    - name: Get Windows uptime
+      ansible.windows.win_powershell: 
+        script: |
+          Get-CimInstance CIM_OperatingSystem | Select-Object -ExpandProperty LastBootUpTime
+      register: windows_uptime
+      changed_when: false
+
+    - name: Show uptime
+      debug:
+        msg: "{{ (windows_uptime.output) }}"

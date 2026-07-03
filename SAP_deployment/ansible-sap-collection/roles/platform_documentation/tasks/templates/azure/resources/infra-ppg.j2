@@ -1,0 +1,41 @@
+{# 
+    generate proximity placement group entries 
+#}
+{% if deployment.proximity_placement_groups is defined %}
+# Proximity placement group
+---
+A proximity placement group (PPG) is a logical grouping used to make sure that Azure compute resources are physically located close to each other. Proximity placement groups are useful for workloads where low latency is a requirement.
+
+The following PPGs will be used for this deployment:
+|Name|Proximity Placement Group Type|Availability Sets|Virtual Machines|
+|-|-|-|-|
+{% for ppg_k, ppg_v in deployment.proximity_placement_groups.items() %}
+
+  {%- set av = namespace(sets=[]) -%}
+  {%- for as_k, as_v in deployment.availability_sets.items() -%}
+    {%- if as_v.ppg_name == ppg_k -%}
+      {%- set av.sets = av.sets + [as_k] -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- set vms = namespace(hosts=[]) -%}
+  {%- for group_k, group_v in deployment.server_groups.items() -%}
+    {%- if group_v.ppg_name == ppg_k -%}
+      {%- for host in group_v.hosts -%}
+        {%- set vms.hosts = vms.hosts + [host] -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- set row = [
+    ppg_k,
+    'Standard',
+    av.sets|sort|join("<br>"|safe),
+    vms.hosts|sort|join("<br>"|safe)
+    ]
+  -%}
+|{{ row | join('|') }}|
+{% endfor %}
+
+{% endif %}
+

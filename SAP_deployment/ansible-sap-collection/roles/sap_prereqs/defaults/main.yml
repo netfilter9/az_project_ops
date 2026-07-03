@@ -1,0 +1,24 @@
+---
+
+# For RedHat we need to stopped the firewalld service by default
+services_redhat: 
+  - name: firewalld
+    state: stopped
+    enabled: no
+    
+kernel_parameters:
+  redhat:
+    - { name: kernel.shmmni , value: 32768 }
+    - { name: kernel.shmmax  , value: 1000000000000000  }
+    - { name: kernel.shmall , value: 1000000000000000 }
+    - { name: kernel.msgmni  , value: 1024 }
+    - { name: kernel.sem , value: 1250 256000 100 1024 }
+  suse:
+    - { name: kernel.shmmni , value: 32768 }
+    - { name: kernel.shmmax  , value: 1000000000000000  }
+    - { name: kernel.shmall , value: 1000000000000000 }
+    - { name: vm.pagecache_limit_mb , value: 1024 }
+    - { name: vm.pagecache_limit_ignore_dirty, value: 2 }
+    - { name: kernel.msgmni  , value: 1024 }
+    - { name: kernel.sem , value: 1250 256000 100 1024 }
+  

@@ -1,0 +1,117 @@
+*&*******************************************************************&*
+* Report              :   ZCM_T_CVERS_EXP_SOFTWARE_COMP               *
+* Title               :   Component Versions Export                   *
+* Created by          :   ASHWINI B                                   *
+* Created on          :   19/08/2020                                  *
+* Purpose             :   This report is used to export component     *
+*                     :   version details from system pre migration   *
+*---------------------------------------------------------------------*
+REPORT zcm_t_cvers_exp_software_comp.
+
+FORM get_config                             ##CALLED
+              TABLES ft_input  STRUCTURE tab512
+                     ft_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep       TYPE c       VALUE '|',
+             lc_x         TYPE c       VALUE 'X',
+             lc_act_exp   TYPE char6   VALUE 'EXPORT',
+             lc_comp      TYPE char9   VALUE 'Component',
+             lc_rel       TYPE char7   VALUE 'Release',
+             lc_extra_rel TYPE char21  VALUE 'Support package level',
+             lc_descr     TYPE char11  VALUE 'Description',
+             lc_msg       TYPE char80  VALUE
+             'No data found'.
+
+  DATA: ls_input   TYPE tab512,
+        ls_output  TYPE tab512,
+        lv_action  TYPE char8,
+        lt_comptab TYPE TABLE OF spam_cvers,
+        ls_comptab TYPE spam_cvers.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read input values from Python/Ansibel
+  READ TABLE ft_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_act_exp. "EXPORT
+
+* Under the pre-migration activities, the system component
+* version details are fetched and exported to Python.
+
+* Components Info
+
+      CALL FUNCTION 'OCS_GET_INSTALLED_COMPS'
+        TABLES
+          tt_comptab       = lt_comptab
+        EXCEPTIONS
+          no_release_found = 1
+          wrong_release    = 2
+          OTHERS           = 3.
+
+      IF sy-subrc EQ 0 AND lt_comptab[] IS NOT INITIAL.
+        SORT: lt_comptab[] BY component.
+      ELSE.
+        " Title
+        CLEAR: ls_output.
+        ls_output = 'Software component details'.
+        APPEND ls_output TO ft_output.
+
+        " Error
+        CLEAR: ls_output.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+           WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+           INTO ls_output.
+        APPEND ls_output TO ft_output.
+        RETURN.
+      ENDIF.
+
+      IF lt_comptab[] IS NOT INITIAL.
+
+        " Title
+        CLEAR: ls_output.
+        ls_output = 'Software component details'.
+        APPEND ls_output TO ft_output.
+
+        " Heading Columns
+        CLEAR: ls_output.
+        CONCATENATE lc_comp      lc_sep
+                    lc_rel       lc_sep
+                    lc_extra_rel lc_sep
+                    lc_descr INTO ls_output.
+        APPEND ls_output TO ft_output.
+
+        " Data
+        CLEAR: ls_output,ls_comptab.
+        LOOP AT lt_comptab INTO ls_comptab.
+          CONCATENATE ls_comptab-component  lc_sep
+                      ls_comptab-release    lc_sep
+                      ls_comptab-extrelease lc_sep
+                      ls_comptab-desc_text INTO ls_output.
+          APPEND ls_output TO ft_output.
+          CLEAR: ls_output,ls_comptab.
+        ENDLOOP.
+
+      ELSE.
+
+         " Title
+        CLEAR: ls_output.
+        ls_output = 'Software component details'.
+        APPEND ls_output TO ft_output.
+
+        CLEAR: ls_output.
+        " No data found
+        ls_output = lc_msg.
+        APPEND ls_output TO ft_output.
+      ENDIF.
+
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.

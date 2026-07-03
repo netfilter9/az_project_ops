@@ -1,0 +1,1 @@
+select count(*) row_count from SAPBS7.USR02;

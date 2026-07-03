@@ -1,0 +1,280 @@
+*&*******************************************************************&*
+* Report              :   ZCM_RZ12_UPDATE_RFC_GROUPS                  *
+* Title               :   RFC Groups                                  *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   26/10/2020                                  *
+* Purpose             :   This report is used to import RFC Groups    *
+*---------------------------------------------------------------------*
+REPORT ZCM_RZ12_UPDATE_RFC_GROUPS.
+
+
+*Note:
+
+*To update, insert , delete rfc groups, modification should be set as
+*U,I,D accordingly in ls_rzllitab-modificatn
+
+*To update the quotas, status be 'I' or 'U' in ls_arfc_quotas-status.
+*To delete the quotas, status be 'D' in ls_arfc_quotas-status.
+*ls_arfc_quotas-status will be taken from ls_rzllitab-modificatn
+
+
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+
+  CONSTANTS: lc_sep            TYPE c VALUE '|' LENGTH 1,
+             rfcsrv_groups     TYPE rzllitab-grouptype VALUE 'S',
+             lc_msg_del_failed TYPE string
+             VALUE 'Deletion of RFC Groups failed',
+             lc_msg_ins_failed TYPE string
+             VALUE 'Creation of RFC Groups failed',
+             lc_msg_upd_failed TYPE string
+             VALUE 'Updation of RFC Groups failed',
+             lc_msg_quotas     TYPE string
+             VALUE 'RFC Quotas have been updated',
+             lc_msg_no_change  TYPE string
+             VALUE 'Settings are unchanged'.
+
+*             lc_msg            TYPE string VALUE 'RFC Groups updated'.
+
+  TYPES: BEGIN OF arfc_configuration,
+           applserver LIKE rzllitab-applserver,
+           status.    "M)odified, N)ew
+      INCLUDE STRUCTURE arfcquotas_ext.
+  TYPES : END   OF arfc_configuration.
+
+
+  DATA:ls_input        TYPE tab512,
+       ls_output       TYPE tab512,
+       lv_lines        TYPE i,
+       lv_flag_quotas  TYPE boolean VALUE space,
+       lt_modif_insert TYPE TABLE OF rzllimodif,
+       lt_modif_delete TYPE TABLE OF rzllimodif,
+       lt_modif_update TYPE TABLE OF rzllimodif,
+       lt_erfc_modif   TYPE TABLE OF  rzllimodgp,
+       group_type      TYPE rzllitab-grouptype VALUE rfcsrv_groups,
+       ls_rzllitab     TYPE rzllimodif,
+       lt_arfc_quotas  TYPE TABLE OF arfc_configuration,
+       ls_arfc_quotas  TYPE arfc_configuration.
+
+  DESCRIBE TABLE lt_input LINES lv_lines.
+  IF lv_lines > 2.
+    DELETE lt_input INDEX 1.
+  ELSE.
+    ls_output = lc_msg_no_change.
+    APPEND ls_output TO lt_output.
+    RETURN. "nothing to do since there are no entries
+  ENDIF.
+
+* Remove the 'Null' values
+  PERFORM null_check TABLES lt_input.
+
+  LOOP AT lt_input INTO ls_input.
+
+    SPLIT ls_input AT lc_sep INTO
+     ls_rzllitab-classname
+     ls_rzllitab-applserver
+     ls_rzllitab-grouptype
+     ls_rzllitab-ip_address
+     ls_rzllitab-resp_time
+     ls_rzllitab-users
+     ls_rzllitab-op_mode
+     DATA(lv_wp_quota) "*ls_rzllitab-wp_quota
+     ls_rzllitab-ipv6
+     ls_rzllitab-ipv6_address
+     ls_rzllitab-ip_address_old
+     ls_rzllitab-ipv6_address_old
+     DATA(lv_active)
+     ls_arfc_quotas-applserver
+     ls_arfc_quotas-status
+     DATA(lv_use_quota)
+     DATA(lv_max_queue)
+     DATA(lv_max_login)
+     DATA(lv_max_own_lg)
+     DATA(lv_max_own_wp)
+     DATA(lv_min_wait_d)
+     DATA(lv_max_comm)
+     DATA(lv_max_wait_t)
+     DATA(lv_max_open_tasks)
+     DATA(lv_max_normal_quota)
+     DATA(lv_max_low_quota)
+     DATA(usepriorityquotas)
+     ls_rzllitab-modificatn.
+
+    ls_arfc_quotas-status = ls_rzllitab-modificatn.
+
+    IF ls_rzllitab-classname <> 'NULL'.
+
+      IF ls_rzllitab-modificatn EQ 'I'.
+        APPEND ls_rzllitab TO lt_modif_insert.
+      ELSEIF     ls_rzllitab-modificatn  EQ 'U'.
+        APPEND ls_rzllitab TO lt_modif_update.
+      ELSEIF ls_rzllitab-modificatn EQ 'D' .
+        APPEND ls_rzllitab TO lt_modif_delete.
+      ENDIF.
+
+    ENDIF.
+
+    ls_arfc_quotas-use_quotas = lv_use_quota.
+    ls_arfc_quotas-max_queue = lv_max_queue.
+    ls_arfc_quotas-max_login = lv_max_login.
+    ls_arfc_quotas-max_own_lg = lv_max_own_lg.
+    ls_arfc_quotas-max_own_wp = lv_max_own_wp.
+    ls_arfc_quotas-min_wait_d = lv_min_wait_d.
+    ls_arfc_quotas-max_comm  = lv_max_comm.
+    ls_arfc_quotas-max_wait_t = lv_max_wait_t.
+    ls_arfc_quotas-max_open_tasks = lv_max_open_tasks.
+    ls_arfc_quotas-max_normal_quota = lv_max_normal_quota.
+    ls_arfc_quotas-max_low_quota = lv_max_low_quota.
+    IF ls_arfc_quotas-status = 'I'
+    OR ls_arfc_quotas-status ='U'.
+      APPEND ls_arfc_quotas TO lt_arfc_quotas.
+    ELSEIF   ls_arfc_quotas-status = 'D'.
+      CLEAR ls_arfc_quotas.
+      ls_arfc_quotas-status = 'D'.
+      APPEND ls_arfc_quotas TO lt_arfc_quotas.
+    ENDIF.
+
+  ENDLOOP.
+
+* Remove duplicate entries in RFC Groups that may arise due to change
+* in instances. Else insert will throw runtime dbsql error.
+
+  IF lt_modif_delete IS NOT INITIAL.
+
+    SORT lt_modif_delete BY classname applserver.
+    DELETE ADJACENT DUPLICATES FROM lt_modif_delete
+      COMPARING classname applserver.
+
+*   Logon Group and instance
+    CALL FUNCTION 'SMLG_MODIFY'
+      EXPORTING
+        set_lock           = space    "set no lock
+        grouptype          = group_type
+      TABLES
+        modifications      = lt_modif_delete
+        erfc_modifications = lt_erfc_modif
+      EXCEPTIONS
+        deletion_failed    = 02.
+    IF sy-subrc = 2.   "update failed
+      ls_output = lc_msg_del_failed.
+      APPEND ls_output TO lt_output.
+    ENDIF.
+
+  ENDIF.
+
+  IF lt_modif_insert IS NOT INITIAL.
+    SORT lt_modif_insert BY classname applserver.
+    DELETE ADJACENT DUPLICATES FROM lt_modif_insert
+      COMPARING classname applserver.
+
+    CALL FUNCTION 'SMLG_MODIFY'
+      EXPORTING
+        set_lock           = space    "set no lock
+        grouptype          = group_type
+      TABLES
+        modifications      = lt_modif_insert
+        erfc_modifications = lt_erfc_modif
+      EXCEPTIONS
+        insertion_failed   = 02.
+    IF sy-subrc = 2.   "update failed
+      ls_output = lc_msg_ins_failed.
+      APPEND ls_output TO lt_output.
+    ENDIF.
+  ENDIF.
+
+  IF lt_modif_update IS NOT INITIAL.
+
+    SORT lt_modif_update BY classname applserver.
+    DELETE ADJACENT DUPLICATES FROM lt_modif_update
+      COMPARING classname applserver.
+
+
+    CALL FUNCTION 'SMLG_MODIFY'
+      EXPORTING
+        set_lock           = space    "set no lock
+        grouptype          = group_type
+      TABLES
+        modifications      = lt_modif_update
+        erfc_modifications = lt_erfc_modif
+      EXCEPTIONS
+        update_failed      = 02.
+    IF sy-subrc = 2.   "update failed
+      ls_output = lc_msg_upd_failed.
+      APPEND ls_output TO lt_output.
+    ENDIF.
+
+  ENDIF.
+
+*If no message has been set, then RFC Groups have been changed correctly
+  IF lt_output IS INITIAL AND
+   (   lt_modif_update IS NOT INITIAL
+    OR lt_modif_insert IS NOT INITIAL
+    OR lt_modif_delete IS NOT INITIAL ).
+    MESSAGE s773(rz) INTO ls_output.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+  ENDIF.
+
+*Resource allocation details
+*Delete will be to clear all the quotas and should be performed first
+  SORT lt_arfc_quotas BY status ASCENDING.
+  LOOP AT lt_arfc_quotas INTO ls_arfc_quotas WHERE status = 'I'
+                                                OR status = 'U'
+                                                OR status = 'D' .
+    CALL FUNCTION 'TH_ARFC_SET_QUOTAS'
+      DESTINATION ls_arfc_quotas-applserver
+      EXPORTING
+        use_quotas            = ls_arfc_quotas-use_quotas
+        max_queue             = ls_arfc_quotas-max_queue
+        max_login             = ls_arfc_quotas-max_login
+        max_own_login         = ls_arfc_quotas-max_own_lg
+        max_own_used_wp       = ls_arfc_quotas-max_own_wp
+        min_wait_dia_wp       = ls_arfc_quotas-min_wait_d
+        max_comm_entries      = ls_arfc_quotas-max_comm
+        max_wait_time         = ls_arfc_quotas-max_wait_t
+        max_open_tasks        = ls_arfc_quotas-max_open_tasks
+        max_normal_quota      = ls_arfc_quotas-max_normal_quota
+        max_low_quota         = ls_arfc_quotas-max_low_quota
+      EXCEPTIONS
+        system_failure        = 1
+        communication_failure = 2
+        OTHERS                = 99.
+    IF sy-subrc = 2.
+*      This is not an issue. Instance server is not available
+    ELSEIF sy-subrc = 1 OR sy-subrc = 99.
+      MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+           WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+           INTO ls_output.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      lv_flag_quotas = abap_true.
+    ENDIF.
+  ENDLOOP.
+
+  IF lv_flag_quotas = abap_false.
+    ls_output = lc_msg_quotas.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+
+  ENDIF.
+
+ENDFORM.
+
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '|NULL|'
+    IN TABLE lt_table WITH '| |'.
+    FIND '|NULL|' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

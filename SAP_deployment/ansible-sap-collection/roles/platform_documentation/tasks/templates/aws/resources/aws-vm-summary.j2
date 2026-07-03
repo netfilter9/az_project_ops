@@ -1,0 +1,37 @@
+{#
+    generate vm summary
+#}
+{% for i in range(0,status_vm|length) -%}
+{% if loop.first %}
+# VM Summary
+---
+|Instance Name|InstanceType|OS Type|
+|-|-|-|
+{% endif %}
+{% if status_vm[i] == '1' %}
+{%- for resource in tfstate_inputdata.resources %}
+{%- if resource.type == "aws_instance" -%}
+{% for instancename in resource.instances %}
+{%- if  vm_list[i]== instancename.index_key %}
+{%- set row = [
+      instancename.index_key,
+      instancename.attributes.instance_type,
+      "Linux" 
+    ] 
+  -%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if status_vm[i] == '0' %}
+{%- set row = [
+    vm_list[i],
+    "Not found",
+    "Not found"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endfor %}

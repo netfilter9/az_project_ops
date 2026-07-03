@@ -1,0 +1,11 @@
+- name: packages | install additional packages
+  package: 
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - make
+    - socat
+    - libaio
+    - libaio-devel
+    - glibc
+    - glibc-devel

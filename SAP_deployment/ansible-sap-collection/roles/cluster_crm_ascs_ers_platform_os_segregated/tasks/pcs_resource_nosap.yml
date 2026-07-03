@@ -1,0 +1,16 @@
+- name: main | set ascs and ers directory facts
+  set_fact:
+    ascs_device: "{{ sap.nfs.ascs_device }}"
+    ers_device: "{{ sap.nfs.ers_device }}"
+
+- name: pcs_resource_nosap | pcs resource create for azure
+  import_tasks: pcs_nosap_azure.yml
+  when: platform == 'azure'
+
+- name: pcs_resource_nosap | pcs resource create for aws
+  import_tasks: pcs_nosap_aws.yml
+  when: platform == 'aws'
+
+- name: pcs_resource_nosap | pcs resource create for aws
+  import_tasks: pcs_nosap_gcp.yml
+  when: platform == 'gcp'

@@ -1,0 +1,36 @@
+---
+
+- name: create JAVA environment variable
+  win_environment:
+    name: JAVA_HOME
+    state: present
+    value: "{{ downloads.download_drive }}:\\Connector\\SCC\\SAPJVM8_62\\sapjvm_8"
+    level: machine
+    
+- name: create PATH environment variable
+  win_path:
+    elements:
+     - '%JAVA_HOME%\bin'
+
+- name: Install Visual C++ Redistributable package
+  win_package: 
+    path: '{{ downloads.download_drive }}:\Connector\SCC\VC_redist.x64.exe'
+    product_id: '{7d607fb4-7e28-4c7a-a92f-3fcdaf555faf}'
+    arguments:
+    - /install
+    - /passive
+    - /norestart
+
+- name: Install java
+  win_shell: '.\jre-8u251-windows-x64.exe /s'
+  args:
+    chdir: '{{ downloads.download_drive }}:\\Connector\\SCC'
+
+
+- name: Install the sap cloud connector
+  win_package: 
+    path: '{{ downloads.download_drive }}:\Connector\SCC\sapcc-2.12.4-windows-x64.msi'
+    state: present
+
+
+

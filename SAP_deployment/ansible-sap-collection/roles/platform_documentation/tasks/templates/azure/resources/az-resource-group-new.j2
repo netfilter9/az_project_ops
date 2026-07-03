@@ -1,0 +1,17 @@
+{# 
+    generate resource group entries 
+#}
+# Resource group
+---
+All new resources for this environment will be deployed to this resource group unless explicitly stated otherwise:
+|Resource Group Name|Location|
+|-|-|
+{% set row = [ 
+  resource_json.data[0].resourceGroup,
+  resource_json.data[0].location 
+  ] 
+%}
+|{{ row | join('|') }}|
+
+
+

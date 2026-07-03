@@ -1,0 +1,130 @@
+{% if deployment.server_groups is defined %}
+
+  {%- for lb_k, lb_v in deployment.load_balancers.items() -%}
+    {# generate loadbalancer summaries #}
+    {%- set lb_summary = namespace(bap=[], fe=[], rules=[], probes=[]) -%}
+
+    {%- for item_k, item_v in lb_v.backends.items() -%}
+      {%- set lb_summary.bap = lb_summary.bap + [item_k~"-bap"] -%}
+      {%- set lb_summary.fe = lb_summary.fe + [item_k~"-fe"] -%}
+      {%- set lb_summary.rules = lb_summary.rules + [item_k~"-rule"] -%}
+      {%- set lb_summary.probes = lb_summary.probes + [item_k~"-probe"] -%}
+    {%- endfor -%}
+    
+    {%- set lb_summary_row = [
+        lb_k,
+        lb_summary.bap|join("<br>"|safe),
+        lb_summary.fe|join("<br>"|safe),
+        lb_summary.rules|join("<br>"|safe),
+        deployment.resource_group.location,
+        "",
+        lb_summary.probes|join("<br>"|safe),
+        "Standard"
+      ]
+    -%}
+
+# Load Balancer Summary ({{ lb_k }})
+---
+|Name|Backend Address Pools|Frontend Ip Configurations|Load Balancing Rules|Location|Outbound Rules|Probes|Sku|
+|-|-|-|-|-|-|-|-|
+|{{ lb_summary_row | join('|') }}|
+
+    {# generate entries for BackendAddressPools #}
+    {%- for backend_k, backend_v in lb_v.backends.items() -%}
+      
+      {%- if loop.first -%}
+## Load Balancer BackendAddressPools
+|Name|Backend Ip Configurations|Load Balancing Rules|
+|-|-|-|
+      {% endif %}
+
+      {%- set lb_backend = namespace(nics=[]) -%}
+      
+      {%- for group_k, group_v in deployment.server_groups.items() -%}
+        {%- if group_v.lb_refs is defined -%}
+          {%- if backend_k in group_v.lb_refs -%}
+            {%- for host_k, host_v in group_v.hosts.items() -%}
+              {%- set lb_backend.nics = lb_backend.nics + [host_k~"_nic01"] -%}
+            {%- endfor -%}  
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    
+    	{%- set lb_backend_row = [
+          backend_k~"-bap",
+          lb_backend.nics|join("<br>"|safe),
+          backend_k~"-rule"
+        ]
+      -%}   
+|{{ lb_backend_row | join('|') }}|
+    {% endfor -%}
+
+    {# generate enteries for frontends#}
+    {%- for item_k, item_v in lb_v.backends.items() -%}
+
+      {%- if loop.first -%}
+## Load Balancer FrontendIpConfigurations
+|Name|Private Ip Address|IP Allocation Method|Subnet|Load Balancing Rules|
+|-|-|-|-|-|
+      {% endif %}
+
+        {%- set lb_frontend_row = [
+            item_k~"-fe",
+            item_v.ip_address,
+            "Static",
+            item_v.subnet,
+            item_k~"-rule"
+          ]
+        -%} 
+|{{ lb_frontend_row | join('|') }}|
+    {% endfor -%}
+
+    {# generate rule details #}
+    {%- for item_k, item_v in lb_v.backends.items() -%}
+      
+      {% if loop.first %}
+## Load Balancer LoadBalancingRules
+|Name|Protocol|Frontend Port|Backend Port|Idle Timeout In Minutes|Load Distribution|Enable Floating IP|Frontend IP Configuration|Backend Address Pool|Probe|
+|-|-|-|-|-|-|-|-|-|-|
+      {% endif %}
+
+      {%- set lb_rule_row = [
+          item_k~"-rule",
+          item_v.rule_protocol | default("All",true),
+          item_v.frontend_port | default("0",true),
+          item_v.backend_port | default("0",true),
+          item_v.idle_timeout_in_minutes | default("30",true),
+          item_v.load_distribution | default("SourceIPProtocol",true),
+          item_v.enable_floating_ip | default("True",true),
+          item_k~"-fe",
+          item_k~"-bap",
+          item_k~"-probe"
+        ]
+      -%} 
+|{{ lb_rule_row | join('|') }}|
+    {% endfor -%}
+
+    {# generate probe details #}
+    {%- for item_k, item_v in lb_v.backends.items() -%}
+      
+      {% if loop.first %}
+## Load Balancer Probes
+|Name|Protocol|Port|Interval In Seconds|Number Of Probes|Load Balancing Rules|
+|-|-|-|-|-|-|
+      {% endif %}
+
+      {%- set lb_probe_row = [
+          item_k~"-probe",
+          item_v.probe_protocol | default("Tcp",true),
+          item_v.probe_port,
+          item_v.interval_in_seconds | default("5",true),
+          item_v.number_of_probes | default("2",true),
+          item_k~"-rule"
+        ]
+      -%} 
+|{{ lb_probe_row | join('|') }}|
+    {% endfor -%}
+
+
+  {% endfor %}
+{% endif %}

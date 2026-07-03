@@ -1,0 +1,36 @@
+#Pre-Validation tasks
+- block:
+  - name: Assert whether the OS is valid as per the doc
+    assert:
+      that:
+        #The Qualys installation supports Debian 7.x, 8.x, Ubuntu 12.x, 14.x, 15.x, 16.04
+        - "(ansible_distribution == 'Ubuntu' and ansible_distribution_major_version in ['12', '14', '15', '16', '18'])
+          or
+          (ansible_distribution == 'Debian' and ansible_distribution_major_version in ['7', '8', '9'])"
+      success_msg: "valid OS for qualys installation"
+      fail_msg: "not valid OS for qualys installation"
+
+  - name: Check if the package already installed
+    vars:
+      ansible_python_interpreter: /usr/bin/python3
+    package_facts:
+      manager: auto
+  
+  - name: Print the packages facts
+    debug:
+      var: ansible_facts.packages
+      verbosity: 2
+
+#Qualys installation steps
+- block:
+  - name: Install Qualys (deb)
+    command: 'dpkg --install /etc/Linux_Deb_QualysCloudAgent.x86_64.deb'
+
+  - name: Activate Qualys (deb)
+    command: "./qualys-cloud-agent.sh ActivationId={{ activation_id }} CustomerId={{ customer_id }}"
+    args:
+      chdir: /usr/local/qualys/cloud-agent/bin
+    ignore_errors: yes
+  
+  when: "not 'qualys-cloud-agent' in ansible_facts.packages"
+

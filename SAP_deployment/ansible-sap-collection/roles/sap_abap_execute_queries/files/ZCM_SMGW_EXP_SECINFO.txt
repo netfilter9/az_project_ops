@@ -1,0 +1,107 @@
+*&********************************************************************&*
+* Report              :   ZCM_SMGW_EXP_SECINFO                         *
+* Title               :   Export SECINFO data in SMGW                  *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   18/08/2020                                   *
+* Purpose             :   This report is for exporting SECINFO data in *
+*                         SMGW during Cloud Migration                  *
+*----------------------------------------------------------------------*
+REPORT zcm_smgw_exp_secinfo.
+
+CONSTANTS: lc_sep     TYPE c VALUE '|'                    LENGTH 1,
+           lc_acl_sec TYPE i VALUE 1,
+           lc_export  TYPE c VALUE 'EXPORT'               LENGTH 6,
+           lc_title   TYPE c VALUE 'Secinfo File'         LENGTH 12,
+           lc_head    TYPE c VALUE 'Data'                 LENGTH 4,
+           lc_err_msg TYPE c VALUE
+           'No records found in the system for SECINFO'   LENGTH 45
+           ##NO_TEXT.
+
+DATA:ls_input       TYPE tab512,
+     ls_output      TYPE tab512,
+     lv_action      TYPE char20,
+     lv_marked_line TYPE c LENGTH 1,
+     lt_acl_tab     TYPE gwy_acl_lines,
+     ls_acl_tab     TYPE gwy_acl_line,
+     lt_secinfo     TYPE TABLE OF gwy_acl_line_colored,
+     ls_secinfo     TYPE gwy_acl_line_colored,
+     lt_data_line   TYPE gwy_acl_line_colored.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.       " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.      " If action is Export
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+      " FM to get SMGW data
+      CALL FUNCTION 'GWY_READ_ACLFILE'
+        EXPORTING
+          acl_type = lc_acl_sec
+        IMPORTING
+          lines    = lt_acl_tab
+          marked   = lv_marked_line
+        EXCEPTIONS
+          OTHERS   = 1.
+
+      IF sy-subrc NE 0.
+
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+             WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+             INTO ls_output.
+        APPEND ls_output TO lt_output.
+        EXIT.
+
+      ENDIF.
+
+      LOOP AT lt_acl_tab INTO ls_acl_tab.
+
+        IF lv_marked_line = 'X'.
+          lt_data_line-line = ls_acl_tab+1.
+        ELSE.
+          lt_data_line-line = ls_acl_tab.
+        ENDIF.
+
+        CASE lc_acl_sec.
+          WHEN lc_acl_sec.
+            APPEND lt_data_line TO lt_secinfo.
+          WHEN OTHERS.
+        ENDCASE.
+
+      ENDLOOP.
+
+      IF lt_secinfo IS NOT INITIAL.
+
+        " Adding heading to the output
+        ls_output = lc_head.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        LOOP AT lt_secinfo INTO ls_secinfo.
+          ls_output = ls_secinfo.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        " No records found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.

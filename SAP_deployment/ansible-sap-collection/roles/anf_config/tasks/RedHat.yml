@@ -1,0 +1,17 @@
+- name: Add an Ethernet connection 
+  command: 
+    cmd: nmcli connection modify "Wired connection 1" +ipv4.routes "{{ hana_scale_out.anf_subnet }} {{ hana_scale_out.storage_routerip }}"
+
+- name: Reboot Systems
+  reboot:
+
+- name: packages | install packages for rhel
+  package:
+    name:
+      - nfs-utils
+      - libgcc
+      - libstdc++
+      - compat-sap-c++*
+      - libatomic
+      - libtool-ltdl
+    state: present

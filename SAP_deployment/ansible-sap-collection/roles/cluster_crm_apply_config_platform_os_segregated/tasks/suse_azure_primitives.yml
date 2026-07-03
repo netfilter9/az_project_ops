@@ -1,0 +1,61 @@
+---
+- name: run configuration prereqs for suse db2
+  import_tasks: db2_config_suse_azure_prereqs.yml
+  when: cluster_type == 'db2'
+
+- name: main | apply configure cluster
+  block: 
+    - name: main | Stopping cluster Primary node
+      command: crm cluster stop
+      when: ansible_hostname == node1
+
+    - name: main | Stopping cluster Secondary node
+      command: crm cluster stop
+      when: ansible_hostname == node2
+
+    - name: main | hana-srhook
+      include_tasks: hana-srhook.yml
+
+    - name: main | Starting cluster 
+      command: crm cluster start
+
+    - name: ensures pacemaker.service.d dir exists
+      file: 
+        path: /etc/systemd/system/pacemaker.service.d
+        state: directory
+
+    - name: main | Create a pacemaker service drop-in file
+      template:
+        src: "pacemaker_config.j2"
+        dest: /etc/systemd/system/pacemaker.service.d/{{ sap.instance_numbers.db }}-pacemaker.conf
+    
+    - name: systemctl daemon-reload
+      systemd:
+        daemon_reload: true
+    
+  when: 
+    - cluster_type == 'hana'
+
+- name: main | copy in cluster config template
+  template:
+    src: "{{ cluster_type }}_suse_azure_config.j2"
+    dest: ~/cluster_config{% if inventory_hostname in groups['db'] %}_{{ sap.db.sid }}{% endif %}
+  when: cluster_type != 'db2'
+
+- name: main | copy in cluster config template
+  template:
+    src: "{{ cluster_type }}_config.j2"
+    dest: ~/cluster_config_{{ sap.db.sid }}
+  when: cluster_type == 'db2'
+
+# - name: main | set cluster maintenace mode
+#   command: crm -F configure property maintenance-mode="true"
+
+- name: main | load crm config
+  shell: 
+    cmd: crm -F config load update cluster_config{% if inventory_hostname in groups['db'] %}_{{ sap.db.sid }}{% endif %}
+    chdir: ~/
+  
+# - name: main | unset cluster maintenace mode
+#   command: crm -F configure property maintenance-mode="false"
+

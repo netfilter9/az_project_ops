@@ -1,0 +1,10 @@
+---
+- name: main | package is installed
+  import_tasks: package.yml
+
+- name: main | array creation
+  import_tasks: array.yml
+
+
+
+

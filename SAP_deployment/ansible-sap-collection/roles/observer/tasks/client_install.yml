@@ -1,0 +1,17 @@
+- name: template the sql file
+  template:
+    src: "clientadmin.j2"
+    dest: "{{ root_dir }}/sapinst/CLIENT/client/clientadmin.rsp"
+
+- name: Install Oracle client
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  command: ./runInstaller -silent "variable=setting" -responseFile {{ root_dir }}/sapinst/CLIENT/client/clientadmin.rsp
+  args:
+    chdir: "{{ root_dir }}/sapinst/CLIENT/client" 
+  environment:
+    CV_ASSUME_DISTID: "OEL7.6"
+  register: clientoutput
+
+- debug:
+    var: clientoutput

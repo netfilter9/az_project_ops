@@ -1,0 +1,12 @@
+- name: folder creation for gcp
+  win_file:
+    path: "{{ item }}"
+    state: directory
+  loop: "{{ folder.path }}"
+
+- name: Download binaries for gcp
+  win_shell: gsutil -m cp -r gs://{{ item.url }}* {{ item.dest }}
+  args:
+    chdir: "{{ downloads.download_drive }}:\\"
+  with_items: "{{ downloads.urls }}"
+

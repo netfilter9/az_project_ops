@@ -1,0 +1,21 @@
+#Pre-Validation tasks
+- block:
+    - name: Assert whether the OS is valid as per the doc
+      assert:
+        that:
+          #OS X Yosemite (version 10.10) and OS X El Capitan (version 10.11)
+          - "(ansible_distribution == 'macOS' and ansible_distribution_version in ['10.10', '10.11'])"
+        success_msg: "valid OS for qualys installation"
+        fail_msg: "not valid OS for qualys installation"
+        
+#Qualys installation steps
+- block:
+
+    - name: Install Qualys (mac)
+      command: installer -pkg /etc/MAC_QualysCloudAgent.x86_64.pkg -target /
+
+    - name: Activate Qualys (mac)
+      command: bash -c " if [[ -f qualys-cloud-agent.sh ]]; then ./qualys-cloud-agent.sh ActivationId={{ activation_id }} CustomerId={{ customer_id }}; else /Applications/QualysCloudAgent.app/Contents/MacOS/qualys-cloud-agent.sh ActivationId={{ activation_id }} CustomerId={{ customer_id }}; fi"
+      args:
+        chdir: /usr/local/qualys/cloud-agent/bin
+

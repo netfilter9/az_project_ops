@@ -1,0 +1,22 @@
+---
+- name: packages | install packages
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - openmotif
+    - libXp
+    - libXt
+    - libXtst
+    - libXmu
+    - libXext
+    - libSM
+    - libICE
+    - libX11
+    - csh
+    - file
+    - libaio
+    - libXrender
+    - libXi
+    - libnsl
+      

@@ -1,0 +1,68 @@
+---
+# tasks file for sap-abap-execute-queries
+
+- name: copy abap pre-migration script files
+  copy:
+    src: "../files/"
+    dest: "{{ abap_scripts_path }}"
+    mode: '0755'
+
+- name: fetching component version
+  sap_pyrfc: username={{ user }} password={{ password }} hostname={{ hostname }} instance={{ instance_number }} client={{ client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript=ZCM_READ_BASIS_COMPONENT.txt outputspath={{ abap_export_path }} inputparams=EXPORT
+  register: component_value
+
+- set_fact:
+    component_version: "{{ (component_value.msg.OUTPUT.RESULT.OUTPUT[0]['DATA'][0]['Release']) }}" 
+
+- debug:
+    var: component_version
+    
+- name: establish connection and getting output from SAP installed System
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_pyrfc: username={{ user }} password={{ password }} hostname={{ hostname }} instance={{ instance_number }} client={{ client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript={{ item.name }} outputspath={{ abap_export_path }} inputparams={{ item.input_params }}
+  with_items:
+      - "{{ abap_pre_migration_list[sap_type | lower] | default([]) }}"
+      - "{{ abap_pre_migration_list[db_type | lower] | default([]) }}"
+      - "{{ abap_pre_migration_list[component_version | default()] | default([]) }}"
+  register: output
+  async: 3600
+  poll: 0
+
+- name: check on async task
+  async_status:
+     jid: "{{ output.results[index].ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  retries: 2000
+  delay: 10 
+  with_items:
+      - "{{ abap_pre_migration_list[sap_type | lower] | default([]) }}"
+      - "{{ abap_pre_migration_list[db_type | lower] | default([]) }}"
+      - "{{ abap_pre_migration_list[component_version | default()] | default([]) }}"
+  loop_control:
+      index_var: index
+  when:
+     - (item.name) == output.results[index].item.name
+
+- name: set fact
+  set_fact : 
+    client_list: >
+        [
+        {% for e in abap_pre_migration_list_clients %}
+        {% for c in source.sap.all_clients %}
+        {{ e | combine (c) }},
+        {% endfor %}
+        {% endfor %}
+        ] 
+  when: source.sap.all_clients is defined
+
+- name: establish connection and getting output from SAP installed System
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_pyrfc: username={{ item.user }} password={{ item.password }} hostname={{ hostname }} instance={{ instance_number }} client={{ item.client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript={{ item.name }} outputspath={{ abap_export_path }} inputparams={{ item.input_params }}
+  no_log: true
+  with_items:
+      - "{{ client_list }}"
+  when: source.sap.all_clients is defined
+  register: output_ls

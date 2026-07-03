@@ -1,0 +1,121 @@
+*&********************************************************************&*
+* Report              :   ZCM_EXP_MISSING_TABLES_INDEX                 *
+* Title               :   Missing Tables and Indexes                   *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   08/09/2020                                   *
+* Purpose             :   This report is to capture Missing Tables and *
+*                         Indexes for Cloud Migration                  *
+*----------------------------------------------------------------------*
+
+REPORT zcm_exp_missing_tables_index.
+
+CONSTANTS: lc_sep     TYPE c VALUE '|'                 LENGTH 1,
+           lc_one     TYPE c VALUE '01'                LENGTH 2,
+           lc_action  TYPE i VALUE '3',
+           lc_export  TYPE c VALUE 'EXPORT'            LENGTH 6,
+           lc_title   TYPE c VALUE
+           'Results of Consistency Check'              LENGTH 40,
+           lc_err_msg TYPE c VALUE
+           'No Missing Tables & Indexes found in the system' LENGTH 50
+           ##NO_TEXT.
+
+DATA: ls_input               TYPE tab512,
+      ls_output              TYPE tab512,
+      lv_action              TYPE char20,
+      lv_current_level2_name TYPE seu_name,
+      lv_object_count        TYPE i,
+      lv_count               TYPE char10,
+      lt_node_tab            TYPE TABLE OF snodetext,
+      ls_node_tab            TYPE snodetext.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      CALL FUNCTION 'DB6_DIAG_DDIC_CONSISTENCY'
+        EXPORTING
+          action                = lc_action
+        TABLES
+          node_tab              = lt_node_tab
+        EXCEPTIONS
+          invalid_parameter_set = 1
+          OTHERS                = 2.
+
+      IF lt_node_tab IS NOT INITIAL.
+
+        " Adding title to the output
+        CONCATENATE lc_one lc_sep lc_title
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_node_tab INTO ls_node_tab.
+
+          CASE ls_node_tab-tlevel.
+            WHEN 1.
+
+            WHEN 2.
+
+              IF ls_node_tab-name NE lv_current_level2_name.
+                lv_current_level2_name = ls_node_tab-name.
+                CONCATENATE ls_node_tab-tlevel lc_sep ls_node_tab-text
+                            INTO ls_output.
+                APPEND ls_output TO lt_output.
+
+              ENDIF.
+
+            WHEN 3.
+
+              CLEAR lv_object_count.
+
+              LOOP AT lt_node_tab TRANSPORTING NO FIELDS
+                WHERE type = ls_node_tab-name.
+                lv_object_count = lv_object_count + 1.
+
+              ENDLOOP.
+
+
+              IF lv_object_count > 0.
+
+                lv_count = lv_object_count.
+                CONDENSE lv_count.
+
+                CONCATENATE ls_node_tab-tlevel lc_sep ls_node_tab-text
+                            lc_sep lv_count
+                            INTO ls_output.
+                APPEND ls_output TO lt_output.
+              ENDIF.
+
+            WHEN 4.
+
+              CONCATENATE ls_node_tab-tlevel lc_sep ls_node_tab-text
+                          INTO ls_output.
+              APPEND ls_output TO lt_output.
+            WHEN OTHERS.
+          ENDCASE.
+        ENDLOOP.
+
+
+      ELSE.
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+        " No Missing Tables and Indexes found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+      ENDIF.
+
+    WHEN OTHERS.
+  ENDCASE.
+ENDFORM.

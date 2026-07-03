@@ -1,0 +1,18 @@
+---
+- name: fstab_config | configure dev shm
+  replace:
+    path: /etc/fstab
+    regexp: "^tmpfs"
+    replace: "tmpfs   /dev/shm        tmpfs   rw,nosuid,nodev,size={{ ((ansible_memory_mb.real.total*1024 + ansible_memory_mb.swap.total*1024) *0.75) | round | int }}k  0 0"
+  register: tmpfs_config
+  
+- name: remount
+  command: mount -o remount /dev/shm
+  when: tmpfs_config.changed
+
+- name: fstab_config | configure /mnt/resource
+  replace:
+    path: /etc/fstab
+    regexp: "^/dev/disk/cloud.*$"
+    replace: "/dev/disk/cloud/azure_resource-part1    /mnt/resource   auto    defaults,nofail,x-systemd.requires=cloud-init.service,comment=cloudconfig   0       2"
+  notify: reboot server

@@ -1,0 +1,28 @@
+---
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- name: copy user unlock response file
+  template:
+    src: post_hadr.j2
+    dest: "{{ sap.install_drive }}:\\post_hadr.rs"
+
+- name: execute sybase commands
+  vars:
+    ansible_become_user: "{{ domainName }}\\syb{{ sap.sid | lower }}"
+    ansible_become_pass: "{{ sybsid_password }}"
+  win_shell: isql -UDR_admin -P{{ sybase_db_password }} -S{{ ansible_hostname }}:4909 -X -i "{{ sap.install_drive }}:\\post_hadr.rs"
+  become: yes
+  become_method: runas
+
+- name: execute commands to add the DR_admin entry to SecureStore
+  vars:
+    ansible_become_user: "{{ domainName }}\\{{ sap.sid | lower }}adm"
+    ansible_become_pass: "{{ passwords.sidadm }}"
+  win_command: "{{ item }}"
+  become: yes
+  become_method: runas
+  loop:
+    - rsecssfx put DB_CONNECT/SYB/DR_USER DR_admin -plain
+    - rsecssfx put DB_CONNECT/SYB/DR_PASSWORD {{ sybase_db_password }}
+

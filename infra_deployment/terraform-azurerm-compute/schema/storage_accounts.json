@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "storage_accounts": {
+            "type": "object",
+            "title": "Storage Accounts",
+            "description": "This is a list group. Each declared item will have a key which defines the name for the storage account.",
+            "examples": [
+                {
+                    "storageaccount1": {}
+                },
+                {
+                    "storageaccount1": {},
+                    "storageaccount2": {}
+                }
+            ],
+            "additionalProperties": {
+                "$ref": "storage_account.json#/definitions/storage_account"
+            }
+        }
+    },
+    "additionalProperties": false
+}

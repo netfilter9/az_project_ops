@@ -1,0 +1,31 @@
+- name: azure_stonith | set fencing
+  command: pcs property set concurrent-fencing=true
+  when: ansible_hostname == node1
+
+- name: azure_stonith | create Stonith Device
+  command: "{{ item }}"
+  with_items: 
+    - pcs property set stonith-timeout=900
+    - pcs stonith create rsc_st_azure fence_azure_arm login={{ app_id }} passwd={{ app_pass }} resourceGroup={{ resource_group }} tenantId={{ tenant_id }} subscriptionId={{ subscription_id }} power_timeout=240 pcmk_reboot_timeout=900 pcmk_monitor_timeout=120 pcmk_monitor_retries=4 pcmk_action_limit=3 op monitor interval=3600
+    - pcs property set stonith-enabled=true
+  when: 
+    - ansible_hostname == node1
+    - ansible_distribution_major_version < '8'
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("rsc_st_azure already exists")) 
+
+- name: azure_stonith | create Stonith Device
+  command: "{{ item }}"
+  with_items: 
+    - pcs property set stonith-timeout=900
+    - pcs stonith create rsc_st_azure fence_azure_arm username={{ app_id }} password={{ app_pass }} resourceGroup={{ resource_group }} tenantId={{ tenant_id }} subscriptionId={{ subscription_id }} power_timeout=240 pcmk_reboot_timeout=900 pcmk_monitor_timeout=120 pcmk_monitor_retries=4 pcmk_action_limit=3 pcmk_delay_max=15 op monitor interval=3600
+    - pcs property set stonith-enabled=true
+  when: 
+    - ansible_hostname == node1
+    - ansible_distribution_major_version >= '8'
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("rsc_st_azure already exists")) 

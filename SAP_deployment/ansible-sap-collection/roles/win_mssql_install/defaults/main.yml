@@ -1,0 +1,48 @@
+---
+
+instance_numbers:
+  "2012":
+    nnn: "110"
+    nn: "11"
+  "2014":
+    nnn: "120"
+    nn: "12"
+  "2016":
+    nnn: "130"
+    nn: "13"
+  "2017":
+    nnn: "140"
+    nn: "14"
+  "2019":
+    nnn: "150"
+    nn: "15"
+
+instance_version: "{{ mssql_params.install.version | default('2016') }}"
+instance_nnn: "{{ instance_numbers[instance_version]['nnn'] }}"
+instance_nn: "{{ instance_numbers[instance_version]['nn'] }}"
+instance_name: "{{ mssql_params.install.instance_name | default('MSSQLSERVER') }}"
+default_sql_directory: "C:\\Program Files\\Microsoft SQL Server\\MSSQL{{ instance_nn }}.{{ instance_name }}\\MSSQL"
+
+default_params:
+  install:
+    version: "{{ instance_version }}"
+    instance_name: "{{ instance_name }}"
+    features: "{{ mssql_params.install.features | default('SQLENGINE') }}"
+    collation: "{{ mssql_params.install.collation | default('SQL_Latin1_General_CP850_BIN2') }}" 
+    directories:
+      install_shared: "C:\\Program Files\\Microsoft SQL Server"
+      install_shared_wow: "C:\\Program Files (x86)\\Microsoft SQL Server"
+      instance: "C:\\Program Files\\Microsoft SQL Server"
+      sql_data: "{{ mssql_params.install.directories.sql_data | default(default_sql_directory + '\\Data') }}"
+      user_db: "{{ mssql_params.install.directories.user_db | default(default_sql_directory + '\\Data') }}"
+      user_db_log: "{{ mssql_params.install.directories.user_db_log | default(default_sql_directory + '\\Data') }}"
+      temp_db: "{{ mssql_params.install.directories.temp_db | default(default_sql_directory + '\\Data') }}"
+      temp_db_log: "{{ mssql_params.install.directories.temp_db_log | default(default_sql_directory + '\\Data') }}"
+      backup: "{{ mssql_params.install.directories.backup | default(default_sql_directory + '\\Backup') }}"
+    firewall:
+      change: "{{ mssql_params.install.firewall.change | default(true) }}"
+      profile: "{{ mssql_params.install.firewall.profile | default('Private, Domain') }}"
+      local_ports: "{{ mssql_params.install.firewall.local_ports | default('1433, 1434') }}"
+    install_ssms: "{{ mssql_params.install.install_ssms | default(false) }}"
+
+sql_source_path: "{{ mssql_params.download_drive }}:\\{{ mssql_params.source_path }}"

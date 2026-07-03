@@ -1,0 +1,49 @@
+---
+
+- name: Install SQL Server
+  win_dsc:
+    resource_name: SQLSetup
+    action: Install
+      
+    # SQL specifics
+    InstanceName: "{{ default_params.install.instance_name }}"
+    Features: "{{ default_params.install.features }}"
+    SQLCollation: "{{ default_params.install.collation }}"
+    
+    # Installation parameters   
+    InstallSharedDir: "{{ default_params.install.directories.install_shared }}"
+    InstallSharedWOWDir: "{{ default_params.install.directories.install_shared_wow }}"
+    InstanceDir: "{{ default_params.install.directories.instance }}"
+    
+    InstallSQLDataDir: "{{ default_params.install.directories.sql_data }}"
+    SQLUserDBDir: "{{ default_params.install.directories.user_db }}"
+    SQLUserDBLogDir: "{{ default_params.install.directories.user_db_log }}"
+    SQLTempDBDir: "{{ default_params.install.directories.temp_db }}"
+    SQLTempDBLogDir: "{{ default_params.install.directories.temp_db_log }}"
+    SQLBackupDir: "{{ default_params.install.directories.backup }}"
+      
+    ASConfigDir: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.install.directories.as_config,omit) }}"
+    ASDataDir: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.install.directories.as_data,omit) }}"
+    ASLogDir: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.install.directories.as_log,omit) }}"
+    ASBackupDir: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.install.directories.as_backup,omit) }}"
+    ASTempDir: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.install.directories.as_temp,omit) }}"
+    
+    # SQL service account
+    SQLSvcAccount_username: "{{ mssql_params.service_accounts.users.service.username }}"
+    SQLSvcAccount_password: "{{ mssql_params.service_accounts.users.service.password }}"
+    # SQL Agent Service Account
+    AgtSvcAccount_username: "{{ mssql_params.service_accounts.users.agent.username }}"
+    AgtSvcAccount_password: "{{ mssql_params.service_accounts.users.agent.password }}"
+    # SQL Analysis Services Account
+    ASSvcAccount_username: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.service_accounts.users.as_service.username,omit) }}"
+    ASSvcAccount_password: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.service_accounts.users.as_service.password,omit) }}"
+    # System Admins 
+    SQLSysAdminAccounts: "{{ mssql_params.service_accounts.sys_admin_groups }}"
+    # Analysis Services Admins (if installed)
+    ASSysAdminAccounts: "{{ ('AS' in default_params.install.features.split(',')) | ternary(mssql_params.service_accounts.as_sysadmin_groups,omit) }}"
+
+    SourcePath: "{{ sql_source_path }}"
+    UpdateEnabled: False
+    ForceReboot: False
+
+    SecurityMode: "{{ (mssql_params.security is defined and mssql_params.security == 'SQL') | ternary('SQL',omit) }}"

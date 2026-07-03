@@ -1,0 +1,23 @@
+---
+# for use when uploading to storage as a service solution such as ANF or GCP filestore
+
+- name: main | download folders for azure
+  command: azcopy cp '{{ item.url }}{{ item.token }}' {{ item.dest }} --recursive=true --overwrite=ifSourceNewer
+  # no_log: true
+  args:
+    chdir: "{{ root_dir }}"
+  with_items:
+    - "{{ downloads }}"
+  tags:
+    - download
+
+- name: main | make sapcar executable
+  file:
+    path: /{{ root_dir }}/sapinst/SWPM/sapcar.exe
+    mode: "0777"
+
+- name: sap_download | expand SWPM sar file
+  command: ./sapcar.exe -xvf SWPM*.SAR
+  args:
+    chdir: /{{ root_dir }}/sapinst/SWPM
+    creates: ./sapinst

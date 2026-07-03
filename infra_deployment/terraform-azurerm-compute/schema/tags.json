@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "tags": {
+            "title": "Tags",
+            "description": "list of tags",
+            "type": "object",
+            "properties": {
+                "owner": {
+                    "type": "string",
+                    "example": "steven.t.urwin@accenture.com"
+                },
+                "autoshutdown": {
+                    "type": "string",
+                    "default": "20:00BST"
+                }
+            },
+            "additionalProperties": {
+                "type": "string"
+            }
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,123 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCC_SICK_CHK_SAPACCESS                      *
+* Title               :   Execute SICK transaction to determine the   *
+*                     :   status of system                            *
+* Purpose             :   To execute select operating system commands *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SICK/RSICC000                                                       *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* XXXXX               :     X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-03-2021 Initial   Ashwini B G    Local    To Execute SICK to      *
+*                                             determine the status of *
+*                                             the system              *
+*---------------------------------------------------------------------*
+REPORT zcc_sick_chk_sapaccess.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config TABLES lt_input  STRUCTURE tab512
+                       lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_not_found  TYPE c VALUE
+             'No list found in memory'                        LENGTH 25,
+             lc_empty_list TYPE c VALUE
+             'The list object transported is empty'           LENGTH 50,
+             lc_invalid    TYPE c VALUE 'Invalid list index'  LENGTH 25,
+             lc_fail_asci  TYPE c VALUE
+             'Failed to convert to asci'                      LENGTH 25,
+             lc_title      TYPE c VALUE 'SAP System Check'    LENGTH 20.
+
+  DATA: lt_list   TYPE TABLE OF abaplist,
+        lt_ascii  TYPE TABLE OF soli,
+        ls_ascii  TYPE soli,
+        ls_output TYPE tab512.
+
+  " Adding title to the output
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+* Execute SICK and retrieve the details of the
+* system's current status
+
+  SUBMIT rsicc000
+    EXPORTING LIST TO MEMORY
+      AND RETURN.
+
+  CALL FUNCTION 'LIST_FROM_MEMORY'
+    TABLES
+      listobject = lt_list
+    EXCEPTIONS
+      not_found  = 1
+      OTHERS     = 2.
+
+  IF sy-subrc = 0.
+
+    CALL FUNCTION 'LIST_TO_ASCI'
+      TABLES
+        listasci           = lt_ascii
+        listobject         = lt_list
+      EXCEPTIONS
+        empty_list         = 1
+        list_index_invalid = 2
+        OTHERS             = 3.
+
+    IF sy-subrc EQ 0.
+
+      FREE: lt_output[].
+
+      CLEAR: ls_ascii,ls_output.
+      LOOP AT lt_ascii INTO ls_ascii.
+        AT FIRST.
+          ls_output = sy-sysid.
+          APPEND ls_output TO lt_output.
+        ENDAT.
+        REPLACE ALL OCCURRENCES OF '-' IN ls_ascii WITH ''.
+        REPLACE ALL OCCURRENCES OF '|' IN ls_ascii WITH ''.
+        IF ls_ascii IS NOT INITIAL.
+          ls_output = ls_ascii.
+          APPEND ls_output TO lt_output.
+        ENDIF.
+        CLEAR: ls_ascii,ls_output.
+      ENDLOOP.
+
+    ELSEIF sy-subrc EQ 1.
+
+      ls_output = lc_empty_list.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      RETURN.
+
+    ELSEIF sy-subrc EQ 2.
+
+      ls_output = lc_invalid.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      RETURN.
+
+    ELSE.
+
+      ls_output = lc_fail_asci.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      RETURN.
+
+    ENDIF.
+
+  ELSE.
+
+    ls_output = lc_not_found.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+
+  ENDIF.
+
+ENDFORM.

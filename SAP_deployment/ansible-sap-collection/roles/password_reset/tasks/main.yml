@@ -1,0 +1,6 @@
+- name: password-reset
+  user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | password_hash('sha512') }}" 
+  become: yes
+  loop: "{{ password_reset }}"

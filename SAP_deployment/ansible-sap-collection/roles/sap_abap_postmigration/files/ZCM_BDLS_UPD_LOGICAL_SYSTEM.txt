@@ -1,0 +1,153 @@
+*&********************************************************************&*
+* Report              :   ZCM_BDLS_UPD_LOGICAL_SYSTEM                  *
+* Title               :   Update Logical system for Cloud Migration    *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   21/12/2020                                   *
+* Purpose             :   This report is used to update logical system *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+REPORT zcm_bdls_upd_logical_system.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep       TYPE c VALUE '|'        LENGTH 1,
+             lc_strtimmed TYPE c VALUE 'X'        LENGTH 1,
+             lc_process   TYPE c VALUE 'PROCESS'  LENGTH 8,
+             lc_success   TYPE c VALUE
+             'Job scheduled with jobname '        LENGTH 35,
+             lc_bdls      TYPE tbtcjob-jobname  VALUE 'BDLS'.
+
+  DATA: ls_input        TYPE tab512,
+        ls_output       TYPE tab512,
+        lv_action       TYPE char10,
+        lv_logsys_old   TYPE logsys,
+        lv_logsys_new   TYPE logsys,
+        lv_maximum      TYPE char10,
+        lv_jobcount     TYPE tbtcjob-jobcount,
+        lv_job_released TYPE char1,
+        lt_joblog       TYPE TABLE OF tbtc5,
+        ls_joblog       TYPE tbtc5,
+        lt_selection    TYPE TABLE OF rsparams,
+        ls_selection    LIKE LINE OF lt_selection.
+
+  " Reading input and get data
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  SPLIT ls_input AT lc_sep INTO
+  lv_action
+  lv_logsys_old
+  lv_logsys_new
+  lv_maximum.
+
+  CASE lv_action.
+
+    WHEN lc_process.              " When action is PROCESS
+
+      IF lv_logsys_old IS NOT INITIAL.
+        ls_selection-selname = 'OLD_LS'. " Old Logical System
+        ls_selection-kind    = 'S'.
+        ls_selection-sign    = 'I'.
+        ls_selection-option  = 'CP'.
+        ls_selection-low     = lv_logsys_old.
+        APPEND ls_selection TO lt_selection.
+      ENDIF.
+
+      IF lv_logsys_new IS NOT INITIAL.
+        ls_selection-selname = 'NEW_LS'. " New Logical System
+        ls_selection-kind    = 'S'.
+        ls_selection-sign    = 'I'.
+        ls_selection-option  = 'CP'.
+        ls_selection-low     = lv_logsys_new.
+        APPEND ls_selection TO lt_selection.
+      ENDIF.
+
+      IF lv_maximum IS NOT INITIAL.
+        ls_selection-selname = 'MAXIMUM'. " Number of entries
+        ls_selection-kind    = 'S'.
+        ls_selection-sign    = 'I'.
+        ls_selection-option  = 'CP'.
+        ls_selection-low     = lv_maximum.
+        APPEND ls_selection TO lt_selection.
+      ENDIF.
+
+      ls_selection-selname = 'CLNT_IND'. " Number of entries
+      ls_selection-kind    = 'S'.
+      ls_selection-sign    = 'I'.
+      ls_selection-option  = 'CP'.
+      ls_selection-low     = 'X'.
+      APPEND ls_selection TO lt_selection.
+
+      ls_selection-selname = 'TESTRUN'. "
+      ls_selection-kind    = 'S'.
+      ls_selection-sign    = 'I'.
+      ls_selection-option  = 'CP'.
+      ls_selection-low     = space.
+      APPEND ls_selection TO lt_selection.
+
+      ls_selection-selname = 'CHECKIT'. "
+      ls_selection-kind    = 'S'.
+      ls_selection-sign    = 'I'.
+      ls_selection-option  = 'CP'.
+      ls_selection-low     = space.
+      APPEND ls_selection TO lt_selection.
+
+      " FM to open the job
+      CALL FUNCTION 'JOB_OPEN'
+        EXPORTING
+          jobname          = lc_bdls
+        IMPORTING
+          jobcount         = lv_jobcount
+        EXCEPTIONS
+          cant_create_job  = 1
+          invalid_job_data = 2
+          jobname_missing  = 3
+          OTHERS           = 4.
+
+      IF sy-subrc EQ 0.
+
+        "Using the standard report to Update Logical system
+        SUBMIT rbdlsmap
+        WITH SELECTION-TABLE lt_selection
+        VIA JOB lc_bdls NUMBER lv_jobcount
+        AND RETURN.
+
+        " FM to close the job
+        CALL FUNCTION 'JOB_CLOSE'
+          EXPORTING
+            jobcount             = lv_jobcount
+            jobname              = lc_bdls
+            strtimmed            = lc_strtimmed
+          IMPORTING
+            job_was_released     = lv_job_released
+          EXCEPTIONS
+            cant_start_immediate = 1
+            invalid_startdate    = 2
+            jobname_missing      = 3
+            job_close_failed     = 4
+            job_nosteps          = 5
+            job_notex            = 6
+            lock_failed          = 7
+            invalid_target       = 8
+            invalid_time_zone    = 9
+            OTHERS               = 10.
+
+        IF sy-subrc EQ 0.
+
+          IF lv_job_released = 'X'.
+            CONCATENATE lc_success lc_bdls
+                        INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+          ENDIF.
+
+        ENDIF.
+      ENDIF.
+
+    WHEN OTHERS.
+  ENDCASE.
+
+ENDFORM.

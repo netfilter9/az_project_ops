@@ -1,0 +1,46 @@
+- name: drbd_for_share | check to see if this is already done
+  stat:
+    path: /etc/drbd.d/{{ share.ref }}-nfs.res
+  register: drbd_done
+
+- name: drbd block
+  block:
+
+    - name: drbd_for_share | generate nfs.res file
+      template:
+        src: nfs.res.j2
+        dest: /etc/drbd.d/{{ share.ref }}-nfs.res
+
+    - name: drbd_for_share | create and bring up on node1
+      command: "{{ cmd }}"
+      loop:
+        - drbdadm create-md {{ share.ref }}-nfs
+        - drbdadm up {{ share.ref }}-nfs
+      loop_control:
+        loop_var: cmd
+      when: ansible_hostname == node1
+
+    - name: drbd_for_share | create and bring up on node2
+      command: "{{ cmd }}"
+      loop:
+        - drbdadm create-md {{ share.ref }}-nfs
+        - drbdadm up {{ share.ref }}-nfs
+      loop_control:
+        loop_var: cmd
+      when: ansible_hostname == node2
+
+    - name: drbd_for_share | create new uuid
+      command: drbdadm new-current-uuid --clear-bitmap {{ share.ref }}-nfs/{{ share.drbd_num }}
+      when: ansible_hostname == node1
+
+    - name: drbd_for_share | for primary on node1
+      command: drbdadm primary --force {{ share.ref }}-nfs
+      when: ansible_hostname == node1
+
+    - name: drbd_for_share | format filesystem
+      filesystem: 
+        fstype: "{{ share.fstype | default('xfs') }}"
+        dev: /dev/drbd{{ share.drbd_num }}
+      when: ansible_hostname == node1
+  
+  when: not drbd_done.stat.exists

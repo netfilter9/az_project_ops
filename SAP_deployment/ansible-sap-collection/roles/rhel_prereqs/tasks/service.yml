@@ -1,0 +1,6 @@
+- name: services | uuidd start
+  service:
+    name: uuidd
+    state: started
+    enabled: yes
+  when: ansible_distribution_major_version >= '8' and platform == 'azure'

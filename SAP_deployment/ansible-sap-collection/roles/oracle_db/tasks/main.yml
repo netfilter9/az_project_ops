@@ -1,0 +1,35 @@
+---
+- name: set username and primary group
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    oracle_installation_primary_group: "{{ sap.db.primary_installation_group | default('oinstall') }}"
+
+- name: main | package install
+  import_tasks: package.yml
+  tags:
+    - packageinstall
+
+- name: main | modify sysctl entries
+  import_tasks: sysctl.yml
+  tags:
+    - sysctl
+
+- name: main | cshrc file creation
+  import_tasks: cshrc.yml
+  tags:
+    - cshrc
+
+- name: main | file permission change 
+  import_tasks: permission.yml
+  tags:
+    - permission
+
+- name: main | oracle installation 
+  import_tasks: oracle_install.yml
+  tags:
+    - oracle_install
+
+- name: main | post oracle installation 
+  import_tasks: post_install.yml
+  tags:
+    - post_install

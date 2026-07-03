@@ -1,0 +1,10 @@
+- name: pcs_resource_hana | pcs hana resource create
+  command: "{{ item }}"
+  with_items:
+      - pcs resource defaults resource-stickiness=1000
+      - pcs resource defaults migration-threshold=5000      
+      - pcs resource create vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} aws-vpc-move-ip ip={{ db_overlay_ip }} interface=eth0 routing_table={{route_table_id}} op monitor interval=30s timeout=20s
+      - pcs resource create SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHanaTopology SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} op start timeout=600 op stop timeout=300 op monitor interval=10 timeout=600 clone clone-max=2 clone-node-max=1 interleave=true
+      - pcs resource create SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHana SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} PREFER_SITE_TAKEOVER=true DUPLICATE_PRIMARY_TIMEOUT=7200 AUTOMATED_REGISTER=true op start timeout=3600 op stop timeout=3600 op monitor interval=61 role="Slave" timeout=700 op monitor interval=59 role="Master" timeout=700 op promote timeout=3600 op demote timeout=3600 promotable meta notify=true clone-max=2 clone-node-max=1 interleave=true
+      - pcs constraint order SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone then SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone symmetrical=false
+      - pcs constraint colocation add vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} with master SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone 2000

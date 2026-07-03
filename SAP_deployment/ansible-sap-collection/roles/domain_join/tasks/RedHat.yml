@@ -1,0 +1,132 @@
+---
+
+- name: install required packages
+  package:
+    name: "{{ domain_join_packages }}"
+    state: present
+  register: domain_join_package_result
+  become: yes
+
+- name: debug domain_join_package_result
+  debug:
+    var: domain_join_package_result
+    verbosity: "{{ verbosity_level }}"
+
+- name: install extra packages for RHEL
+  package:
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+    state: present
+  when: ansible_distribution_major_version == '7'
+
+- name: install pip package
+  package:
+    name: "python-pip"
+    state: present
+  when: ansible_distribution_major_version == '7'
+
+- name: install any required pip packages
+  pip:
+    name: "{{ domain_join_pip_packages }}"
+
+- name: include ntp configuration tasks
+  include_tasks:
+    file: ntp_config.yml
+  when:
+    - domain_join_configure_ntp | bool
+
+- name: get realm status
+  command: "/usr/sbin/realm discover {{ dns_domain_name }}"
+  register: realm_status
+
+- name: debug realm_status
+  debug:
+    var: realm_status
+    verbosity: "{{ verbosity_level }}"
+
+- name: get realm configured state
+  vars:
+    regex: '^\s+configured:\s(.+)$'
+  set_fact:
+    domain_join_realm_state: "{{ item |
+                                 regex_search(regex, '\\1') |
+                                 first }}"
+  loop: "{{ realm_status.stdout_lines }}"
+  when:
+    - item | regex_search(regex)
+
+- name: debug domain_join_realm_state
+  debug:
+    var: domain_join_realm_state
+    verbosity: "{{ verbosity_level }}"
+
+- name: block to realm join to active directory domain
+  block:
+
+      # TODO: is expect required or could we just use --one-time-password
+    - name: join system to active directory domain
+      vars:
+        ou_part: "{{ (domain_join_computer_ou | length) |
+                      ternary('--computer-ou=' + domain_join_computer_ou,
+                              '') }}"
+      expect:
+        command: "/bin/bash -c '/usr/sbin/realm join \
+                            --user={{ domain_join_username }} \
+                            {{ ou_part }} \
+                            {{ dns_domain_name }}'"
+        responses:
+          (?i)password: "{{ domain_join_password }}"
+      register: domain_join_join_state
+      notify:
+        - restart-sssd
+      become: yes
+
+    - name: debug domain_join_join_state
+      debug:
+        var: domain_join_join_state
+        verbosity: "{{ verbosity_level }}"
+
+  when:
+    - domain_join_realm_state != 'kerberos-member'
+
+- name: template /etc/krb5.conf
+  template:
+    src: krb5.j2
+    dest: /etc/krb5.conf
+  register: domain_join_krb5_conf
+  notify:
+    - restart-sssd
+  become: yes
+
+- name: debug domain_join_krb5_conf
+  debug:
+    var: domain_join_krb5_conf
+    verbosity: "{{ verbosity_level }}"
+
+- name: template /etc/sssd/sssd.conf
+  template:
+    src: sssd.j2
+    dest: /etc/sssd/sssd.conf
+  register: domain_join_sssd_conf
+  notify:
+    - restart-sssd
+  become: yes
+
+- name: debug domain_join_sssd_conf
+  debug:
+    var: domain_join_sssd_conf
+    verbosity: "{{ verbosity_level }}"
+
+- name: Set dns search in /etc/dhcp/dhclient.conf
+  lineinfile:
+    path: /etc/dhcp/dhclient.conf
+    regexp: '^append domain-name \" {{ dns_domain_name }}\";$'
+    line: "append domain-name \" {{ dns_domain_name }}\";"
+    create: yes
+    mode: 0644
+    owner: root
+    group: root
+  notify:
+    - restart-network
+  become: yes
+  when:
+    - domain_join_update_dhcp_client | bool

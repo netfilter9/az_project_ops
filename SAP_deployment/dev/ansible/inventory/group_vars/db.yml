@@ -1,0 +1,57 @@
+virtual_hostname: "{{ sap.logical_hosts.db.hostname }}"
+virtual_ip: "{{ sap.logical_hosts.db.ip }}"
+tune: "{{ sap.db.tune }}"
+swapfile_size: 20480
+
+groupsetup:
+  - name: sapsys
+    gid: "{{ users.sapsys.gid }}"
+
+usersetup:
+  - name: "{{ sap.db.sid|lower }}adm"
+    uid: "{{ users.dbsidadm.uid }}"
+    group: sapsys
+    shell: /bin/sh
+    password: "{{ passwords.dbsidadm }}"
+    sudo: true
+  - name: "{{ sap.sid|lower }}adm"
+    uid: "{{ users.sidadm.uid }}"
+    group: sapsys
+    shell: /bin/sh
+    password: "{{ passwords.sidadm }}"
+    sudo: true
+
+volume_groups:
+  - ref: opt-traps
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGCORTEX
+    lv: lv_opttrap
+    size: 10g
+    mount: /usr/sap
+  - ref: hanashared
+    pvs: /dev/disk/azure/data/by-lun/9
+    vg: VGSAP
+    lv: lv_hdbshared
+    size: 70g
+    mount: /hana/shared
+  - ref: hanadata
+    pvs: /dev/disk/azure/data/by-lun/1,/dev/disk/azure/data/by-lun/2,/dev/disk/azure/data/by-lun/3,/dev/disk/azure/data/by-lun/4
+    vg: VGDATA
+    lv: lv_hdbdata  
+    stripes: 4
+    stripe_size: 1024
+    mount: /hana/data
+  - ref: hanalog
+    pvs: /dev/disk/azure/data/by-lun/5,/dev/disk/azure/data/by-lun/6,/dev/disk/azure/data/by-lun/7,/dev/disk/azure/data/by-lun/8
+    vg: VGLOG
+    lv: lv_hdblog
+    stripes: 4
+    stripe_size: 256
+    mount: /hana/log 
+  - ref: sapcd
+    pvs: /dev/disk/azure/data/by-lun/10
+    vg: VGSAPCD
+    lv: lv_sapcd
+    size: 255g
+    mount: /sapcd
+

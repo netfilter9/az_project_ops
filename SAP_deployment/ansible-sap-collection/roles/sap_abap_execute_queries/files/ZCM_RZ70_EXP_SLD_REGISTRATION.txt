@@ -1,0 +1,121 @@
+*&*******************************************************************&*
+* Report              :   ZCM_RZ70_EXP_SLD_REGISTRATION               *
+* Title               :   Logical Systems                             *
+* Created by          :   Soumya Ray                                  *
+* Created on          :   22/09/2020                                  *
+* Purpose             :   This report is used to export Gateway host, *
+*                         service and period in minutes( tcode: RZ70) *
+*---------------------------------------------------------------------*
+
+REPORT zcm_rz70_exp_sld_registration.
+
+FORM get_config
+               TABLES lt_input  STRUCTURE tab512 " Input from PYTHON
+                      lt_output STRUCTURE tab512. " Output to PYTHON
+
+  CONSTANTS: lc_sep       TYPE c       VALUE '|',
+             lc_export    TYPE char20   VALUE 'EXPORT',
+             lc_nodata    TYPE string   VALUE 'No data',
+             lc_msg_head  TYPE string VALUE
+                            'Registrationinsystemlandscapedirectory',
+             lc_tablename TYPE tabname  VALUE 'SLDAGADM'.
+
+  DATA: ls_output     TYPE tab512,
+        ref_table_des TYPE REF TO cl_abap_structdescr,
+        idetails      TYPE abap_compdescr_tab,
+        xdetails      TYPE abap_compdescr,
+        ls_prefinal   TYPE string,
+        lv_btcmin     TYPE string.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  CHECK sy-subrc EQ 0.
+  DATA(lv_action) = ls_input.
+
+  CLEAR: ls_output, ls_prefinal.
+  CASE lv_action.
+
+    WHEN lc_export. " EXPORT action
+      ls_output = lc_msg_head. " Heading of script
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+* Select to get the table entries of SLDAGADM for PROGNAME RSLDAGDS
+      SELECT SINGLE * FROM sldagadm
+      INTO @DATA(ls_sldagadm)
+            WHERE progname = 'RSLDAGDS'.
+      IF ls_sldagadm EQ space. " In case table has no value
+        ls_output = lc_nodata.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+      ELSE.                 " In case table has value
+* //Logic to get Column headings
+        ref_table_des ?=
+        cl_abap_typedescr=>describe_by_name( lc_tablename ).
+        idetails[] = ref_table_des->components[].
+        LOOP AT idetails INTO xdetails.
+          CONCATENATE ls_prefinal xdetails-name '|' INTO ls_prefinal.
+          CLEAR xdetails.
+        ENDLOOP.
+        ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+        ls_output = ls_prefinal.
+        APPEND ls_output TO lt_output.
+* //Logic to get Column headings
+        CLEAR: ls_prefinal, ls_output.
+        lv_btcmin = ls_sldagadm-btcmin. " BTCMIN type casted to string
+*   Table value is concatenated to output table
+        CONCATENATE ls_sldagadm-progname lc_sep
+                    ls_sldagadm-active   lc_sep
+                    ls_sldagadm-seqnr    lc_sep
+                    ls_sldagadm-dorfc    lc_sep
+                    ls_sldagadm-rfcdest  lc_sep
+                    ls_sldagadm-gwhost   lc_sep
+                    ls_sldagadm-gwserv   lc_sep
+                    ls_sldagadm-doshm    lc_sep
+                    ls_sldagadm-dobtc    lc_sep
+                    lv_btcmin            lc_sep
+                    ls_sldagadm-cshmhost lc_sep
+                    ls_sldagadm-test     lc_sep
+                    ls_sldagadm-testcnt  lc_sep
+                    ls_sldagadm-testprnt INTO ls_prefinal. " Data value
+*  Form to replace blank values in last field with NULL.
+        PERFORM end_null_check CHANGING ls_prefinal.
+        CONDENSE ls_prefinal.
+        ls_output = ls_prefinal.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+*  Form to replace blank values in fields ( in between ) with NULL.
+      PERFORM null_check TABLES  lt_output.
+  ENDCASE.
+  CLEAR: ls_output, ls_prefinal, lv_btcmin, ls_input, lv_action,
+  xdetails.
+  FREE: idetails, ref_table_des.
+
+ENDFORM.
+
+FORM null_check  TABLES   lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.
+
+FORM end_null_check  CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+  off = strlen( ls_string ) - 1
+  len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+    INTO ls_string.
+  ENDIF.
+
+ENDFORM.

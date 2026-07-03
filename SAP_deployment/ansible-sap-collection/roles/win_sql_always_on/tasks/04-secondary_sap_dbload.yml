@@ -1,0 +1,55 @@
+---
+
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- debug:
+    msg: "{{ domainName }}"
+
+- name: Create a new group SAP_SAP_GlobalAdmin
+  win_group:
+    name: SAP_SAP_GlobalAdmin
+    description: SAP Global Administration Group
+    state: present
+
+- name: Create a new group SAP_LocalAdmin
+  win_group:
+    name: SAP_LocalAdmin
+    description: SAP Local Administration Group
+    state: present
+
+- name: Create a new group SAP_SAP_LocalAdmin
+  win_group:
+    name: SAP_SAP_LocalAdmin
+    description: SAP Local Administration Group
+    state: present
+
+- name: Create a new group SAP_SID_LocalAdmin
+  win_group:
+    name: SAP_{{ sap.sid }}_LocalAdmin
+    description: SAP Local Administration Group
+    state: present
+
+- name: create sapadm user
+  win_user:
+    name: "sapadm"
+    password: "{{ vault_passwords.mssql.service }}"
+    state: present
+    groups:
+      - SAP_SAP_GlobalAdmin
+      - SAP_LocalAdmin
+      - SAP_SAP_LocalAdmin
+
+- name: Add global user to a local group
+  win_group_membership:
+    name: SAP_LocalAdmin
+    members:
+      - "{{ domainName }}\\SAP_{{ sap.sid }}_GlobalAdmin"
+    state: present
+
+- name: Add sid user to a local group
+  win_group_membership:
+    name: SAP_{{ sap.sid }}_LocalAdmin
+    members:
+      - "{{ domainName }}\\SAP_{{ sap.sid }}_GlobalAdmin"
+    state: present

@@ -1,0 +1,61 @@
+---
+- name: pcs_resource_hana_azure | pcs hana resource create
+  command: pcs property set maintenance-mode=true 
+
+- name: pcs_resource_hana_azure | pcs hana resource create for redhat >= 8
+  block:
+
+    - name: resource create vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs resource create vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} IPaddr2 ip="{{ sap.logical_hosts.db.ip }}"
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: resource create nc_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs resource create nc_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} azure-lb port=625{{ sap.instance_numbers.db }}
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: resource create SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs resource create SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHanaTopology SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} op start timeout=600 op stop timeout=300 op monitor interval=10 timeout=600 clone clone-max=2 clone-node-max=1 interleave=true
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: resource create SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs resource create SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHana SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} PREFER_SITE_TAKEOVER=true DUPLICATE_PRIMARY_TIMEOUT=7200 AUTOMATED_REGISTER={{ primitives.db.automatic_register }} op start timeout=3600 op stop timeout=3600 op monitor interval=61 role="Slave" timeout=700 op monitor interval=59 role="Master" timeout=700 op promote timeout=3600 op demote timeout=3600 promotable notify=true clone-max=2 clone-node-max=1 interleave=true
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: resource group add g_ip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs resource group add g_ip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} nc_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: constraint order SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone
+      command: pcs constraint order SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone then SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone symmetrical=false
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: constraint colocation add g_ip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      command: pcs constraint colocation add g_ip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} with master SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone 4000
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+  
+  when: ansible_distribution_major_version >= '8'
+
+- name: pcs_resource_hana_azure | pcs hana resource create
+  command: pcs property set maintenance-mode=false
+

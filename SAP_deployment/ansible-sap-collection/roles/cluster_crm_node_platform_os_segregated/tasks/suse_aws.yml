@@ -1,0 +1,30 @@
+---
+- name: suse | setup os config
+  import_tasks: os_config.yml
+  tags:
+    - os_config
+
+- name: suse | setup ssh keys
+  import_tasks: ssh_key_setup.yml
+  tags:
+    - ssh
+
+- name: rhel | perform corosync service tuning for aws and rhel
+  include_tasks: corosync_aws.yml
+  tags:
+    - corosync_aws
+
+- name: suse | enable corosync
+  command: systemctl enable corosync
+
+- name: suse | enable pacemaker
+  command: systemctl enable pacemaker
+
+- name: suse | enable logd
+  command: systemctl enable logd
+
+- name: suse | stop logd
+  command:  systemctl stop logd
+
+- name: suse | start logd
+  command:  systemctl start logd

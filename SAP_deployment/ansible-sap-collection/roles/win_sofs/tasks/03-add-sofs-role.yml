@@ -1,0 +1,24 @@
+---
+
+- name: get cluster scale out role details
+  win_shell: |
+    (Get-ClusterGroup).Name
+  register: get_clustergroup
+
+  # note that if the ScaleOutFileServerRole has already been
+  # registered in active directory but is not present in the cluster
+  # then this step will fail.  This could have happened if running
+  # the setup again or due to an actual duplicate name conflict.
+  # If the task does fail then investigate whether the name is correct
+  # or whether a stale object exists in AD
+- name: add cluster ScaleOutFileServerRole
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_shell : |
+    Add-ClusterScaleOutFileServerRole -Name "{{ sap.global_hostname }}"
+  register: add_sofsrole
+  become: yes
+  become_method: runas
+  when:
+    - sap.global_hostname not in get_clustergroup.stdout_lines

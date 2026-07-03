@@ -1,0 +1,81 @@
+# - name: grub | copy in grub file
+#   vars:
+#     files:
+#       - grub.{{ ansible_os_family }}_{{ ansible_distribution_version }}
+#       - grub.{{ ansible_os_family }}_{{ ansible_distribution_major_version }}
+#   copy:
+#     src: "{{ lookup('first_found', files) }}"
+#     dest: /etc/default/grub
+#   register: hanarules
+
+- name: grub | copy in grub file
+  lineinfile:
+    path: /etc/default/grub
+    backup: yes
+    backrefs: yes
+    state: present
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ line_item }}).*). *$"
+    line: "\\1 {{ line_item }}\""
+  with_items:
+    - "processor.max_cstate=1"
+    - "intel_idle.max_cstate=1"
+    - "transparent_hugepage=never"
+  when:
+    - ansible_os_family == 'RedHat'
+    # - sap_hana_preconfigure_modify_grub_cmdline_linux
+  loop_control:
+    loop_var: line_item
+  register: hanarules
+
+- name: grub | update in grub file for suse
+  lineinfile:
+    path: /etc/default/grub
+    backup: yes
+    backrefs: yes
+    state: present
+    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=(?!.* {{ line_item }}).*). *$"
+    line: "\\1 {{ line_item }}\""
+  with_items:
+    - "processor.max_cstate=1"
+    - "intel_idle.max_cstate=1"
+    - "transparent_hugepage=never"
+  when:
+    - ansible_os_family == 'Suse'
+    # - sap_hana_preconfigure_modify_grub_cmdline_linux
+  loop_control:
+    loop_var: line_item
+  register: hanarules
+
+- name: grub | tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: net.core.wmem_max, value: 6291456 }
+    - { name: net.core.rmem_max, value: 6291456 }
+    - { name: net.ipv4.tcp_wmem, value: 4096 16384 4194304 }
+    - { name: net.ipv4.tcp_rmem, value: 4096 87380 6291456 }
+    - { name: net.ipv4.tcp_timestamps, value: 1 }
+    # - { name: net.ipv4.tcp_tw_recycle, value: 1 }
+    - { name: net.ipv4.tcp_tw_reuse, value: 1 }
+    - { name: net.ipv4.tcp_syncookies, value: 1 }
+    - { name: net.ipv4.tcp_window_scaling, value: 1 }
+    - { name: net.ipv4.conf.default.secure_redirects, value: 0 }
+    - { name: net.ipv4.conf.all.secure_redirects, value: 0 }
+    - { name: net.ipv4.tcp_slow_start_after_idle, value: 0 }
+    - { name: net.core.somaxconn, value: 4096 }
+    - { name: net.ipv4.tcp_max_syn_backlog, value: 8192 }
+    - { name: net.ipv4.tcp_syn_retries, value: 8 }
+    - { name: net.ipv4.ip_local_port_range, value: 40000 61000 }
+    - { name: vm.swappiness, value: 5 }
+    - { name: vm.overcommit_memory, value: 0 }
+    - { name: fs.aio-max-nr, value: 1048576 }
+
+- name: grub | grub2-mkconfig
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  when: hanarules.changed
+
+- name: reboot server
+  reboot:
+  when: hanarules.changed

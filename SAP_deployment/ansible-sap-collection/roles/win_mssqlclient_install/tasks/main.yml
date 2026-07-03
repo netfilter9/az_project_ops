@@ -1,0 +1,30 @@
+---
+
+- name: download SQL installers
+  win_shell: 
+   azcopy cp '{{ item.url }}{{ sas_tokens[item.token_ref] }}' {{ item.dest }} --recursive=true --overwrite=ifSourceNewer
+  args:
+    chdir: "{{ mssql_params.download_drive }}:\\"
+  with_items: "{{ mssql_params.downloads }}"
+  tags:
+    - sql-download
+  when: platform == 'azure'
+
+- name: download SQL installers
+  win_shell: gsutil -m cp -r gs://{{ item.url }}* {{ item.dest }}
+  args:
+    chdir: "{{ mssql_params.download_drive }}:\\"
+  with_items: "{{ mssql_params.downloads }}"
+  tags:
+    - sql-download
+  when: platform == 'gcp'
+
+## Using win_command module since win_package doesnt work with this particular msi.
+
+- name: install sql native client
+  win_command: "msiexec.exe /i {{ mssql_params.download_drive }}:\\SQLclient\\msodbcsql.msi /qr IACCEPTMSODBCSQLLICENSETERMS=YES"
+  when: bods is not defined
+
+- name: install sql native client 11.0
+  win_command: "msiexec.exe /i {{ mssql_params.download_drive }}:\\SQLclient\\sqlncli.msi /qr IACCEPTSQLNCLILICENSETERMS=YES"
+  when: bods is defined

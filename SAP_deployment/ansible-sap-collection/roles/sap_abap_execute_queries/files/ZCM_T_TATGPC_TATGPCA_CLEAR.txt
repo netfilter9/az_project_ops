@@ -1,0 +1,142 @@
+*&*******************************************************************&*
+* Report              :   ZCM_T_TATGPC_TATGPCA_CLEAR                  *
+* Title               :   Logical Systems                             *
+* Created by          :   Soumya Ray                                  *
+* Created on          :   30/09/2020                                  *
+* Purpose             :   To check the tables TATGPC and TATGPCA      *
+*                         are empty if not display the entry.         *
+*---------------------------------------------------------------------*
+REPORT zcm_t_tatgpc_tatgpca_clear.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+  CONSTANTS: lc_sep    TYPE c       VALUE '|',
+             lc_export TYPE char20   VALUE 'EXPORT',
+             lc_head   TYPE string VALUE 'Checktableentries'.
+  DATA: ls_output   TYPE tab512,
+        ls_prefinal TYPE string.
+  " Read action required from Python interface
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  CHECK sy-subrc EQ 0.
+  DATA(lv_action) = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+      ls_output = lc_head.
+      APPEND ls_output TO lt_output.
+      CLEAR: ls_output.
+*    Delete if TATGPC has any entry.
+      DELETE FROM TATGPC.
+      COMMIT WORK.
+*   Check to make sure table is blank
+      PERFORM read_data TABLES lt_output
+                        USING 'TATGPC'
+                        CHANGING ls_output .
+
+      CLEAR: ls_output.
+      APPEND ls_output TO lt_output.
+*    Delete if TATGPCA has any entry.
+      DELETE FROM TATGPCA.
+      COMMIT WORK.
+*   Check to make sure table is blank
+      PERFORM read_data TABLES lt_output
+                       USING 'TATGPCA'
+                       CHANGING ls_output .
+
+  ENDCASE.
+ENDFORM.
+FORM read_data  TABLES   lt_output TYPE table
+                USING iv_tablename TYPE tabname
+                CHANGING ls_output TYPE tab512.
+
+  CONSTANTS: lc_msg_nodata TYPE string VALUE
+           'There is no data'.
+
+  FIELD-SYMBOLS : <ft_table> TYPE ANY TABLE.
+  DATA lt_table TYPE REF TO data.
+
+  CREATE DATA lt_table TYPE TABLE OF (iv_tablename).
+
+
+  ASSIGN lt_table->* TO <ft_table>.
+
+  "Table Name
+  ls_output = iv_tablename.
+  APPEND ls_output TO lt_output.
+
+  SELECT * FROM (iv_tablename) INTO TABLE <ft_table>.
+  IF sy-subrc <> 0.
+
+    ls_output = lc_msg_nodata.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+    RETURN.
+
+  ENDIF.
+  DATA : idetails     TYPE abap_compdescr_tab,
+         xdetails     TYPE abap_compdescr,
+         lv_fieldname TYPE string.
+  DATA : ref_table_des TYPE REF TO cl_abap_structdescr.
+  DATA ls_prefinal TYPE string.
+
+  "Column headings
+  ref_table_des ?= cl_abap_typedescr=>describe_by_name( iv_tablename ).
+  idetails[] = ref_table_des->components[].
+  LOOP AT idetails INTO xdetails.
+*    lv_fieldname = xdetails.
+    CONCATENATE ls_prefinal xdetails-name '|' INTO ls_prefinal.
+  ENDLOOP.
+  ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+  ls_output = ls_prefinal.
+  APPEND ls_output TO lt_output.
+
+  "Table data
+  LOOP AT <ft_table> ASSIGNING FIELD-SYMBOL(<fs_structure>).
+    CLEAR: ls_prefinal, ls_output.
+    DO .
+      ASSIGN COMPONENT sy-index OF STRUCTURE <fs_structure>
+        TO FIELD-SYMBOL(<comp>).
+      IF sy-subrc <> 0.
+        EXIT .
+      ENDIF.
+      CONCATENATE ls_prefinal <comp> '|' INTO ls_prefinal.
+    ENDDO.
+    ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+
+    PERFORM end_null_check CHANGING ls_prefinal.
+    ls_output = ls_prefinal.
+    APPEND ls_output TO lt_output.
+
+  ENDLOOP.
+
+ENDFORM.
+
+FORM end_null_check  CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+FORM null_check  TABLES   lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

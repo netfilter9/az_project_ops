@@ -1,0 +1,5 @@
+- name: Set FireWall Rules
+  command: "{{ item }}"
+  with_items: 
+    - firewall-cmd --add-service=high-availability --permanent
+    - firewall-cmd --add-service=high-availability

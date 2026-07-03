@@ -1,0 +1,44 @@
+#
+# This responses file installs "SAP ASE Data Movement for HADR" feature for Business Suite
+#
+RUN_SILENT=true
+AGREE_TO_SYBASE_LICENSE=true
+AGREE_TO_SAP_LICENSE=true
+
+PRODUCTION_INSTALL=TRUE
+INSTALL_SETUP_HADR_SAMPLE=true
+
+# Windows only
+DO_NOT_CREATE_SHORTCUT=true
+REGISTER_UNINSTALLER_WINDOWS=false
+INSTALL_USER_PROFILE=USER
+DO_NOT_CREATE_RMA_WINDOW_SERVICE=true
+
+#chadr
+INSTALL_SCC_SERVICE=false
+
+USER_INSTALL_DIR=/sybase/{{ sap.db.sid | upper }}
+
+# Install HADR ("SAP ASE Data Movement for HADR" feature)
+DO_UPDATE_INSTALL=false
+CHOSEN_INSTALL_SET=Custom
+CHOSEN_FEATURE_LIST=fase_hadr
+CHOSEN_INSTALL_FEATURE_LIST=fase_hadr
+
+INSTALL_SAP_HOST_AGENT=FALSE
+
+# License
+SYBASE_PRODUCT_LICENSE_TYPE=license
+SYSAM_LICENSE_SOURCE=proceed_without_license
+SYSAM_PRODUCT_EDITION=Enterprise Edition
+SYSAM_LICENSE_TYPE=AC :  OEM Application Deployment CPU License
+SYSAM_NOTIFICATION_ENABLE=false
+
+# Do not configure new servers
+SY_CONFIG_ASE_SERVER=false
+SY_CONFIG_HADR_SERVER=false
+SY_CONFIG_BS_SERVER=false
+SY_CONFIG_XP_SERVER=false
+SY_CONFIG_JS_SERVER=false
+SY_CONFIG_SM_SERVER=false
+SY_CONFIG_SCC_SERVER=false

@@ -1,0 +1,608 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "storage_account": {
+            "title": "Storage Account",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "type": "string"
+                },
+                "diagnostics": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "log_analytics_workspace_name": {
+                            "type": "string",
+                            "examples": [
+                                "example-la-scNN"
+                            ]
+                        },
+                        "settings": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "account": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "default": []
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "blob": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "queue": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "table": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "file": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "logs": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "StorageRead",
+                                                    "StorageWrite",
+                                                    "StorageDelete"
+                                                ]
+                                            }
+                                        },
+                                        "metrics": {
+                                            "type": "array",
+                                            "items": {
+                                                "enum": [
+                                                    "Transaction",
+                                                    "Capacity"
+                                                ]
+                                            }
+                                        },
+                                        "retention_policy": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "properties": {
+                                                "enabled": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                },
+                                                "days": {
+                                                    "type": "integer",
+                                                    "default": 30
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "enabled": {
+                                    "type": "boolean",
+                                    "default": false
+                                },
+                                "days": {
+                                    "type": "integer",
+                                    "default": 30
+                                }
+                            }
+                        }
+                    }
+                },
+                "blob_properties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "delete_retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        },
+                        "container_delete_retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        }
+                    }
+                },
+                "share_properties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "retention_policy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "days": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 365,
+                                    "default": 7
+                                }
+                            }
+                        }
+                    }
+                },
+                "allow_nested_items_to_be_public": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "infrastructure_encryption_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "is_hns_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "large_file_share_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "shared_access_key_enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "enable_https_traffic_only": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "create_rules_as_resources": {
+                    "description": "decides if rules are created within account, or as separate resources",
+                    "type": "boolean"
+                },
+                "network_rules": {
+                    "description": "definition of network rules",
+                    "type": "object",
+                    "additionalProperties": {
+                        "properties": {
+                            "default_action": {
+                                "type": "string",
+                                "examples": [
+                                    "Deny"
+                                ]
+                            },
+                            "ip_rules": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "N.N.N.N"
+                                    ]
+                                }
+                            },
+                            "bypass": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "examples": [
+                                        "AzureServices"
+                                    ]
+                                }
+                            },
+                            "subnets": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "vnet": {
+                                            "type": "string"
+                                        },
+                                        "subnet": {
+                                            "type": "string"
+                                        },
+                                        "subnet_id": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "examples": [
+                        {
+                            "rule1": {}
+                        }
+                    ]
+                },
+                "lookup": {
+                    "$ref": "fields.json#/definitions/lookup"
+                },
+                "account_tier": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "Standard",
+                        "Premium"
+                    ],
+                    "default": "Standard"
+                },
+                "account_kind": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "StorageV2",
+                        "BlobStorage",
+                        "BlockBlobStorage",
+                        "FileStorage",
+                        "Storage"
+                    ],
+                    "default": "StroageV2"
+                },
+                "account_replication_type": {
+                    "description": "TODO",
+                    "type": "string",
+                    "enum": [
+                        "LRS",
+                        "GRS",
+                        "RAGRS",
+                        "ZRS",
+                        "GZRS",
+                        "RAGZRS"
+                    ],
+                    "default": "LRS"
+                },
+                "containers": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/storage_container"
+                    },
+                    "examples": [
+                        {
+                            "container1": {}
+                        }
+                    ]
+                },
+                "fileshares": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "fileshare1": {}
+                        }
+                    ]
+                },
+                "queues": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "queue1": {}
+                        }
+                    ]
+                },
+                "tables": {
+                    "description": "TODO",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "table1": {}
+                        }
+                    ]
+                },
+                "data_lake_fss": {
+                    "description": "Data Lake Gen2 File System with optional file system path. Storage account must be upgraded to Data Lake Gen2",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "examples": [
+                                    "examplepath"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "examples": [
+                        {
+                            "datalakefs1": {}
+                        }
+                    ]
+                },
+                "management_policy": {
+                    "description": "TODO",
+                    "type": "object",
+                    "properties": {
+                        "rules": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "examples": [
+                                            "rule1"
+                                        ]
+                                    },
+                                    "enabled": {
+                                        "type": "boolean",
+                                        "default": true
+                                    },
+                                    "filter": {
+                                        "prefix_match": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "examples": [
+                                                [
+                                                    "container1/prefix1"
+                                                ]
+                                            ]
+                                        },
+                                        "blob_types": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "default": [
+                                                "blockBlob"
+                                            ]
+                                        }
+                                    },
+                                    "action": {
+                                        "type": "object",
+                                        "properties": {
+                                            "base_blob": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "tier_to_cool_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 10
+                                                    },
+                                                    "tier_to_archive_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 50
+                                                    },
+                                                    "delete_after_days_since_modification_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 100
+                                                    }
+                                                }
+                                            },
+                                            "snapshot": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "delete_after_days_since_creation_greater_than": {
+                                                        "type": "integer",
+                                                        "default": 30
+                                                    }
+                                                },
+                                                "additionalProperties": false,
+                                                "required": [],
+                                                "examples": [
+                                                    {
+                                                        "delete_after_days_since_creation_greater_than": 30
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [],
+                                        "examples": [
+                                            {}
+                                        ]
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [],
+                                "examples": []
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [],
+                    "examples": [
+                        {}
+                    ]
+                },
+                "location": {
+                    "$ref": "fields.json#/definitions/location"
+                }
+            },
+            "additionalProperties": false
+        },
+        "storage_container": {
+            "description": "TODO",
+            "type": "object",
+            "properties": {
+                "blobs": {
+                    "type": "object",
+                    "additionalItems": {
+                        "type": "object",
+                        "properties": {
+                            "file": {
+                                "description": "path to local file",
+                                "type": "string",
+                                "examples": [
+                                    "./files/susesapconfig.sh"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "file"
+                        ],
+                        "examples": [
+                            {
+                                "file": "./files/myscript.sh"
+                            }
+                        ]
+                    },
+                    "examples": [
+                        {
+                            "1": {
+                                "file": ""
+                            }
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        }
+    },
+    "additionalProperties": false
+}

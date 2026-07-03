@@ -1,0 +1,6 @@
+---
+
+- name: sap prerequisities
+  include_tasks: "{{ ansible_os_family }}.yml"
+  tags:
+    - gcp-prereqs

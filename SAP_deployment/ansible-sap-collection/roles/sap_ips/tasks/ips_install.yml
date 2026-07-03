@@ -1,0 +1,63 @@
+- name: main | create ips.params
+  template:
+    src: "ips.params.j2"
+    dest: "{{ install_dir }}/{{ansible_hostname}}_ips.params"
+    mode: "0644"
+
+- debug:
+    msg: "{{ admin_user }}"
+
+- name: main | install
+  vars:
+    env:   
+      LD_LIBRARY_PATH: '{% if dbtype == "sybase" %}/sybase/SDK/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib/:/sybase/SDK{% else %}/usr/sap/hdbclient{% endif %}'
+      SYBASE: '{% if dbtype == "sybase" %}/sybase/SDK{% endif %}'
+      LANG: en_US.UTF-8
+  shell:
+    cmd: "source ~/.profile; ./setup.sh -r {{ install_dir }}/{{ ansible_hostname }}_ips.params -InstallDir {{ IPS_dir }}"
+    creates: "{{ install_dir }}/sapinst/LOGS/ipslog_{{ ansible_hostname }}*.zip"  
+  args:
+    chdir: "{{ install_dir }}/sapinst/IPS/"
+  environment: "{{env}}"
+  register: ipsinstallresult
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'Suse' and (ips_install | default(true))
+
+- name: main | install
+  vars:
+    env:   
+      LD_LIBRARY_PATH: '{% if dbtype == "sybase" %}/sybase/SDK/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib/:/sybase/SDK{% else %}/usr/sap/hdbclient{% endif %}'
+      SYBASE: '{% if dbtype == "sybase" %}/sybase/SDK{% endif %}'
+      LANG: en_US.UTF-8
+  shell:
+    cmd: "source ~/.bash_profile; ./setup.sh -r {{ install_dir }}/{{ ansible_hostname }}_ips.params -InstallDir {{ IPS_dir }}"
+    creates: "{{ install_dir }}/sapinst/LOGS/ipslog_{{ ansible_hostname }}*.zip"  
+  args:
+    chdir: "{{ install_dir }}/sapinst/IPS/"
+  environment: "{{env}}"
+  register: ipsinstallresult
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'RedHat' and (ips_install | default(true))
+
+- name: Create logs directory if it does not exist
+  file:
+    path: "{{ install_dir }}/sapinst/LOGS"
+    state: directory
+    mode: '0755'
+  when: ips_install | default(true)
+
+- name: main | create zip file of installation logs
+  archive:
+    path: /tmp/sapinst_instdir
+    dest: "{{ install_dir }}/sapinst/LOGS/sapinstlog_{{ ansible_hostname }}_{{ ansible_date_time.iso8601 }}.zip"
+    format: zip
+    force_archive: true
+  when: ipsinstallresult.changed  and (ips_install | default(true))
+
+- name: main | tidy up params
+  file:
+    path: "{{ install_dir }}/{{ansible_hostname}}_ips.params"
+    state: absent
+  when: ips_install | default(true)

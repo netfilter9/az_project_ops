@@ -1,0 +1,468 @@
+[
+{% if output_fs.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if sapmnt mount is not local FS",
+    "Current Value": "Null",
+    "Recommended Value": "NFS"
+}
+{% else %}
+    {% if output_fs.stdout == 'nfs' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if sapmnt mount is not local FS",
+            "Current Value": "output_fs.stdout",
+            "Recommended Value": "NFS"
+        }
+    {% else %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if sapmnt mount is not local FS",
+            "Current Value": "Local Storage",
+            "Recommended Value": "NFS"
+        }
+    {% endif %}    
+{% endif %},
+{% if output_fs_trans.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if /trans mount is not local FS",
+    "Output": "This check is not applicable for this system"
+}
+{% else %}
+    {% if output_fs.stdout == 'nfs' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if /trans mount is not local FS",
+            "Current Value": "output_fs_trans.stdout",
+            "Recommended Value": "NFS"
+        }
+    {% else %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if /trans mount is not local FS",
+            "Current Value": "Local Storage",
+            "Recommended Value": "NFS"
+        }
+    {% endif %}    
+{% endif %},
+{% if output_diskutil.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking filesystem utilisation above 80%",
+    "Current Value": "None of the Disks are utilized above %d percent",
+    "Recommended Value": "<80%"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking filesystem utilisation above 80%",
+    "Current Value": "{{ output_diskutil.stdout }}",
+    "Recommended Value": "<80%"
+}
+{% endif %},
+{% if output_disksize.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if the disk size of the /usr/sap/{{ sid }} is less than 30G",
+    "Current Value": "Null"
+    "Recommended Value": "<80%"
+}
+{% else %}
+    {% if output_disksize.stdout < '30' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if the disk size of the /usr/sap/{{ sid }} is less than 30G",
+            "Current Value": "{{ output_disksize.stdout }}G",
+            "Recommended Value": ">30G"
+        }
+    {% else %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if the disk size of the /usr/sap/{{ sid }} is less than 30G",
+            "Output": "{{ output_disksize.stdout}}G",
+            "Recommended Value": ">30G"
+        }
+    {% endif %}    
+{% endif %},
+{% if output_hana.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+    "Current Value": "Null",
+    "Recommended Value": ">=512G"
+}
+{% else %}
+    {% if output_hana.stdout < '30' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+            "Current Value": "{{ output_hana.stdout }}G",
+            "Recommended Value": ">=512G"
+        }
+    {% else %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "Infra",
+            "Description": "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+            "Current Value": "{{ output_hana.stdout }}G",
+            "Recommended Value": ">=512G"
+        }
+    {% endif %}    
+{% endif %},
+{% if output_hostname.stdout > '13' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if length of  hostname is more than 13",
+    "Current Value": "{{ output_hostname.stdout }}",
+    "Recommended Value": "Hostname length shouble be <13"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "Infra",
+    "Description": "Checking if length of  hostname is more than 13",
+    "Current Value": "{{ output_hostname.stdout }}",
+    "Recommended Value": "Hostname length shouble be <13"
+}
+{% endif %},  
+{% if output_uid.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the uid of sidadm user '{{ sid|lower }}adm' ",
+    "Current Value": "{{ output_uid.stdout }}",
+	"Recommended Value": "Please ensure all sidadm across all servers in an SID should be same"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the uid of sidadm user '{{ sid|lower }}adm' ",
+    "Current Value": "{{ output_uid.stdout }}",
+	"Recommended Value": "Please ensure all sidadm across all servers in an SID should be same"
+}
+{% endif %},
+{% if output_sapadmuid.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the uid of sapadm user",
+    "Current Value": "{{ output_sapadmuid.stdout }}",
+    "Recommended Value": "Please ensure all sapadm across all servers in an SID should be same"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the uid of sapadm user ",
+    "Current Value": "{{ output_sapadmuid.stdout }}",
+    "Recommended Value": "Please ensure all sapadm across all servers in an SID should be same"
+}
+{% endif %},
+{% if output_groups.results[0].stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the group of sidadm user '{{ sid|lower }}adm' ",
+    "Current Value": "{{ output_groups.results[0].stdout }}",
+    "Recommended Value": "Please ensure groups of all sidadm across all servers in an SID should be same"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the group of sidadm user '{{ sid|lower }}adm' ",
+    "Current Value": "{{ output_groups.results[0].stdout }}",
+    "Recommended Value": "Please ensure groups of all sidadm across all servers in an SID should be same"
+}
+{% endif %},
+{% if output_groups.results[1].stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the group of sapadm user ",
+    "Current Value": "{{ output_groups.results[1].stdout }}",
+    "Recommended Value": "Please ensure groups of all sapadm across all servers in an SID should be same"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the group of sapadm user ",
+    "Current Value": "{{ output_groups.results[1].stdout }}",
+    "Recommended Value": "Please ensure groups of all sapadm across all servers in an SID should be same"
+}
+{% endif %},
+{% if output_gid.stdout == ' ' %}
+{
+
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the GID of group sapsys ",
+    "Current Value": "{{ output_gid.stdout }}",
+    "Recommended Value": "Please ensure GID of group sapsys across all servers in an SID should be same"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Fetching the GID of group sapsys ",
+    "Current Value": "{{ output_gid.stdout }}",
+    "Recommended Value": "Please ensure GID of group sapsys across all servers in an SID should be same"
+}
+{% endif %},
+{% if output_somaxconn.stdout >= '4096' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the value of net.core.somaxconnn is >= 4096",
+    "Current Value": "{{ output_somaxconn.stdout }}",
+	"Recommended Value": ">=4096"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the value of net.core.somaxconnn is >= 4096",
+    "Current Value": "{{ output_somaxconn.stdout }}",
+	"Recommended Value": ">=4096"
+}
+{% endif %},
+{% if output_systembacklog.stdout >= '8192' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the value of net.ipv4.tcp_max_syn_backlog >= 8192",
+    "Current Value": "{{ output_systembacklog.stdout }}",
+	"Recommended Value": ">=8192"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the value of net.ipv4.tcp_max_syn_backlog >= 8192",
+    "Current Value": "{{ output_systembacklog.stdout }}",
+	"Recommended Value": ">=8192"
+}
+{% endif %},
+{% if output_portrange.stdout == "9000\t65499" %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if net.ipv4.ip_local_port_range is between 9000 and 65499",
+    "Current Value": "{{ output_portrange.stdout }}",
+	"Recommended Value": "9000-65499"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if net.ipv4.ip_local_port_range is between 9000 and 65499",
+    "Current Value": "{{ output_portrange.stdout }}",
+	"Recommended Value": "9000-65499"
+}
+{% endif %},
+{% if output_slowstart.stdout == '0' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the  value of net.ipv4.tcp_slow_start_after_idle is 0",
+    "Current Value": "{{ output_slowstart.stdout }}",
+	"Recommended Value": "0"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the  value of net.ipv4.tcp_slow_start_after_idle is 0",
+    "Current Value": "{{ output_slowstart.stdout }}",
+	"Recommended Value": "0"
+}
+{% endif %},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Displaying the values of net.ipv4.tcp_wmem",
+    "Current Value": "{{ output_tcpwmem.stdout }}",
+	"Recommended Value": "Please refer SAP Note - 2382421"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Displaying the values of net.ipv4.tcp_rmem",
+    "Current Value": "{{ output_tcprmem.stdout }}",
+	"Recommended Value": "Please refer SAP Note - 2382421"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Displaying the values of net.core.wmem_max",
+    "Current Value": "{{ output_wmemmax.stdout }}",
+	"Recommended Value": "Please refer SAP Note - 2382421"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Displaying the values of net.core.rmem_max",
+    "Current Value": "{{ output_rmemmax.stdout }}",
+	"Recommended Value": "Please refer SAP Note - 2382421"
+},
+{% if output_windowscaling.stdout == '1' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the value of net.ipv4.tcp_window_scaling is 1",
+    "Current Value": "{{ output_windowscaling.stdout }}",
+	"Recommended Value": "1"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking if the value of net.ipv4.tcp_window_scaling is 1",
+    "Current Value": "{{ output_windowscaling.stdout }}",
+	"Recommended Value": "1"
+}
+{% endif %},
+{% if output_Swappiness.stdout == "40\t60" %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the Swappiness Value details ",
+    "Current Value": " Error: {{ output_Swappiness.stdout }}",
+    "Recommended Value": "Between 40 and 60"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the Swappiness Value details ",
+    "Current Value": "{{ output_Swappiness.stdout }}",
+    "Recommended Value": "Between 40 and 60"
+}
+{% endif %},
+{% if output_usertasksmax.stdout == 'infinity' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking if the value of UserTasksMax is infinity",
+    "Current Value": "{{ output_usertasksmax.stdout }}",
+	"Recommended Value": "Infinity"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking if the value of UserTasksMax is infinity",
+    "Current Value": "{{ output_usertasksmax.stdout }}",
+	"Recommended Value": "Infinity"
+}
+{% endif %},
+{% if output_hugepage.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking if transparent hugepages is disabled",
+    "Output": "This check is not applicable for this system"
+}
+{% else %}
+    {% if output_hugepage.stdout == 'always madvise [never]' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "{{ ansible_os_family }}",
+            "Description": "Checking if transparent hugepages is disabled",
+            "Current Value": "{{ output_hugepage.stdout }}",
+	        "Recommended Value": "always madvise [never]"
+        }
+    {% else%}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "{{ ansible_os_family }}",
+            "Description": "Checking if transparent hugepages is disabled",
+            "Current Value": "{{ output_hugepage.stdout }}",
+	        "Recommended Value": "always madvise [never]"
+        }
+    {% endif %}    
+{% endif %},
+{% if output_ksm.stdout == '0' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking if Kernel samepage merging (KSM) value is 0",
+    "Current Value": "{{ output_ksm.stdout }}",
+	"Recommended Value": "0"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking if Kernel samepage merging (KSM) value is 0",
+    "Current Value": "{{ output_ksm.stdout }}",
+	"Recommended Value": "0"
+}
+{% endif %}
+]

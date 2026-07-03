@@ -1,0 +1,109 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SMICM_EXP_ICM_STATUS                    *
+* Title               :   SMICM Status                                *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   22/09/2020                                  *
+* Purpose             :   This report is used to check the status in  *
+*                     :   SMICM                                       *
+*---------------------------------------------------------------------*
+REPORT ZCM_SMICM_EXP_ICM_STATUS.
+
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        lv_action TYPE char8.
+
+  CLEAR: ls_input, lv_action.
+
+  " Read the action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+*This segment is taken from the standard report RSMONICM
+
+      CONSTANTS icm_status_none            TYPE i VALUE 0.
+      CONSTANTS icm_status_init            TYPE i VALUE 1.
+      CONSTANTS icm_status_run             TYPE i VALUE 2.
+      CONSTANTS icm_status_shutdown        TYPE i VALUE 3.
+      CONSTANTS icm_status_down            TYPE i VALUE 4.
+      CONSTANTS icm_status_maint           TYPE i VALUE 5.
+
+      DATA:  icm_info_data TYPE icm_info.
+      DATA: BEGIN OF icm_servlist2 OCCURS 10.
+          INCLUDE STRUCTURE icm_sinfo2.
+      DATA: END OF icm_servlist2.
+
+      DATA: BEGIN OF icm_servlist OCCURS 10.
+          INCLUDE STRUCTURE icm_sinfo3.
+      DATA: END OF icm_servlist.
+
+      DATA: BEGIN OF icm_thrlist OCCURS 10.
+          INCLUDE STRUCTURE icm_thrlst.
+      DATA: END OF icm_thrlist.
+
+      CALL FUNCTION 'ICM_GET_INFO2'
+        IMPORTING
+          info_data   = icm_info_data
+        TABLES
+          servlist    = icm_servlist2
+          thrlist     = icm_thrlist
+          servlist3   = icm_servlist
+        EXCEPTIONS
+          icm_error   = 1
+          icm_timeout = 2
+          OTHERS      = 6.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+                INTO ls_output.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+*      Transaction Name
+      ls_output = 'SMICM'.
+      APPEND ls_output TO lt_output.
+
+      " Column Title
+      ls_output = 'Status'.
+      APPEND ls_output TO lt_output.
+
+*    Status mapped to number
+      CASE icm_info_data-status.
+        WHEN icm_status_none.
+          ls_output = 'Not running'.
+        WHEN icm_status_init.
+          ls_output = 'Initial'.
+        WHEN icm_status_run.
+          ls_output = 'Running'.
+        WHEN icm_status_shutdown.
+          ls_output = 'Shutdown'.
+        WHEN icm_status_down.
+          ls_output = 'Stopped'.
+        WHEN icm_status_maint.
+          ls_output = 'Maintenance'.
+        WHEN OTHERS.
+          ls_output = 'Illegal'.
+      ENDCASE.
+
+      APPEND ls_output TO lt_output.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.

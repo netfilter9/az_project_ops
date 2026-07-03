@@ -1,0 +1,7 @@
+- name: post_install | post installation
+  command: /oracle/oraInventory/orainstRoot.sh
+  become: yes
+
+- name: post_install | post installation
+  command: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/root.sh"
+  become: yes

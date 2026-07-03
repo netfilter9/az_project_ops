@@ -1,0 +1,17 @@
+---
+- name: main | create sapinst.params
+  template:
+    src: "sybaseiq.j2"
+    dest: "{{ root_dir }}/sybase_iq/{{ ansible_hostname }}.rsp"
+
+- name: install sybase IQ
+  command: ./setup.bin -f {{ root_dir }}/sybase_iq/{{ ansible_hostname }}.rsp -i silent -DAGREE_TO_SAP_LICENSE=true
+  become_user: "{{ sybase_iq_user | default('sybase_inst') }}"
+  become : yes  
+  args:
+    chdir: "{{ root_dir }}/sapinst/sybaseIQ/ebf29967"
+  environment:
+    SYBASE: "{{ install_path }}"
+    LD_LIBRARY_PATH: "{{ install_path }}/IQ-16_1/lib64/:/usr/lib/" 
+  ignore_errors: true
+  

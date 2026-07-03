@@ -1,0 +1,14 @@
+---
+
+- name: add Dsc modules
+  win_psmodule:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ dsc_modules }}"
+
+- name: add SqlServerDsc module
+  win_psmodule:
+    name: SqlServerDsc
+    state: present
+  when: inventory_hostname in groups.mssql
+  

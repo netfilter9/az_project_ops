@@ -1,0 +1,33 @@
+- name: aws dataprovider
+  block:
+
+    - name: suse download 
+      command: aws s3 cp s3://{{ product.bucket_name }}/{{ item.url }} "{{ item.dest }}" --recursive
+      args:
+        chdir: "{{ root_dir }}"
+      tags:
+        - download
+      when: connectivity == 'no'
+
+    - name: suse download
+      command: "{{  item  }}"
+      args:
+        chdir: "{{ root_dir }}"
+      loop:
+        - wget "{{ suse_dataprovider_url }}"
+        - wget "{{ suse_gpgkey_url }}"
+      tags:
+        - download
+      when: connectivity == 'yes'
+  
+    - name: Packages update
+      command: rpm --import RPM-GPG-KEY-AWS
+      args:
+        chdir: "{{ root_dir }}"
+
+    - name: install suse aws-sap-dataprovider
+      command: zypper install -y '{{ dataprovider_suse | default("aws-sap-dataprovider-sles.x86_64.rpm") }}'
+      args:
+        chdir: "{{ root_dir }}"
+
+  when: platform == 'aws'

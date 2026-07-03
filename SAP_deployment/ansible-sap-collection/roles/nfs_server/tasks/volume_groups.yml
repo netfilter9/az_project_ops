@@ -1,0 +1,34 @@
+---
+- name: volume_groups | Ensure volume groups exist
+  lvg:
+    pvs: "{{ share.pvs }}"
+    vg: "{{ share.vg | default(share.ref) }}"
+    state: present
+  tags:
+    - vg
+       
+- name: volume_groups | ensure logical volumes exist
+  lvol:
+    vg: "{{ share.vg | default(share.ref) }}"
+    lv: "{{ share.lv | default(share.ref) }}"
+    size: "{{ share.size | default('100%VG')}}"
+    active: yes
+    state: present
+  tags:
+    - lv
+
+- name: volume_groups | Ensure base filesystems for logical volumes exist
+  filesystem:
+    fstype: "{{ share.fstype | default('xfs') }}"
+    dev: "/dev/mapper/{{ share.vg | default(share.ref) }}-{{ share.lv | default(share.ref) }}"
+    force: no
+  when: node2 is not defined
+ 
+- name: volume_groups | Ensure filesystem is mounted to the /srv/nfs directory
+  mount:
+    path: /srv/nfs/
+    src: "/dev/mapper/{{ share.vg | default(share.ref) }}-{{ share.lv | default(share.ref) }}"
+    fstype: "{{ share.fstype | default('xfs') }}"
+    state: mounted
+  when: node2 is not defined
+

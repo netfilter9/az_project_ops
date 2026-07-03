@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "recovery_vault": {
+            "title": "Recovery Vault",
+            "description": "recovery_vault block as defined below",
+            "type": "object",
+            "examples": [
+                {
+                    "resource_group_name": "",
+                    "name": ""
+                }
+            ],
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name",
+                    "examples": [
+                        "example-rg-sc02"
+                    ]
+                },
+                "name": {
+                    "title": "Name",
+                    "description": "(Required) the name of the target recovery vault for backups",
+                    "type": "string",
+                    "examples": [
+                        "example-rsv-sc02"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "resource_group_name",
+                "name"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

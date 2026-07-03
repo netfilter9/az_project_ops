@@ -1,0 +1,90 @@
+---
+- name: Cleanup
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become: true
+  vars:
+
+  tasks:
+
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Print package status
+      ansible.builtin.debug:
+        msg: "{{ item }} {{ 'installed' if item in ansible_facts.packages else 'not installed' }}"
+      loop:
+        - open-vm-tools
+        - open-vm-tools-desktop
+        - zabbix-agent2
+        - VRTSnbpck
+        - VRTSpbx
+        - VRTSnbclt
+        - VRTSnbjre
+
+    - name: Print service status
+      ansible.builtin.debug:
+        msg: "{{ item }} is {{ ansible_facts.services[item + '.service'].state }} and {{ ansible_facts.services[item + '.service'].status }}"
+      loop:
+        - vmtoolsd
+        - zabbix-agent2
+        - pbx
+        - vnetd
+        - bpcd
+      when: (item + '.service') in ansible_facts.services
+
+    - name: Check whether NetBackup uninstall script exists
+      ansible.builtin.stat:
+        path: /usr/openv/netbackup/bin/goodies/netbackup_uninstall
+      register: netbackup_uninstall_script
+
+    - name: Print NetBackup uninstall method
+      ansible.builtin.debug:
+        msg: "NetBackup uninstall script {{ 'found' if netbackup_uninstall_script.stat.exists else 'not found' }}"
+
+    - name: Stop and disable services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop:
+        - vmtoolsd
+        - zabbix-agent2
+        - pbx
+        - vnetd
+        - bpcd
+      failed_when: false
+
+    - name: Run NetBackup uninstall script if present
+      ansible.builtin.command: /usr/openv/netbackup/bin/goodies/netbackup_uninstall
+      when: netbackup_uninstall_script.stat.exists
+      register: netbackup_uninstall_result
+      changed_when: netbackup_uninstall_result.rc == 0
+      failed_when: false
+
+    - name: Print NetBackup uninstall result
+      ansible.builtin.debug:
+        var: netbackup_uninstall_result.stdout_lines
+      when: netbackup_uninstall_script.stat.exists
+
+    - name: Remove remaining NetBackup RPM packages
+      ansible.builtin.package:
+        name:
+          - VRTSnbpck
+          - VRTSpbx
+          - VRTSnbclt
+          - VRTSnbjre
+        state: absent
+      failed_when: false
+
+    - name: Remove VMware tools and Zabbix agent
+      ansible.builtin.package:
+        name:
+          - open-vm-tools
+          - open-vm-tools-desktop
+          - zabbix-agent2
+        state: absent

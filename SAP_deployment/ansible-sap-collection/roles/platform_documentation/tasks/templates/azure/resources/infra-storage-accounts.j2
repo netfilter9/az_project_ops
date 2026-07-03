@@ -1,0 +1,35 @@
+{# 
+    generate storage account entries 
+#}
+{% if deployment.storage_accounts is defined %}
+# Storage Accounts
+---
+Azure storage accounts can contain data objects: blobs, files, queues, tables, and disks. The storage account provides a unique namespace for your Azure Storage data that is accessible from anywhere in the world over HTTP or HTTPS. Data in your Azure storage account is durable and highly available, secure, and massively scalable.
+
+Azure Storage offers several types of storage accounts. For most scenarios, a general-purpose v2 storage account is recommended by Microsoft. These can contain: 
+- Blobs (all types: Block, Append, Page)
+- Data Lake Gen2
+- Files
+- Disks
+- Queues
+- Tables
+
+
+The following storage accounts will be deployed within the resource group:
+|Storage Account Name|Location|Sku|Kind|Access Tier|Secure Transfer Enabled|Network Rule Set|
+|-|-|-|-|-|-|-|
+{% for storage_k, storage_v in deployment.storage_accounts.items() %}
+{% set row = [ 
+  storage_k,
+  deployment.resource_group.location,
+  storage_v.tier~'_'~storage_v.replication_type,
+  storage_v.kind,
+  storage_v.access_tier,
+  'True',
+  'Bypass (Azure Services) = '~storage_v.network_acls.bypass | join(",")~'<br>DefaultAction = Deny<br>Allow (Subnets) = '~storage_v.network_acls.allowed_subnets | join(",")
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endfor %}
+
+{% endif %}

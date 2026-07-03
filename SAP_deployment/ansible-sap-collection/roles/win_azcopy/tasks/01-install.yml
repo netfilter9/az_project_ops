@@ -1,0 +1,54 @@
+---
+
+- name: check if azcopy.exe is already present
+  win_stat:
+    path: C:\AzCopy\azcopy.exe
+  register: azcopy_info 
+
+- name: block to handle download
+  block:
+    - name: create temporary download directory
+      win_tempfile:
+        state: directory
+        suffix: azcopydownload
+      register: win_temp_dir
+
+    - name: download azcopy
+      win_get_url:
+        url: https://aka.ms/downloadazcopy-v10-windows
+        dest: "{{ win_temp_dir.path }}\\azcopy.zip"
+        follow_redirects: all
+      register: win_get_url
+
+    - name: unzip azcopy
+      win_unzip:
+        src: "{{ win_temp_dir.path }}\\azcopy.zip"
+        dest: "{{ win_temp_dir.path }}"
+      register: win_unzip
+      when: win_get_url is changed
+
+    - name: find azcopy.exe
+      win_find:
+        paths: "{{ win_temp_dir.path }}"
+        patterns: ["azcopy.exe"]
+        recurse: yes
+      register: win_find
+
+    - name: copy azcopy to root directory
+      win_copy:
+        src: "{{ win_find.files[0].path }}"
+        dest: C:\AzCopy\
+        remote_src: yes
+      when: win_find.files | length
+
+    - name: add azcopy to path variable
+      win_path:
+        elements:
+        - 'C:\AzCopy\'
+        scope: user
+  always:
+    - name: clean up temp dir
+      win_file:
+        path: "{{ win_temp_dir.path }}"
+        state: absent
+  when: not azcopy_info.stat.exists

@@ -1,0 +1,89 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    db_user: "{{ sap.db.db_user | default('sysdba') }}"
+    dgmgrl_user: "{{ sap.db.dgmgrl_user | default('sys') }}"
+
+- name: start dg_broker
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  shell:
+    cmd: |
+      sqlplus -s / as {{ db_user }}/{{ passwords.master }}<<'EOF'
+      alter system set dg_broker_start=TRUE scope=both;
+      exit;
+      EOF
+  args:
+      chdir: $ORACLE_HOME/bin
+  environment:
+      path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+      ORACLE_SID: "{{ sap.db.sid|upper }}"
+      ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+      ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+  register: dg_output
+
+- name: see output
+  debug:
+    var: dg_output
+
+- name: run dgmgrl commands on primary node
+  block:
+    - name: run the dgmgrl file
+      shell:
+        cmd: |
+          dgmgrl {{ dgmgrl_user }}/{{ passwords.master }}<<'EOF'
+          create configuration {{ sap.db.sid | upper }} as primary database is {{ sap.db.sid | upper }}{{ primary_instance_ch | upper }} connect identifier is {{ sap.db.sid | upper }}{{ primary_instance_ch | upper }};
+          add database {{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }} as connect identifier is {{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }} maintained as physical;
+          edit database {{ sap.db.sid | upper }}{{ primary_instance_ch | upper }} set property 'LogXptMode'='SYNC';
+          edit database {{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }} set property 'LogXptMode'='SYNC';
+          edit configuration set protection mode as maxavailability;
+          edit configuration set property FastStartFailoverThreshold=45;
+          edit database '{{ sap.db.sid | lower }}{{ primary_instance_ch | lower }}' set property  StaticConnectIdentifier = '(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST={{ db_primary_hostname | default(dbnode1) }})(PORT={{ port | default('1521') }}))(CONNECT_DATA=(SERVICE_NAME={{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}_DGMGRL)(INSTANCE_NAME={{ sap.db.sid | upper }})(SERVER=DEDICATED)))';  
+          edit database '{{ sap.db.sid | lower }}{{ secondary_instance_ch | lower }}' set property  StaticConnectIdentifier = '(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST={{ db_secondary_hostname | default(dbnode2) }})(PORT={{ port | default('1521') }}))(CONNECT_DATA=(SERVICE_NAME={{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }}_DGMGRL)(INSTANCE_NAME={{ sap.db.sid | upper }})(SERVER=DEDICATED)))';
+          EOF
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args:
+        chdir: $ORACLE_HOME/bin
+      environment:
+        path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+      register: dgmgrl_output
+
+    - debug:
+        var: dgmgrl_output
+  when: ansible_hostname == dbnode1
+
+- name: make standby directory
+  become: true
+  become_user: "{{ oracle_installation_user }}"
+  file:
+    path: "{{ root_dir }}/{{ sap.db.sid|upper }}/oraarch_standby" 
+    state: directory
+
+- name: set primary database property 
+  block:
+      - name: set primary database property 
+        shell:
+          cmd: |
+            dgmgrl {{ dgmgrl_user }}/{{ passwords.master }}<<'EOF'
+            edit database '{{ sap.db.sid | lower }}{{ primary_instance_ch | lower }}' set property  StandbyArchiveLocation = '{{ root_dir }}/{{ sap.db.sid | upper }}/oraarch_standby';
+            edit database '{{ sap.db.sid | lower }}{{ secondary_instance_ch | lower }}' set property  StandbyArchiveLocation = '{{ root_dir }}/{{ sap.db.sid | upper }}/oraarch_standby'; 
+            enable configuration;
+            EOF
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        args:
+          chdir: $ORACLE_HOME/bin
+        environment:
+          path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+          ORACLE_SID: "{{ sap.db.sid|upper }}"
+          ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+          ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+        register: db_set_prop_output
+
+      - debug:
+          var:  db_set_prop_output
+  when: ansible_hostname == dbnode1

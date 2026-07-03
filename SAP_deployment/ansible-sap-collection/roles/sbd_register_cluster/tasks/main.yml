@@ -1,0 +1,19 @@
+---
+- name: main | check to see if cluster is already registered
+  command: grep -c {{ cluster_ref }} /etc/target/saveconfig.json
+  register: result
+  failed_when:
+    - result.failed
+    - ('No such file or directory' not in result.stderr)
+    - result.stdout | int != 0
+
+- name: main | setup for new cluster
+  command: "{{ item }}"
+  loop:
+    - targetcli backstores/fileio create {{ cluster_ref }} /sbd/{{ cluster_ref }} 50M write_back=false
+    - targetcli iscsi/ create iqn.2006-04.{{ cluster_ref }}.local:{{ cluster_ref }}
+    - targetcli iscsi/iqn.2006-04.{{ cluster_ref }}.local:{{ cluster_ref }}/tpg1/luns/ create /backstores/fileio/{{ cluster_ref }}
+    - targetcli iscsi/iqn.2006-04.{{ cluster_ref }}.local:{{ cluster_ref }}/tpg1/acls/ create iqn.2006-04.{{ node1 }}.local:{{ node1 }}
+    - targetcli iscsi/iqn.2006-04.{{ cluster_ref }}.local:{{ cluster_ref }}/tpg1/acls/ create iqn.2006-04.{{ node2 }}.local:{{ node2 }}
+    - targetcli saveconfig
+  when: result.failed or result.stdout | int < 1

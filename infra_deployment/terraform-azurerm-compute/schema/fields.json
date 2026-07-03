@@ -1,0 +1,87 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "Common Azure Fields",
+    "description": "Shared definitions for common Azure fields",
+    "definitions": {
+        "resource_group_name": {
+            "title": "resource group name",
+            "description": "name for the resource group",
+            "type": "string",
+            "examples": [
+                "example-rg-sc01"
+            ],
+            "default": "example-rg-scNN"
+        },
+        "lookup": {
+            "title": "lookup",
+            "description": "set to true to perform a lookup for this component rather than create",
+            "type": "boolean",
+            "default": false
+        },
+        "location": {
+            "title": "location",
+            "description": "azure region to deploy to",
+            "type": "string",
+            "examples": [
+                "westus2",
+                "eastus",
+                "uksouth"
+            ]
+        },
+        "lb_refs": {
+            "title": "Load Balancer References",
+            "description": "",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "examples": [
+                    "ascs",
+                    "ers",
+                    "db"
+                ]
+            }
+        },
+        "vnet_name": {
+            "title": "vnet_name",
+            "description": "name of virtual network",
+            "type": "string",
+            "examples": [
+                "vnet-prod"
+            ]
+        },
+        "storage_account_name": {
+            "title": "Storage Account Name",
+            "description": "name of storage account to use as diagnostics backend",
+            "type": "string",
+            "examples": [
+                "examplevmdiagsasc02"
+            ]
+        },
+        "lookup_rg_name": {
+            "title": "Lookup Resource Group Name",
+            "description": "(Optional) If defined, this will cause terraform to perform a lookup on an existing PPG, otherwise a new one will be created",
+            "$ref": "fields.json#/definitions/resource_group_name"
+        },
+        "protocol": {
+            "title": "Protocol",
+            "description": "network protocol",
+            "type": "string",
+            "enum": [
+                "Tcp",
+                "All",
+                "Udp"
+            ]
+        },
+        "zone": {
+            "title": "Zone",
+            "description": "(Optional) a target zone for the VM",
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3
+            ]
+        }
+    },
+    "additionalProperties": false
+}

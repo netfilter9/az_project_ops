@@ -1,0 +1,3 @@
+---
+- name: main | delete lines from icm_filter_rules.txt
+  import_tasks: icm_filter_rules.yml

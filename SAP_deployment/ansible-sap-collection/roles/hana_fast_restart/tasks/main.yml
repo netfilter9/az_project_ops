@@ -1,0 +1,97 @@
+---
+
+- set_fact:
+    checkmajor: "{{ 2 | int }}"
+    checkminor: "{{ 40 | int }}"
+
+- name: Checking HDB version
+  shell: "sudo su - {{ sap.db.sid | lower }}adm -c 'HDB version' | grep version |sed -n 2p| awk '{print $2}'"
+  register: output_hanaversionot
+
+- set_fact: 
+    Hdbversion: "{{ output_hanaversionot.stdout }}"
+    currentmajorversion: "{{ output_hanaversionot.stdout.split('.')[0] | int }}"
+    currentminorversion: "{{ output_hanaversionot.stdout.split('.')[2] | int }}"
+
+- name: Checking for major version
+  assert:
+    that:
+      - currentmajorversion >= checkmajor
+    fail_msg: "fast restart not supported"
+    success_msg: "fast restart supported"
+  register: major_msg
+
+- name: Checking for minor version
+  assert:
+    that:
+      - currentminorversion >= checkminor
+    fail_msg: "fast restart not supported"
+    success_msg: "fast restart supported"
+  when: major_msg.msg in "fast restart supported" and (currentmajorversion <= checkmajor)
+
+- name: Execute command to register number of NUMA nodes
+  shell: "lscpu | grep NUMA"
+  register: numa_output
+
+- name: Setting the numa_nodes_count
+  set_fact:
+    numa_nodes: "{{ numa_output.stdout_lines[0].split(':')[1] | int - 1 }}"
+
+- debug:
+    var: numa_nodes
+  
+- name: Create the NUMA node directories 
+  file:
+    dest: "/hana/tmpfs{{ item }}/{{ sap.db.sid | upper }}"
+    state: directory
+    owner: "{{ sap.db.sid | lower }}adm"
+    group: sapsys
+    recurse: yes
+  with_sequence: start=0 end="{{ numa_nodes }}"
+
+- name: setting the permissions of directories
+  file:
+    dest: "/hana/tmpfs{{ item }}/{{ sap.db.sid | upper }}"
+    state: directory
+    mode: 777
+    recurse: yes
+  with_sequence: start=0 end="{{ numa_nodes }}"
+
+- name: Mount the NUMA node directories to tmpfs
+  command: "mount tmpfs{{ sap.db.sid | upper }}{{ item }} -t tmpfs -o mpol=prefer:{{ item }} /hana/tmpfs{{ item }}/{{ sap.db.sid | upper }}"
+  with_sequence: start=0 end="{{ numa_nodes }}"
+
+- name: Update /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    line: tmpfs{{ sap.db.sid | upper }}{{ item }} /hana/tmpfs{{ item }}/{{ sap.db.sid | upper }} tmpfs rw,relatime,mpol=prefer:{{ item }}
+    create: yes
+  with_sequence: start=0 end="{{ numa_nodes }}"
+
+- name: setting the basepath_persistent_memory_volumes
+  set_fact:
+    my_string: "{{ my_string }}/hana/tmpfs{{ item }}/{{ sap.db.sid|upper }};"
+  with_sequence: start=0 end="{{ numa_nodes }}"
+  register: string_value
+  vars:
+    my_string: ""
+
+- name: remove ;
+  set_fact:
+    final_string: "{{ my_string[:-1] }}"
+  
+- name: Update the [persistence] section in the global.ini file
+  lineinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+    insertafter: '^basepath_logvolumes*'
+    line: basepath_persistent_memory_volumes = {{ final_string }}
+
+- name: stop HANA 
+  command: "/usr/sap/hostctrl/exe/sapcontrol -nr {{sap.instance_numbers.db}} -function Stop"
+
+- name: start HANA 
+  command: "/usr/sap/hostctrl/exe/sapcontrol -nr {{sap.instance_numbers.db}} -function Start"
+
+- name: Persistent memory parameters
+  include_tasks: "persistent_memory.yml"
+  when: sap.db.memory_limit is defined or sap.db.default_table is defined

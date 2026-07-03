@@ -1,0 +1,11 @@
+---
+
+- name: win-failover-cluster | configure pre requisites
+  include_tasks: 01-pre-reqs.yml
+  tags:
+    - prereqs
+
+- name: win-failover-cluster | setup cluster
+  include_tasks: 02-create-cluster.yml
+  tags:
+    - cluster

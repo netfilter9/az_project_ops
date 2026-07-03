@@ -1,0 +1,17 @@
+---
+
+- name: Update global.ini file
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+    block: |
+          [memorymanager]
+          persistent_memory_global_allocation_limit = {{ sap.db.memory_limit }}
+  when: sap.db.memory_limit is defined
+
+- name: Update indexserver.ini file
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/indexserver.ini
+    block: |
+          [persistent_memory]
+          table_default = {{ sap.db.default_table }}
+  when: sap.db.default_table is defined

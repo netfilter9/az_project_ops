@@ -1,0 +1,15 @@
+{# 
+    generate vm summary 
+#}
+{%- for InstanceId in allvm_list -%}
+{% for resource in tfstate_inputdata.resources %}
+{% if resource.type == "aws_instance" %}
+{% for instancename in resource.instances %}
+{%- set item = instancename.attributes.id -%}
+{% if item == InstanceId %}
+{{ instancename.index_key }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}

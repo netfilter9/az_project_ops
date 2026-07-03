@@ -1,0 +1,5 @@
+- name: Start PCS Service
+  command: "{{ item }}"
+  with_items: 
+    - systemctl start pcsd.service
+    - systemctl enable pcsd.service

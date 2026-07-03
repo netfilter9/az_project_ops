@@ -1,0 +1,41 @@
+---
+- name: cluster_packages | ensure required cluster agent packages are installed
+  package:
+    name: 
+      - fence-agents
+      - resource-agents
+      - socat
+    state: present
+    
+- name: suse | setup os config
+  import_tasks: os_config.yml
+  tags:
+    - os_config
+
+- name: suse | setup ssh keys
+  import_tasks: ssh_key_setup.yml
+  tags:
+    - ssh
+
+- name: main | create corosync.conf in primary node
+  vars:
+    primary_ip: "{{ hostvars[node1]['ansible_default_ipv4']['address'] }}"
+    secondary_ip: "{{ hostvars[node2]['ansible_default_ipv4']['address'] }}"
+  template:
+    src: "gcp_Suse_corosync.j2"
+    dest: "/etc/corosync/corosync.conf"
+  when: ansible_hostname == node1
+
+- name: main | create corosync.conf in secondary node
+  vars:
+    primary_ip: "{{ hostvars[node2]['ansible_default_ipv4']['address'] }}"
+    secondary_ip: "{{ hostvars[node1]['ansible_default_ipv4']['address'] }}"
+  template:
+    src: "gcp_Suse_corosync.j2"
+    dest: "/etc/corosync/corosync.conf"
+  when: ansible_hostname == node2
+
+- name: suse | run base ha cluster commands
+  import_tasks: suse_ha_cluster.yml
+  tags:
+    - suse_ha_cluster

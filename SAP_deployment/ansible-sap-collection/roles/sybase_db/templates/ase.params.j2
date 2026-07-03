@@ -1,0 +1,163 @@
+# Replay feature output
+# ---------------------
+# This file was built by the Replay feature of InstallAnywhere.
+# It contains variables that were set by Panels, Consoles or Custom Code.
+
+
+
+#Validate Response File
+#----------------------
+RUN_SILENT=true
+
+#Choose Install Folder
+#---------------------
+USER_INSTALL_DIR=/sybase/{{ sap.db.sid }}
+
+#Install older version
+#---------------------
+
+#Choose Install Set
+#------------------
+CHOSEN_FEATURE_LIST=fase_srv,fase_add_lm,fopen_client,fdblib,fesql_c_lang,fesql_cobol_lang,fxa,fodbcl,fconn_add_lm,fjconnect160,fdbisql,fqptune,fsysam_util,fase_cagent,fsysam_server,fconn_python,fconn_perl,fconn_php,fscc_server,fasecmap,fodata_ase,fase_hadr
+CHOSEN_INSTALL_FEATURE_LIST=fase_srv,fase_add_lm,fopen_client,fdblib,fesql_c_lang,fesql_cobol_lang,fxa,fodbcl,fconn_add_lm,fjconnect160,fdbisql,fqptune,fsysam_util,fase_cagent,fsysam_server,fconn_python,fconn_perl,fconn_php,fscc_server,fasecmap,fodata_ase,fase_hadr
+CHOSEN_INSTALL_SET=Full
+
+#SAP Host Agent
+#--------------
+INSTALL_SAP_HOST_AGENT=TRUE
+SUDO_PASSWORD= {{ passwords.admin | default(passwords.master) }}
+
+#Choose Product License Type
+#---------------------------
+SYBASE_PRODUCT_LICENSE_TYPE=license
+
+#Choose SySAM License
+#--------------------
+SYSAM_LICENSE_SOURCE=proceed_without_license
+SYSAM_LICENSE_FILE_PATHNAME=
+SYSAM_EXISTING_LICENSE_SERVER_HOSTNAME=
+SYSAM_EXISTING_LICENSE_SERVER_PORTNUMBER=
+
+#Choose SYSAM Product Edtion and License Type
+#--------------------------------------------
+SYSAM_PRODUCT_EDITION=Enterprise Edition
+SYSAM_LICENSE_TYPE=CP :  CPU License
+
+#SySAM Notification Setting
+#--------------------------
+SYSAM_NOTIFICATION_ENABLE=false
+SYSAM_NOTIFICATION_EMAIL_SEVERITY=NONE
+
+#Install
+#-------
+-fileOverwrite_/sybase/{{ sap.db.sid }}/sybuninstall/ASESuite/uninstall.lax=Yes
+
+#Configure New Servers
+#---------------------
+SY_CONFIG_ASE_SERVER=true
+SY_CONFIG_HADR_SERVER=false
+SY_CONFIG_BS_SERVER=true
+SY_CONFIG_XP_SERVER=true
+SY_CONFIG_JS_SERVER=true
+SY_CONFIG_SM_SERVER=true
+SY_CONFIG_WS_SERVER=false
+SY_CONFIG_SCC_SERVER=true
+SY_CONFIG_TXT_SERVER=false
+
+#Configure Servers with Different User Account
+#---------------------------------------------
+SY_CFG_USER_ACCOUNT_CHANGE=no
+
+#User Configuration Data Directory
+#---------------------------------
+SY_CFG_USER_DATA_DIRECTORY=/sybase/{{ sap.db.sid }}
+
+#Configure New SAP ASE
+#---------------------
+SY_CFG_ASE_SERVER_NAME={{ sap.db.sid }}
+SY_CFG_ASE_HOST_NAME={{ sap.logical_hosts.db.hostname | default (ansible_hostname) }}
+SY_CFG_ASE_PORT_NUMBER=5000
+SY_CFG_ASE_APPL_TYPE=MIXED
+SY_CFG_ASE_PAGESIZE=8k
+SY_CFG_ASE_PASSWORD={{ passwords.systemdb | default(passwords.master) }}
+SY_CFG_ASE_MASTER_DEV_NAME={{ sybase_enterprise.master.path }}
+SY_CFG_ASE_MASTER_DEV_SIZE={{ sybase_enterprise.master.dev_size | default('104') }}
+SY_CFG_ASE_MASTER_DB_SIZE={{ sybase_enterprise.master.db_size | default('52') }}
+SY_CFG_ASE_SYBPROC_DEV_NAME={{ sybase_enterprise.sysproc.path }}
+SY_CFG_ASE_SYBPROC_DEV_SIZE={{ sybase_enterprise.sysproc.dev_size | default('196') }}
+SY_CFG_ASE_SYBPROC_DB_SIZE={{ sybase_enterprise.sysproc.db_size | default('196') }}
+SY_CFG_ASE_SYBTEMP_DEV_NAME={{ sybase_enterprise.sybsysdb.path }}
+SY_CFG_ASE_SYBTEMP_DEV_SIZE={{ sybase_enterprise.sybsysdb.dev_size | default('12') }}
+SY_CFG_ASE_SYBTEMP_DB_SIZE={{ sybase_enterprise.sybsysdb.db_size | default('12') }}
+SY_CFG_ASE_ERROR_LOG=/sybase/{{ sap.db.sid }}/{{ sap.db.sybase_ase | default('ASE-16_0') }}/install/{{ sap.db.sid }}.log
+CFG_REMOTE_AND_CONTROL_AGENT=false
+ENABLE_COCKPIT_MONITORING=true
+COCKPIT_TECH_USER=tech_user
+COCKPIT_TECH_USER_PASSWORD={{ passwords.cockpittechuser | default(passwords.master) }}
+SY_CFG_ASE_PCI_ENABLE={{ sybase_enterprise.pci.enable | default(true) }}
+SY_CFG_ASE_PCI_DEV_NAME={{ sybase_enterprise.pci.path | default() }}
+#SY_CFG_ASE_PCI_DEV_NAME=$NULL$
+SY_CFG_ASE_PCI_DEV_SIZE={{ sybase_enterprise.pci.dev_size | default('192') }}
+SY_CFG_ASE_PCI_DB_SIZE={{ sybase_enterprise.pci.db_size | default('192') }}
+SY_CFG_ASE_TEMP_DEV_NAME={{ sybase_enterprise.tempdbdev.path }}
+SY_CFG_ASE_TEMP_DEV_SIZE={{ sybase_enterprise.tempdbdev.dev_size | default('100') }}
+SY_CFG_ASE_TEMP_DB_SIZE={{ sybase_enterprise.tempdbdev.db_size | default('100') }}
+SY_CFG_ASE_OPT_ENABLE=false
+SY_CFG_ASE_CPU_NUMBER=$NULL$
+SY_CFG_ASE_MEMORY=$NULL$
+SY_CFG_ASE_LANG=us_english
+SY_CFG_ASE_CHARSET=utf8
+SY_CFG_ASE_SORTORDER=bin_utf8
+SY_CFG_ASE_SAMPLE_DB=false
+
+#Configure New Backup Server
+#---------------------------
+SY_CFG_BS_SERVER_NAME={{ sap.db.sid }}_BS
+SY_CFG_BS_PORT_NUMBER=5001
+SY_CFG_BS_ERROR_LOG=/sybase/{{ sap.db.sid }}/{{ sap.db.sybase_ase | default('ASE-16_0') }}/install/{{ sap.db.sid }}_BS.log
+SY_CFG_BS_ALLOW_HOSTS=
+
+#Configure New XP Server
+#-----------------------
+SY_CFG_XP_SERVER_NAME={{ sap.db.sid }}_XP
+SY_CFG_XP_PORT_NUMBER=5002
+SY_CFG_XP_ERROR_LOG=/sybase/{{ sap.db.sid }}/{{ sap.db.sid }}_XP.log
+
+#Configure New Job Scheduler
+#---------------------------
+SY_CFG_JS_SERVER_NAME={{ sap.db.sid }}_JSAGENT
+SY_CFG_JS_PORT_NUMBER=4900
+SY_CFG_JS_MANAG_DEV_NAME={{ sybase_enterprise.sybmgmtdb.path }}
+SY_CFG_JS_MANAG_DEV_SIZE={{ sybase_enterprise.sybmgmtdb.dev_size | default('76') }}
+SY_CFG_JS_MANAG_DB_SIZE={{ sybase_enterprise.sybmgmtdb.db_size | default('76') }}
+
+#Configure Self Management
+#-------------------------
+SY_CFG_SM_USER_NAME=sa
+SY_CFG_SM_PASSWORD={{ passwords.selfmanagement | default(passwords.master) }}
+
+#Configure Historical Monitoring Data Repository
+#-----------------------------------------------
+#SY_CFG_BALDR_DATA_DEV_NAME={{ sybase_enterprise.saptools.data.path }}
+#SY_CFG_BALDR_DATA_DEV_SIZE={{ sybase_enterprise.saptools.data.dev_size | default('2048') }}
+#SY_CFG_BALDR_LOG_DEV_NAME={{ sybase_enterprise.saptools.log.path }}
+#SY_CFG_BALDR_LOG_DEV_SIZE={{ sybase_enterprise.saptools.log.dev_size | default('256') }}
+
+#Cockpit Host and Ports
+#----------------------
+CONFIG_SCC_HTTP_PORT=4282
+CONFIG_SCC_HTTPS_PORT=4283
+SCC_TDS_PORT_NUMBER=4998
+SCC_RMI_PORT_NUMBER=4992
+
+#Cockpit Users and Passwords
+#---------------------------
+CONFIG_SCC_CSI_SCCADMIN_USER=sccadmin
+CONFIG_SCC_CSI_SCCADMIN_PWD= {{ passwords.sccadmin | default(passwords.master) }}
+CONFIG_SCC_CSI_UAFADMIN_USER=uafadmin
+CONFIG_SCC_CSI_UAFADMIN_PWD= {{ passwords.sccuafadmin | default(passwords.master) }}
+CONFIG_SCC_REPOSITORY_PWD= {{ passwords.sccrepository | default(passwords.master) }}
+
+ASEP_REMEMBER_PASSWORD=TRUE
+AGREE_TO_SAP_LICENSE=TRUE
+#DO_UPDATE_INSTALL=TRUE

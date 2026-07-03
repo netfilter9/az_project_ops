@@ -1,0 +1,44 @@
+---
+#
+# First we make sure we have the right packages installed
+#
+- name: main | Remove uwanted packages
+  package:
+    name:
+      - lio-utils
+      - python-rtslib
+      - python-configshel
+      - targetcli
+    state: absent
+  tags:
+    - packages
+
+- name: main | Install SBD packages
+  package:
+    name: 
+      - targetcli-fb
+    state: present
+  tags:
+    - packages
+
+- name: main | install additional dbus-1-python package (package manager doesn't work for this one)
+  command: zypper install --force-resolution -y dbus-1-python
+  tags:
+    - packages
+    
+#
+# Then we start the required service
+#
+- name: main | Start and enable targetcli service
+  systemd:
+    name: targetcli
+    state: started
+    enabled: yes
+
+#
+# Then we create a folder to store the SBD control files  
+#
+- name: main | Ensure /sbd folder exists
+  file:
+    path: "/sbd"
+    state: directory

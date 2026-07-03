@@ -1,0 +1,7 @@
+---
+
+- name: run hadr commands on secondary and restore database
+  include_tasks: secondary_db2_hadr_{{ platform }}.yml
+  when: ansible_hostname == node2
+
+

@@ -1,0 +1,572 @@
+*&********************************************************************&*
+* Report              :   ZCM_DB13_UPD_JOB_SCHEDULING                  *
+* Title               :   DB13 Job Scheduling                          *
+* Created by          :   YASASWINI KANDUKURI                          *
+* Created on          :   14/10/2020                                   *
+* Purpose             :   Scheduling jobs in DB13                      *
+*----------------------------------------------------------------------*
+REPORT zbasis_r_db13_jobsched_migrate.
+
+FORM get_config
+             TABLES ft_input  STRUCTURE tab512
+                    ft_output STRUCTURE tab512.
+  DATA:
+    action_excp TYPE REF TO cx_db6_calendar_action,
+    tomorrow    TYPE sydatum,
+    next_day    TYPE sydatum,
+    offset      TYPE i,
+    wa_action   TYPE sdbap.
+
+  FIELD-SYMBOLS:
+    <c> TYPE c.
+
+  TYPES: BEGIN OF job_detail_descr,
+           refresh                     TYPE c,
+*   job details
+           descr                       TYPE sdba_lname,
+           target                      TYPE syhost,
+           category                    TYPE i,
+           category_display            TYPE db6jo_category_name,
+           exclusive_access(1)         TYPE c,
+           externally_scheduled(1)     TYPE c,
+           with_log(1)                 TYPE c,
+           with_job(1)                 TYPE c,
+           with_extension              TYPE abap_bool,
+           with_recurrence(1)          TYPE c,
+           with_preview                TYPE abap_bool,
+           planned                     TYPE db6tstamp_struct,
+           original_planned            TYPE db6tstamp_struct,
+           log                         TYPE db6pmprot,
+           start                       TYPE db6tstamp_struct,
+           stop                        TYPE db6tstamp_struct,
+           status                      TYPE sdba_rcd,
+           status_code                 TYPE i,
+*   group of radio buttons defining unit of period
+           rb_period_none              TYPE c,
+           rb_period_hour              TYPE c,
+           rb_period_day               TYPE c,
+           rb_period_week              TYPE c,
+
+*   details of selected periods
+           period                      TYPE i,
+*   - hours
+           period_at_0                 TYPE c,
+           period_at_1                 TYPE c,
+           period_at_2                 TYPE c,
+           period_at_3                 TYPE c,
+           period_at_4                 TYPE c,
+           period_at_5                 TYPE c,
+           period_at_6                 TYPE c,
+           period_at_7                 TYPE c,
+           period_at_8                 TYPE c,
+           period_at_9                 TYPE c,
+           period_at_10                TYPE c,
+           period_at_11                TYPE c,
+           period_at_12                TYPE c,
+           period_at_13                TYPE c,
+           period_at_14                TYPE c,
+           period_at_15                TYPE c,
+           period_at_16                TYPE c,
+           period_at_17                TYPE c,
+           period_at_18                TYPE c,
+           period_at_19                TYPE c,
+           period_at_20                TYPE c,
+           period_at_21                TYPE c,
+           period_at_22                TYPE c,
+           period_at_23                TYPE c,
+*   - weeks
+           period_on_monday(1)         TYPE c,
+           period_on_tuesday(1)        TYPE c,
+           period_on_wednesday(1)      TYPE c,
+           period_on_thursday(1)       TYPE c,
+           period_on_friday(1)         TYPE c,
+           period_on_saturday(1)       TYPE c,
+           period_on_sunday(1)         TYPE c,
+
+           range_begin                 TYPE db6tstamp_struct,
+*   group of radio buttons defining type of end criterion
+           rb_range_no_end(1)          TYPE c,
+           rb_range_end_occ(1)         TYPE c,
+           rb_range_end_date(1)        TYPE c,
+
+*   details of selected end criterion
+*   - end after N occurrences
+           range_occurrences           TYPE i,
+*   - end by timestamp
+           range_end                   TYPE db6tstamp_struct,
+           recurrence_explanation(132) TYPE c,
+         END OF job_detail_descr.
+  CONSTANTS: lc_sep     TYPE c      VALUE '|',
+             lc_act_exp TYPE char6  VALUE 'EXPORT',
+             c_x        TYPE c      VALUE 'X',
+             lc_text    TYPE char80 VALUE
+             'DBA Job SCheduling',
+             lc_textmsg TYPE char80 VALUE
+             'Job Scheduled Successfully'.
+
+  DATA: lv_action              TYPE string,
+        ft_success             TYPE STANDARD TABLE OF tab512,
+        ft_error               TYPE STANDARD TABLE OF tab512,
+        ls_input               TYPE tab512,
+        ls_output              TYPE tab512,
+        ls_action              TYPE sdbap,
+        lt_action              TYPE  db6jo_plan_table,
+        lv_timestamp           TYPE db6tstamp_struct,
+        lv_actionname          TYPE string,
+        lv_planstrtdate        TYPE sy-datum,
+        lv_daye                TYPE scal-indicator,
+        lv_planstrttime        TYPE sy-uzeit,
+        lv_recflag             TYPE char1,
+        lv_recpattern          TYPE char1,
+        lv_strttstmp           TYPE sdba_frsts,
+        lv_crttstmp            TYPE sdba_crts,
+        lv_rectime             TYPE sy-uzeit,
+        lv_recday              TYPE string,
+        lv_recnoend            TYPE char1,
+        lv_day_number          TYPE i,
+        lv_recoccurence        TYPE string,
+        lv_recendafter         TYPE string,
+        lv_recenddate          TYPE sy-datum,
+        lv_function_unit       TYPE syrepid,
+        lv_duration_in_seconds TYPE i,
+        ls_job                 TYPE job_detail_descr,
+        ls_recurrence          TYPE sdba_recur,
+        lv_actionid            TYPE sdba_btype,
+        lt_parameters          TYPE db6jo_param_table,
+        lv_sys_id              TYPE sy-sysid,
+        lo_sys                 TYPE REF TO cl_db6_sys,
+        lv_config              TYPE REF TO cl_dba_calendar_cfg,
+        lo_exec                TYPE REF TO cx_db6_sys,
+        lv_rec                 TYPE string,
+        lv_recdaytime          TYPE string,
+        lv_endafter            TYPE sdba_delts,
+        navigator              TYPE REF TO cl_db6_tree_navigator,
+        lv_recendtime          TYPE sy-uzeit,
+        screen_info            TYPE db6jo_screen_info,
+        lv_time                TYPE db6tstamp_struct.
+  DATA:
+    BEGIN OF external,
+      action            TYPE i,
+      system_id         TYPE db6navsyst-sysid,
+      data              TYPE REF TO data,
+      requested_command TYPE syucomm,
+      show_launchpad    TYPE abap_bool,
+      as_popup          TYPE abap_bool,
+      force_lock        TYPE abap_bool,
+    END OF external.
+  CLEAR: lv_actionid,
+    lv_actionname,
+    lv_planstrtdate,
+    lv_planstrttime,
+    lv_recflag,
+    lv_recpattern,
+    lv_recnoend,
+    lv_recoccurence,
+    lv_recenddate,
+    lv_recendtime,
+    lv_rec,
+    lv_recdaytime,
+    ls_recurrence,
+    ls_job,
+    lv_daye,
+    ls_input,
+    ls_output.
+  IF ft_input IS NOT INITIAL.
+    LOOP AT ft_input INTO ls_input.
+      IF sy-tabix  = '1'.
+        SPLIT ls_input AT lc_sep INTO
+        lv_actionid
+        lv_actionname
+        lv_planstrtdate
+        lv_planstrttime
+        lv_recflag
+        lv_recpattern
+        lv_recnoend
+        lv_recoccurence
+        lv_recenddate
+        lv_recendtime.
+      ELSE.
+        SPLIT ls_input AT lc_sep INTO
+        lv_rec
+        lv_recdaytime.
+        IF lv_rec = 'DAY'.
+          IF lv_rec = 'DAY' AND lv_recdaytime = '00'.
+            ls_job-period_at_0 = c_x.
+            ls_recurrence-hourofday+0(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '01'.
+            ls_job-period_at_1 = c_x.
+            ls_recurrence-hourofday+1(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '02'.
+            ls_job-period_at_2 = c_x.
+            ls_recurrence-hourofday+2(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '03'.
+            ls_job-period_at_3 = c_x.
+            ls_recurrence-hourofday+3(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '04'.
+            ls_job-period_at_4 = c_x.
+            ls_recurrence-hourofday+4(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '05'.
+            ls_job-period_at_5 = c_x.
+            ls_recurrence-hourofday+5(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '06'.
+            ls_job-period_at_6 = c_x.
+            ls_recurrence-hourofday+6(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '07'.
+            ls_job-period_at_7 = c_x.
+            ls_recurrence-hourofday+7(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '08'.
+            ls_job-period_at_8 = c_x.
+            ls_recurrence-hourofday+8(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '09'.
+            ls_job-period_at_9 = c_x.
+            ls_recurrence-hourofday+9(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '10'.
+            ls_job-period_at_10 = c_x.
+            ls_recurrence-hourofday+10(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '11'.
+            ls_job-period_at_11 = c_x.
+            ls_recurrence-hourofday+11(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '12'.
+            ls_job-period_at_12 = c_x.
+            ls_recurrence-hourofday+12(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '13'.
+            ls_job-period_at_13 = c_x.
+            ls_recurrence-hourofday+13(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '14'.
+            ls_job-period_at_14 = c_x.
+            ls_recurrence-hourofday+14(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '15'.
+            ls_job-period_at_15 = c_x.
+            ls_recurrence-hourofday+15(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '16'.
+            ls_job-period_at_16 = c_x.
+            ls_recurrence-hourofday+16(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '17'.
+            ls_job-period_at_17 = c_x.
+            ls_recurrence-hourofday+17(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '18'.
+            ls_job-period_at_18 = c_x.
+            ls_recurrence-hourofday+18(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '19'.
+            ls_job-period_at_19 = c_x.
+            ls_recurrence-hourofday+19(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '20'.
+            ls_job-period_at_20 = c_x.
+            ls_recurrence-hourofday+20(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '21'.
+            ls_job-period_at_21 = c_x.
+            ls_recurrence-hourofday+21(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '22'.
+            ls_job-period_at_22 = c_x.
+            ls_recurrence-hourofday+22(1) = 'X'.
+          ELSEIF lv_rec = 'DAY' AND lv_recdaytime = '23'.
+            ls_job-period_at_23 = c_x.
+            ls_recurrence-hourofday+23(1) = 'X'.
+          ENDIF.
+        ELSEIF lv_rec = 'WEEK'.
+          IF lv_recdaytime = 'MONDAY'.
+            ls_job-period_on_monday = c_x.
+            ls_recurrence-dayofweek+0(1) = 'X'.
+          ELSEIF lv_recdaytime = 'TUESDAY'.
+            ls_job-period_on_tuesday = c_x.
+            ls_recurrence-dayofweek+1(1) = 'X'.
+          ELSEIF lv_recdaytime = 'WEDNESDAY'.
+            ls_job-period_on_wednesday = c_x.
+            ls_recurrence-dayofweek+2(1) = 'X'.
+          ELSEIF lv_recdaytime = 'THURSDAY'.
+            ls_job-period_on_thursday = c_x.
+            ls_recurrence-dayofweek+3(1) = 'X'.
+          ELSEIF lv_recdaytime = 'FRIDAY'.
+            ls_job-period_on_friday = c_x.
+            ls_recurrence-dayofweek+4(1) = 'X'.
+          ELSEIF lv_recdaytime = 'SATURDAY'.
+            ls_job-period_on_saturday = c_x.
+            ls_recurrence-dayofweek+5(1) = 'X'.
+          ELSEIF lv_recdaytime = 'SUNDAY'.
+            ls_job-period_on_sunday = c_x.
+            ls_recurrence-dayofweek+6(1) = 'X'.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+      CLEAR: ls_input.
+    ENDLOOP.
+    "Header
+    ls_output = lc_text.
+    APPEND ls_output TO ft_output.
+    CLEAR: ls_output.
+    "current system
+    external-action = cl_db6_action=>db6act_db13.
+*  SUPPRESS DIALOG.
+    navigator = cl_db6_tree_navigator=>create(
+    system_id         = external-system_id
+    action            = external-action
+    externally_called = abap_true
+    show_launchpad    = external-show_launchpad
+    force_lock        = external-force_lock ).
+
+    "Build action Table
+    ls_action-btype = lv_actionid.
+    ls_action-sysid = sy-sysid.
+    "create timestamp
+    CONCATENATE sy-datum sy-uzeit INTO lv_crttstmp.
+    ls_action-cretstmp = lv_crttstmp.
+    "start timestamp
+    CONCATENATE lv_planstrtdate lv_planstrttime INTO lv_strttstmp.
+    ls_action-starttstmp = lv_strttstmp.
+
+    "Refer FORM ADD_PLAN in Include LSDB6CALPLC
+* Reoccurance
+    IF lv_recflag IS INITIAL.
+      CALL FUNCTION 'DATE_COMPUTE_DAY'
+        EXPORTING
+          date = lv_planstrtdate
+        IMPORTING
+          day  = lv_daye.
+
+      ls_action-period = 0.
+      ls_action-daye   = lv_daye.
+      ls_action-timee  = lv_planstrttime.
+      CONCATENATE lv_planstrtdate lv_planstrttime INTO lv_strttstmp.
+      ls_action-starttstmp = lv_strttstmp.
+      CLEAR ls_action-deltstmp.
+      APPEND ls_action TO lt_action.
+    ENDIF.
+
+    IF lv_recpattern = 'H'.
+      ls_action-timee = '240000'.
+      ls_action-period = '1'.
+      lv_duration_in_seconds = 3600.
+      CLEAR: ls_action-daye.
+      ls_recurrence-period = ls_action-period.
+      ls_recurrence-unit   = 'H'.
+      "Recurrence
+      IF lv_recflag IS NOT INITIAL.
+        IF lv_recnoend = c_x.
+          CLEAR ls_action-deltstmp.
+        ELSEIF lv_recoccurence IS NOT INITIAL.
+          lv_duration_in_seconds =
+          lv_duration_in_seconds * ls_action-period *
+          lv_recoccurence - 1.
+          lv_timestamp = ls_action-starttstmp.
+          lv_timestamp =
+          cl_db6_calendar_tool=>add_seconds_to_timestamp(
+          seconds   = lv_duration_in_seconds
+          timestamp = lv_timestamp ) .
+          ls_action-deltstmp = lv_timestamp.
+        ELSEIF lv_recenddate IS NOT INITIAL.
+          CONCATENATE lv_recenddate lv_recendtime INTO lv_endafter.
+          ls_action-deltstmp = lv_endafter.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+    "For Day
+    IF lv_recpattern = 'D'.
+      ls_job-rb_period_day = c_x.
+      ls_action-period = '1'.
+      lv_duration_in_seconds = 86400.
+      ls_action-timee = lv_planstrttime.
+      ls_recurrence-period = ls_action-period.
+      ls_recurrence-unit   = 'D'.
+      "Recurrence
+      IF lv_recflag IS NOT INITIAL.
+        IF lv_recnoend = c_x.
+          CLEAR ls_action-deltstmp.
+        ELSEIF lv_recoccurence IS NOT INITIAL.
+          lv_duration_in_seconds =
+          lv_duration_in_seconds * ls_action-period *
+          lv_recoccurence - 1.
+          lv_timestamp = ls_action-starttstmp.
+          lv_timestamp =
+          cl_db6_calendar_tool=>add_seconds_to_timestamp(
+          seconds   = lv_duration_in_seconds
+          timestamp = lv_timestamp ) .
+          ls_action-deltstmp = lv_timestamp.
+        ELSEIF lv_recenddate IS NOT INITIAL.
+          CONCATENATE lv_recenddate lv_recendtime INTO lv_endafter.
+          ls_action-deltstmp = lv_endafter.
+        ENDIF.
+      ENDIF.
+      CLEAR: ls_action-daye.
+      tomorrow = sy-datum + 1.
+      DO 24 TIMES.
+        offset = sy-index - 1.
+        ASSIGN ls_recurrence-hourofday+offset(1) TO <c>.
+        IF <c> = 'X'.
+          ls_action-timee = offset * 3600.
+          ls_action-starttstmp(8) = ls_action-starttstmp(8).
+
+          IF ls_action-timee < ls_action-starttstmp+8(6).
+            next_day = ls_action-starttstmp(8).
+            next_day = next_day + 1.
+            ls_action-starttstmp(8) = next_day.
+          ENDIF.
+
+          ls_action-starttstmp+8(6) = ls_action-timee.
+          IF ls_action-starttstmp(8) = sy-datum AND
+            ls_action-timee <= sy-uzeit.
+            ls_action-starttstmp(8) = tomorrow.
+          ENDIF.
+          APPEND ls_action TO lt_action.
+        ENDIF.
+      ENDDO.
+    ENDIF.
+    " For Week
+    IF lv_recpattern = 'W'.
+      ls_job-rb_period_week = c_x.
+      ls_action-period = '7'.
+      lv_duration_in_seconds = 86400.
+      lv_day_number = cl_db6_calendar_tool=>daynumber_of_date(
+       lv_planstrtdate ).
+      ls_action-daye  = lv_day_number.
+      ls_action-timee = lv_planstrttime.
+
+      ls_recurrence-period = '1'.
+      "Recurrence
+      IF lv_recflag IS NOT INITIAL.
+        IF lv_recnoend = c_x.
+          CLEAR ls_action-deltstmp.
+        ELSEIF lv_recoccurence IS NOT INITIAL.
+          lv_duration_in_seconds =
+          lv_duration_in_seconds * ls_action-period *
+          lv_recoccurence - 1.
+          lv_timestamp = ls_action-starttstmp.
+          lv_timestamp =
+          cl_db6_calendar_tool=>add_seconds_to_timestamp(
+          seconds   = lv_duration_in_seconds
+          timestamp = lv_timestamp ) .
+          ls_action-deltstmp = lv_timestamp.
+        ELSEIF lv_recenddate IS NOT INITIAL.
+          CONCATENATE lv_recenddate lv_recendtime INTO lv_endafter.
+          ls_action-deltstmp = lv_endafter.
+        ENDIF.
+      ENDIF.
+      ls_recurrence-unit   = 'W'.
+      DO 7 TIMES.
+        offset = sy-index - 1.
+        ASSIGN ls_recurrence-dayofweek+offset(1) TO <c>.
+        IF <c> = 'X'.
+          ls_action-daye = sy-index.
+          APPEND ls_action TO lt_action.
+        ENDIF.
+      ENDDO.
+    ENDIF.
+    " For Hour
+    IF lv_recpattern = 'H'.
+      APPEND ls_action TO lt_action.
+    ENDIF.
+
+
+    CLEAR: lv_sys_id, lo_sys.
+    lv_sys_id = sy-sysid. "System ID
+*
+    TRY .
+        cl_db6_sys=>get_sys_ref(
+    EXPORTING
+      system_id     = lv_sys_id
+    RECEIVING
+      sys_ref       = lo_sys ).
+
+      CATCH cx_db6_sys INTO lo_exec.
+
+    ENDTRY.
+
+    CLEAR: lv_function_unit.
+
+***Read the database name
+    IF lo_sys IS BOUND.
+      IF lo_sys->con_ref IS NOT INITIAL.
+        DATA(lv_dbname) = lo_sys->con_ref->con_data-dbms.
+      ELSE.
+*        Check for current s/m being SQL
+        IF lo_sys->sys_data IS NOT INITIAL.
+          lv_dbname = lo_sys->sys_data-dbsys.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+    CONCATENATE lv_dbname '_JOB_SET_DIALOG_PARAMETERS'
+      INTO lv_function_unit.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_time.
+
+    lv_config = cl_dba_calendar_cfg=>get_ref( sys_ref = lo_sys
+                                                 offline = space ).
+
+    CALL FUNCTION lv_function_unit
+      EXPORTING
+        action_id                = lv_actionid
+        variant                  = '0'
+        command                  = 'ADD'
+        timestamp                = lv_time
+        sys_ref                  = lo_sys
+        cfg_ref                  = lv_config
+      IMPORTING
+        program                  = screen_info-program
+        screen                   = screen_info-screen
+      TABLES
+        parameters               = lt_parameters
+      EXCEPTIONS
+        invalid_parameter_set    =
+                                   cl_db6_rc=>x_invalid_parameter_set
+        invalid_parameter_format =
+                                   cl_db6_rc=>x_invalid_parameter_format
+        fatal_error              = cl_db6_rc=>x_fatal_error
+        OTHERS                   = cl_db6_rc=>x_others.
+
+    CLEAR: lv_function_unit.
+
+    CONCATENATE lv_dbname '_JOB_GET_DIALOG_PARAMETERS'
+      INTO lv_function_unit.
+
+    CALL FUNCTION lv_function_unit
+      EXPORTING
+        action_id             = lv_actionid
+        recurrence            = ls_recurrence
+        sys_ref               = lo_sys
+      TABLES
+        parameters            = lt_parameters
+      EXCEPTIONS
+        action_cancelled      =
+                                cl_db6_rc=>x_action_cancelled
+        invalid_parameter_set =
+                                cl_db6_rc=>x_invalid_parameter_set
+        OTHERS                = cl_db6_rc=>x_others.
+
+    CLEAR: ls_action.
+
+    LOOP AT lt_action INTO ls_action.
+      CALL FUNCTION 'DB6_PLAN_ADD_BATCH'
+        EXPORTING
+          action                = ls_action
+          recurrence            = ls_recurrence
+          connection            = lo_sys->sys_data-dbcname
+        TABLES
+          parameters            = lt_parameters
+        EXCEPTIONS
+          permission_denied     =
+                                  cl_db6_rc=>x_permission_denied
+          job_error             = cl_db6_rc=>x_job_error
+          db_error              = cl_db6_rc=>x_db_error
+          no_configuration_data =
+                                  cl_db6_rc=>x_no_configuration_data
+          OTHERS                = cl_db6_rc=>x_others.
+
+      IF sy-subrc = 0.
+        CONCATENATE lv_actionname lc_textmsg
+         INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO ft_success.
+      ELSE.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+            WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+        INTO ls_output.
+        APPEND ls_output TO ft_output.
+      ENDIF.
+      CLEAR: ls_output, ls_action.
+    ENDLOOP.
+    IF ft_success IS NOT INITIAL.
+      CONCATENATE lv_actionname lc_textmsg
+           INTO ls_output SEPARATED BY space.
+      APPEND ls_output TO ft_output.
+    ENDIF.
+  ENDIF.
+ENDFORM.

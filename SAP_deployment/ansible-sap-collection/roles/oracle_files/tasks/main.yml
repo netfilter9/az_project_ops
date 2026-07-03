@@ -1,0 +1,34 @@
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name: create passwd file
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  command: "orapwd file={{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/dbs/orapw{{ sap.db.sid | upper }} password={{ passwords.master }} entries=10"
+  args:
+    chdir: $ORACLE_HOME/bin
+    creates: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/dbs/orapw{{ sap.db.sid | upper }}"
+  environment:
+    path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+    ORACLE_SID: "{{ sap.db.sid|upper }}"
+    ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+    ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+
+- name: create data and log directories
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  file: 
+    path: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ item }}"
+    state: directory
+  loop:
+    - sapdata1
+    - sapdata2
+    - sapdata3
+    - sapdata4
+    - origlogA
+    - origlogB
+    - mirrlogA
+    - mirrlogB
+    - oraflash
+  register: shellout

@@ -1,0 +1,17 @@
+---
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+    dbtype: "{{ sap.db.type | lower }}" 
+    ds_dsnname: "{{ bods.ds.dsnname | default(default_ds_dsnname)}}"
+
+- name: main | install hana client
+  import_tasks: hana_client.yml
+  tags:
+    - hana_client
+  when: dbtype  == "hana"
+
+- name: main | install ds
+  import_tasks: ds_install.yml
+  tags:
+    - ds_install

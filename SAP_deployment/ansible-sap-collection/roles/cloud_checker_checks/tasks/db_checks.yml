@@ -1,0 +1,50 @@
+---
+
+######################################################################
+#                       DB CHECKS                                 #
+######################################################################
+
+- name: main | db-checks
+  block: 
+    - name: Checking HDB version
+      shell : "sudo su - {{db_sid|lower}}adm HDB version | grep version |sed -n 2p| awk '{print $2}'"
+      become: yes
+      register: output_hanaversion
+      ignore_errors: true
+
+    - debug: 
+        var: output_hanaversion
+    
+
+    - name: Checking HDB User Store
+      shell : "sudo su - {{db_sid|lower}}adm  -c 'hdbuserstore list'"
+      become: yes
+      register: output_hdbsuserstore
+      ignore_errors: true
+
+    - name: Checking if auto NUMA balancing is disbaled
+      shell: cat /etc/default/grub | grep -oP '(?<=numa_balancing=)\w+'
+      become: yes
+      register: output_numabal
+       
+  when: "'db' in group_names"
+
+- name: get hana output version
+  debug:
+     var: output_hanaversion 
+
+- name: hdbuserstore output
+  debug:
+     var: output_hdbsuserstore 
+
+- name: output of numabal
+  debug:
+    var: output_numabal
+
+- name: DB checks
+  template:
+    src: "db-checks.j2"
+    dest: "{{ input_path }}/DB-checks/{{ ansible_hostname }}_db-checks.{{ output }}"
+  delegate_to: localhost  
+  when: 
+      - "'db' in group_names" 

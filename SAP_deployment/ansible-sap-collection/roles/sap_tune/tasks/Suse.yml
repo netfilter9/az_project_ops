@@ -1,0 +1,27 @@
+---
+
+- name: tune | enable sysstat services
+  systemd:
+    name: sysstat
+    enabled: yes
+    state: restarted
+
+- name: tune | install packages
+  package:
+    name:
+      - saptune
+    state: present
+  register: result
+  until: result is not failed
+  retries: 5
+
+- name: tune | saptune solution apply
+  command: saptune solution apply {{ tune }}
+  register: saptune_solution
+  failed_when: 
+    - saptune_solution.failed
+    - not (saptune_solution.stderr.find("There is already one solution applied"))
+
+#bala to confirm if this is always the same on all ose
+- name: tune | saptune daemon start
+  command: saptune daemon start

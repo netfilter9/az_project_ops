@@ -1,0 +1,631 @@
+REPORT zcm_r_rstptest_exp_tms_check.
+*---------------------------------------------------------------------*
+* Program Name        : zcm_r_rstptest_exp_tms_check                  *
+* Title               : TMS - Check Transport Tool                    *
+* Purpose             : Check transport tool inconsistency in TMS     *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* RSTPTEST                                                            *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+*                                                                     *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local    Description          *
+*---------------------------------------------------------------------*
+*03-02-2021  Initial   Swetha       Local        TMS-TR Tool check    *
+*---------------------------------------------------------------------*
+"// Class Implementation
+CLASS gcl_test_defn DEFINITION.
+  PUBLIC SECTION.
+    "// Type
+    TYPES: BEGIN OF ty_list,
+             level    TYPE snodetext-tlevel,
+             name     TYPE tptest-name,
+             text(40),
+           END   OF ty_list.
+    "// DATA
+    DATA: gt_list                TYPE STANDARD TABLE OF ty_list.
+
+    "// CONSTANTS
+    CONSTANTS:
+      gc_test_host           TYPE tptest-name    VALUE 'host',
+      gc_test_interface      TYPE tptest-name    VALUE 'interface',
+      gc_test_profile        TYPE tptest-name    VALUE 'profile',
+      gc_test_destination    TYPE tptest-name    VALUE 'destination',
+      gc_test_connect        TYPE tptest-name    VALUE 'connect',
+      gc_test_deploy_service TYPE tptest-name    VALUE 'deploy service',
+      gc_test_deploy_tools   TYPE tptest-name    VALUE 'deploy tools',
+      gc_test_generic_deploy TYPE tptest-name    VALUE 'generic deploy',
+      gc_x                   TYPE c              VALUE 'X',
+      gc_appl_prefix         TYPE tptest-name    VALUE 'APPL:'.
+
+    CONSTANTS:
+      "//  tp interface test
+      gc_tp_test_version     TYPE tptest-name    VALUE 'VERSION',
+      gc_tp_test_dir_trans   TYPE tptest-name    VALUE 'DIR_TRANS',
+      gc_tp_test_param_path  TYPE tptest-name    VALUE 'PARAM_PATH',
+      gc_tp_test_open_param  TYPE tptest-name    VALUE 'OPEN_PARAM',
+      gc_tp_test_param_vers  TYPE tptest-name    VALUE 'PARAM_VERS',
+      gc_tp_test_logging     TYPE tptest-name    VALUE 'LOGGING',
+      gc_tp_test_dest_name   TYPE tptest-name    VALUE 'DEST_NAME',
+      gc_tp_test_tp_path     TYPE tptest-name    VALUE 'TP_PATH',
+      gc_tp_test_tp_check    TYPE tptest-name    VALUE 'TP_CHECK',
+      gc_tp_test_rfc_ping    TYPE tptest-name    VALUE 'RFC_PING',
+      gc_tp_test_rfc_connect TYPE tptest-name    VALUE 'RFC_CONNECT'
+      ,
+      gc_tp_test_tp_version  TYPE tptest-name    VALUE 'TP_VERSION',
+      gc_tp_test_db_connect  TYPE tptest-name    VALUE 'DB_CONNECT',
+      gc_tp_test_tp_offline  TYPE tptest-name    VALUE 'TP_OFFLINE',
+      gc_tms_sev_info        TYPE stmsc-severity VALUE 'I',
+      gc_tms_sev_error       TYPE stmsc-severity VALUE 'E'.
+    "// Constants
+    CONSTANTS:
+      gc_col_background TYPE n              VALUE '0',
+      gc_col_blue       TYPE n              VALUE '1',
+      gc_col_normal     TYPE n              VALUE '2'.
+    "// TMS Status check
+    METHODS  check_tms_status
+      RETURNING VALUE(et_result) TYPE snodetab.
+    "// Derive Status result
+  PRIVATE SECTION.
+    METHODS: fill_result
+      IMPORTING is_test   TYPE tptest
+                is_list   TYPE ty_list
+      CHANGING  es_result TYPE snodetext.
+
+ENDCLASS.
+*--------------------------------------------------------------------*
+"// FORM CALL
+*--------------------------------------------------------------------*
+"// Wrapper RFC Main Dynamic Form call
+FORM get_config                 ##CALLED
+  TABLES lt_input STRUCTURE tab512
+        lt_output STRUCTURE tab512.
+  "// DATA
+  DATA :
+      lv_action        TYPE string.
+  "// CONSTANTS
+  CONSTANTS:
+    lc_inc_ip TYPE string VALUE 'Incorrect input',
+    lc_export TYPE string VALUE 'EXPORT',
+    lc_no_ip  TYPE string VALUE 'No input given',
+    lc_no_op  TYPE string VALUE 'No Data Found',
+    lc_lev1   TYPE char3  VALUE 'TOP',
+    lc_tick   TYPE char2  VALUE 'Ok',
+    lc_fail   TYPE string VALUE 'Not Ok',
+    lc_check  TYPE string VALUE 'ICON_CHECKED',
+    lc_err    TYPE string VALUE 'ICON_FAILURE',
+    lc_ok     TYPE string VALUE 'ICON_OKAY',
+    lc_hyp    TYPE char1  VALUE '|'.
+
+  "// Output structure
+  DATA(ls_output) = VALUE tab512( ).
+  "// Read Input
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  IF sy-subrc EQ 0.
+    lv_action = ls_input.      " Action
+  ELSE.
+    " No input given
+    ls_output = lc_no_ip.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  "// TMS Check
+  CASE lv_action.
+      "// EXPORT
+    WHEN lc_export.
+      DATA(lt_result) = NEW gcl_test_defn( )->check_tms_status( ).
+      IF lt_result IS NOT INITIAL.
+        LOOP AT lt_result INTO DATA(ls_result).
+          "// second record not needed
+          IF ls_result-type EQ lc_lev1  AND sy-tabix EQ 2. "'TOP'
+            CONTINUE.
+            "// Records other than 1st
+          ELSEIF ls_result-type EQ lc_lev1  AND sy-tabix NE 1. "'TOP'
+            "// Add Blank Line to Output for different Nodes
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+            "// Node Names
+            ls_output = ls_result-name.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+
+          ELSE.
+            "// Sub-Node status
+            IF ls_result-text1 EQ lc_check."'ICON_CHECKED'.
+              ls_result-text1 = lc_tick."'OK'.
+            ELSEIF ls_result-text1 EQ lc_err."'ICON_FAILURE'.
+              ls_result-text1 = lc_fail."'NOT OK'.
+            ELSEIF ls_result-text1 EQ lc_ok  OR ls_result-text1 IS
+            "'ICON_OKAY'
+            INITIAL.
+              CLEAR ls_result-text1.
+            ENDIF.
+
+            "// TOP Node Values
+            IF ls_result-type EQ lc_lev1 AND sy-tabix EQ 1. "'TOP'
+              CONCATENATE sy-sysid ls_result-name ls_result-text
+              ls_result-text1
+              INTO ls_output SEPARATED BY space.
+            ELSE.
+              "// Sub-Node - DIR Values
+              CONCATENATE ls_result-name ls_result-text ls_result-text1
+              INTO ls_output SEPARATED BY lc_hyp."'|'.
+            ENDIF.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+          ENDIF.
+        ENDLOOP.
+      ELSE.
+        "No data found
+        ls_output = lc_no_op.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        RETURN.
+      ENDIF.
+      "// Others
+    WHEN OTHERS.
+      " Incorrect input
+      ls_output = lc_inc_ip.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+  ENDCASE.
+ENDFORM.
+
+"// Class Implementation
+CLASS gcl_test_defn IMPLEMENTATION.
+  METHOD check_tms_status.
+
+    DATA: lt_test   TYPE STANDARD TABLE OF  tptest,
+          lt_stdout TYPE STANDARD TABLE OF  tpstdout.
+
+    DATA: lt_gp_test TYPE STANDARD TABLE OF stms_tp_test.
+    DATA: ls_tp_test TYPE stms_tp_test,
+          ls_conf    TYPE tmsmconf.
+
+    DATA:
+          lv_index            TYPE sy-tabix,
+          lv_suppress_ws_node TYPE stms_flag,
+          lv_lines            TYPE i,
+          lv_trace            TYPE i.
+
+    CONSTANTS:
+      lc_tp_int TYPE string VALUE 'tp-Interface',
+      lc_hname  TYPE string VALUE 'Host Name',
+      lc_ver    TYPE string VALUE 'Version',
+      lc_tdir   TYPE string VALUE 'Transport Directory',
+      lc_log    TYPE string VALUE 'Logging',
+      lc_tprof  TYPE string VALUE 'Transport Profile',
+      lc_pth    TYPE string VALUE 'Path',
+      lc_prof   TYPE string VALUE 'Profile',
+      lc_rdest  TYPE string VALUE 'RFC-Destination',
+      lc_dest   TYPE string VALUE 'Destination',
+      lc_tpth   TYPE string VALUE 'tp Path',
+      lc_tpexe  TYPE string VALUE 'tp Executable',
+      lc_rping  TYPE string VALUE 'RFC Ping',
+      lc_tcall  TYPE string VALUE 'tp Call',
+      lc_rcon   TYPE string VALUE 'RFC Connection',
+      lc_tver   TYPE string VALUE 'tp Version',
+      lc_dbcon  TYPE string VALUE 'DB Connect',
+      lc_ocall  TYPE string VALUE 'Offline Call',
+      lc_dweb   TYPE string VALUE 'Deploy Web Service',
+      lc_wser   TYPE string VALUE 'Web Service',
+      lc_prx    TYPE string VALUE 'Proxy',
+      lc_ctst   TYPE string VALUE 'Connection Test',
+      lc_ftrns  TYPE string VALUE 'File Transfer',
+      lc_dtool  TYPE string VALUE 'Deploy Tool',
+      lc_sdmt   TYPE string VALUE 'SDM Deploy Tool',
+      lc_surl   TYPE string VALUE 'SDM URL',
+      lc_scred  TYPE string VALUE 'SDM Credentials',
+      lc_sping  TYPE string VALUE 'SDM Ping',
+      lc_xiurl  TYPE string VALUE 'XI URL',
+      lc_xicred TYPE string VALUE 'XI Credentials',
+      lc_xiping TYPE string VALUE 'XI Ping',
+      lc_slurl  TYPE string VALUE 'SLD URL',
+      lc_slcred TYPE string VALUE 'SLD Credentials',
+      lc_slping TYPE string VALUE 'SLD Ping',
+      lc_extd   TYPE string VALUE 'External Deployers',
+      lc_appl   TYPE string VALUE 'Appl.',
+      lc_chkn   TYPE string VALUE 'Check transport tool',
+      lc_icok   TYPE string VALUE 'ICON_OKAY',
+      lc_fail   TYPE string VALUE 'ICON_FAILURE',
+      lc_info   TYPE char1  VALUE 'I',
+      lc_lev1   TYPE char3  VALUE 'TOP',
+      lc_lev2   TYPE char3  VALUE 'DIR',
+      lc_app    TYPE string VALUE 'APPL:',
+      lc_check  TYPE string VALUE 'ICON_CHECKED'.
+
+
+    "// List and result declaration
+    DATA(ls_list) = VALUE ty_list( ).
+    DATA(ls_result) = VALUE snodetext( ).
+
+    "// Define layout
+    REFRESH gt_list.
+    ls_list-level = 03."'03'.                               " interface
+    ls_list-name  = gc_test_interface.
+    ls_list-text  = lc_tp_int."'tp-Interface'. " 'tp-Schnittstelle'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_test_host.
+    ls_list-text  = lc_hname."'Host Name'."'Rechnername'(002).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_version.
+    ls_list-text  = lc_ver."'Version'(011).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_dir_trans.
+    ls_list-text  = lc_tdir.
+    "'Transport Directory'."'Transportverzeichnis'(012).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_logging.
+    ls_list-text  = lc_log."'Logging'."'Protokollierung'(015).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 03."'03'.                               " profile
+    ls_list-name  = gc_test_profile.
+    ls_list-text  = lc_tprof."'Transport Profile'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_param_path.
+    ls_list-text  = lc_pth."'Path'."'Pfad'(013).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04." '04'.
+    ls_list-name  = gc_tp_test_open_param.
+    ls_list-text  = lc_prof."'Profile'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_param_vers.
+    ls_list-text  = lc_ver."'Version'(016).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 03." '03'." destination
+    ls_list-name  = gc_test_destination.
+    ls_list-text  = lc_rdest."'RFC-Destination'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_dest_name.
+    ls_list-text  = lc_dest."'Destination'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_tp_path.
+    ls_list-text  = lc_tpth."'tp Path'."'tp-Pfad'(022).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_tp_check.
+    ls_list-text  = lc_tpexe."'tp Executable'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_rfc_ping.
+    ls_list-text  = lc_rping." 'RFC Ping'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 03." '03'." connect
+    ls_list-name  = gc_test_connect.
+    ls_list-text  = lc_tcall."'tp Call'."'tp-Aufruf'(030).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_rfc_connect.
+    ls_list-text  = lc_rcon."'RFC Connection'. "'RFC-Verbindung'(031).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_tp_version.
+    ls_list-text  = lc_tver."'tp Version'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_db_connect.
+    ls_list-text  = lc_dbcon."'DB Connect'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = gc_tp_test_tp_offline.
+    ls_list-text  = lc_ocall."'Offline Call'."'Offline Aufruf'(034).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 03."'03'.
+    " deploy web service
+    ls_list-name  = gc_test_deploy_service.
+    ls_list-text  = lc_dweb."'Deploy Web Service'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_ws_name.
+    ls_list-text  = lc_wser."'Web Service'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_ws_destination.
+    ls_list-text  = lc_dest."'Destination'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_ws_proxy.
+    ls_list-text  = lc_prx."'Proxy'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_ws_ping.
+    ls_list-text  = lc_ctst."'Connection Test'."'Verbindungstest'(w05).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_file_transfer.
+    ls_list-text  = lc_ftrns."'File Transfer'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 03.
+    "'03'.                               " deploy tools
+    ls_list-name  = gc_test_deploy_tools.
+    ls_list-text  = lc_dtool."'Deploy Tool'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_deploy_tool.
+    ls_list-text  = lc_sdmt."'SDM Deploy Tool'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sdm_url.
+    ls_list-text  = lc_surl."'SDM URL'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sdm_user.
+    ls_list-text  = lc_scred.
+    "'SDM Credentials'."'SDM Anmeldedaten'(d03).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sdm_ping.
+    ls_list-text  = lc_sping."'SDM Ping'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_xi_url.
+    ls_list-text  = lc_xiurl."'XI URL'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04." '04'.
+    ls_list-name  = ctsc_ds_test_xi_user.
+    ls_list-text  = lc_xicred."'XI Credentials'."'XI Anmeldedaten'(d06).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_xi_ping.
+    ls_list-text  = lc_xiping."'XI Ping'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sld_url.
+    ls_list-text  = lc_slurl."'SLD URL'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sld_user.
+    ls_list-text  = lc_slcred.
+    "'SLD Credentials'."'SLD Anmeldedaten'(d09).
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04."'04'.
+    ls_list-name  = ctsc_ds_test_sld_ping.
+    ls_list-text  = lc_slping."'SLD Ping'.
+    APPEND ls_list TO gt_list.
+* append generic deployers
+    ls_list-level = 03.
+    "'03'.                               " deploy tools
+    ls_list-name  = gc_test_generic_deploy.
+    ls_list-text  = lc_extd."'External Deployers'.
+    APPEND ls_list TO gt_list.
+    ls_list-level = 04." '04'.
+    ls_list-name  = gc_appl_prefix.
+    ls_list-text  = lc_appl."'Appl.'.
+    APPEND ls_list TO gt_list.
+
+
+*//  Perform Test
+    CALL FUNCTION 'TRINT_TP_INTERFACE_TEST'
+      EXPORTING
+        iv_prid_min = 1                 " workaround for
+        iv_prid_max = 99                " correct stdout
+        iv_trace    = lv_trace
+      TABLES
+        tt_test     = lt_test
+        tt_stdout   = lt_stdout
+      EXCEPTIONS
+        OTHERS      = 0.
+
+    "// Get local system description
+    CALL FUNCTION 'TMS_CFG_READ_LOCAL_CONFIG'
+      EXPORTING
+        iv_with_text = abap_true
+      IMPORTING
+        es_conf      = ls_conf
+      EXCEPTIONS
+        OTHERS       = 0.
+
+* convert result
+    CLEAR ls_tp_test.
+    ls_tp_test-system-sysnam = sy-sysid.
+    ls_tp_test-system-systxt = ls_conf-systxt.
+    ls_tp_test-host          = sy-host.
+    ls_tp_test-test          = lt_test.
+    ls_tp_test-stdout        = lt_stdout.
+    APPEND ls_tp_test TO lt_gp_test.
+
+
+    FREE et_result.
+
+    ls_result-type    = lc_lev1."'TOP'.
+    ls_result-tlevel  = 01."'01'.
+    ls_result-name    = lc_chkn."'Check transport tool'.
+    ls_result-nlength = 32.
+    ls_result-color   = gc_col_background.
+    WRITE  sy-datum DD/MM/YYYY
+                    TO ls_result-text.
+    WRITE  sy-uzeit USING EDIT MASK '__:__:__'
+                    TO ls_result-text+12(8).
+    ls_result-tpos    = 61.
+    ls_result-tlength = 25.
+    ls_result-tcolor  = gc_col_background.
+    APPEND ls_result TO et_result.
+
+    LOOP AT lt_gp_test INTO ls_tp_test.
+      ls_result-type    = lc_lev1."'TOP'.
+      ls_result-tlevel  = 02."'02'.
+      ls_result-name    = ls_tp_test-system-sysnam.
+      ls_result-nlength = 3.
+      ls_result-color   = gc_col_blue.
+      ls_result-text    = ls_tp_test-system-systxt.
+      ls_result-tlength = 55.
+      ls_result-tcolor  = gc_col_background.
+      IF ls_tp_test-alert-severity = space OR
+         ls_tp_test-alert-severity = gc_tms_sev_info.
+        ls_result-text1    = lc_icok."'ICON_OKAY'.
+      ELSE.
+        ls_result-text1    = lc_fail."'ICON_FAILURE'.
+        ls_result-hotspot1 = gc_x.
+      ENDIF.
+      ls_result-kind1    = lc_info."'I'.
+      ls_result-tpos1    =  79.
+      ls_result-tlength1 =  5.
+      APPEND ls_result TO  et_result.
+      IF ls_tp_test-alert-severity = gc_tms_sev_error.
+        CONTINUE.
+      ENDIF.
+
+
+      LOOP AT gt_list INTO ls_list.
+        IF ls_list-level = 03."'03'.
+          ls_result-tlevel      = 03." '03'.
+          ls_result-type        = lc_lev1."'TOP'.
+          ls_result-hide(15)    = ls_list-name.
+          ls_result-hide+15(10) = ls_tp_test-system-sysnam.
+          ls_result-name        = ls_list-text.
+          ls_result-nlength     = 25.
+          ls_result-color       = gc_col_blue.
+          ls_result-text1       = lc_icok."'ICON_OKAY'.
+          ls_result-kind1       = lc_info."'I'.
+          ls_result-tpos1       =  79.
+          ls_result-tlength1    =  5.
+          IF ls_list-name = gc_test_deploy_service.
+            DESCRIBE TABLE ls_tp_test-ds_test LINES lv_lines.
+            IF lv_lines = 0. " test not available
+              lv_suppress_ws_node = gc_x.
+            ENDIF.
+          ELSEIF ls_list-name = gc_test_generic_deploy.
+            READ TABLE ls_tp_test-ds_test WITH KEY name(5) =
+            gc_appl_prefix
+                                          TRANSPORTING NO FIELDS.
+            IF sy-subrc <> 0.
+              lv_suppress_ws_node = gc_x.
+            ENDIF.
+          ENDIF.
+        ELSE.
+          ls_result-tlevel      = 04." '04'.
+          ls_result-type        = lc_lev2."'DIR'.
+          ls_result-hide(15)    = ls_list-name.
+          ls_result-hide+15(10) = ls_tp_test-system-sysnam.
+          ls_result-name        = ls_list-text.
+          ls_result-nlength     = 21.
+          ls_result-color       = gc_col_normal.
+          READ TABLE ls_tp_test-test WITH KEY name = ls_list-name
+                                     INTO DATA(ls_test).
+          IF sy-subrc = 0.
+            lv_index = sy-tabix + 1.
+            READ TABLE ls_tp_test-test INDEX lv_index INTO
+            DATA(ls_test2).
+            IF sy-subrc = 0 AND ls_test-name = ls_test2-name.
+              ls_result-text3 = ls_test2-value.
+            ENDIF.
+            me->fill_result(
+              EXPORTING
+                is_test   = ls_test
+                is_list   = ls_list
+              CHANGING
+                es_result = ls_result ).
+          ELSEIF ls_list-name = lc_app  AND ls_list-level = 04.
+            " '04'. "'APPL:'
+*       new applications - several ones
+            LOOP AT ls_tp_test-test INTO ls_test WHERE name(5) = lc_app
+            ."'APPL:'
+              lv_index = sy-tabix + 1.
+              CONCATENATE ls_list-text ls_test-name+5 INTO
+              ls_result-name.
+              READ TABLE ls_tp_test-test INDEX lv_index INTO ls_test2.
+              IF sy-subrc = 0 AND ls_test-name = ls_test2-name.
+                ls_result-text3 = ls_test2-value.
+              ENDIF.
+              me->fill_result(
+                EXPORTING
+                  is_test   = ls_test
+                  is_list   = ls_list
+                CHANGING
+                  es_result = ls_result ).
+              APPEND ls_result TO et_result.           " output it here
+              lv_suppress_ws_node = gc_x. " do not output it second time
+            ENDLOOP.
+          ELSEIF ls_list-name = gc_test_host.
+            IF ls_tp_test-host <> space.
+              ls_result-text     = ls_tp_test-host.
+              ls_result-tlength  = 50.
+              ls_result-tcolor   = gc_col_background.
+              ls_result-text1  = lc_check."'ICON_CHECKED'.
+              ls_result-kind1  = lc_info."'I'.
+              ls_result-hotspot1 = space.
+              ls_result-tpos1    =  79.
+              ls_result-tlength1 =  5.
+            ELSE.
+              CONTINUE.
+            ENDIF.
+          ELSE.
+            CONTINUE.
+          ENDIF.
+        ENDIF.
+        IF lv_suppress_ws_node IS INITIAL.
+          APPEND ls_result TO et_result.
+        ENDIF.
+      ENDLOOP.
+
+    ENDLOOP. " systems
+
+
+  ENDMETHOD.
+
+  METHOD fill_result.
+    "// CONSTANTS
+    CONSTANTS:
+      lc_check     TYPE string VALUE 'ICON_CHECKED',
+      lc_fail      TYPE string VALUE 'ICON_FAILURE',
+      lc_ds_name   TYPE string  VALUE 'DS_TST_',
+      lc_appl_name TYPE string  VALUE 'APPL:',
+      lc_note      TYPE string  VALUE 'ICON_DISPLAY_NOTE',
+      lc_info      TYPE char1   VALUE 'I',
+      lc_warn      TYPE char1   VALUE 'W',
+      lc_stat1     TYPE char1   VALUE '1',
+      lc_stat0     TYPE char1   VALUE '0',
+      lc_txt       TYPE string  VALUE '..'.
+"// check for status fill related to OK (Checked) , Not ok ( Failure)
+    es_result-text = is_test-value.
+    es_result-text2    = is_test-value.
+    IF es_result-text+40(10) <> space.
+      es_result-text+38 = lc_txt."'..'.
+    ENDIF.
+    es_result-tlength  = 40.
+    es_result-tcolor   = gc_col_background.
+    IF is_test-status = lc_stat1."'1'.
+      es_result-text1  = lc_check ."'ICON_CHECKED'.
+      es_result-kind1  = lc_info."'I'.
+      es_result-hotspot1 = space.
+    ELSEIF is_test-status = lc_stat0."'0'.
+      es_result-text1  = lc_fail."'ICON_FAILURE'.
+      es_result-kind1  = lc_info."'I'.
+      IF is_list-name = gc_tp_test_param_vers OR
+         is_list-name = gc_tp_test_rfc_ping   OR
+         is_list-name = gc_tp_test_db_connect OR
+         is_list-name = gc_tp_test_tp_offline OR
+         is_list-name(7) = lc_ds_name OR
+         "'DS_TST_' OR  " hack to enable ECTS errors
+        is_list-name(5) = lc_appl_name."'APPL:'.
+        es_result-hotspot1 = gc_x.
+      ELSE.
+        es_result-hotspot1 = space.
+      ENDIF.
+    ELSEIF is_test-status = lc_warn."'W'.
+      es_result-text1  = lc_note."'ICON_DISPLAY_NOTE'.
+      es_result-kind1  = lc_info."'I'.
+      es_result-hotspot1 = gc_x.
+    ELSE.
+      es_result-text1    = space.
+      es_result-kind1    = space.
+      es_result-hotspot1 = space.
+    ENDIF.
+    es_result-tpos1    =  79.
+    es_result-tlength1 =  5.
+
+  ENDMETHOD.
+ENDCLASS.

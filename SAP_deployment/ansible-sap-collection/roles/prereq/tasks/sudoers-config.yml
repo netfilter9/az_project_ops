@@ -1,0 +1,17 @@
+- name: sudoers-config | disable targetpw value
+  replace:
+    path: /etc/sudoers
+    regexp: (#)?Defaults targetpw
+    replace: "#Defaults targetpw"
+
+- name: sudoers-config | disable all value
+  replace:
+    path: /etc/sudoers
+    regexp: (#)?ALL\s*ALL=\(ALL\) ALL
+    replace: "#ALL   ALL=(ALL) ALL"
+
+- name: sudoers-config | add admin group to sudoer file
+  lineinfile:
+    path: /etc/sudoers
+    line: "%{{ admin_user }} ALL=(ALL) ALL"
+    state: present

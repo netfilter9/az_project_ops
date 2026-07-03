@@ -1,0 +1,120 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "network_security_group": {
+            "title": "Network Security Group",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name"
+                },
+                "use_inline_rules": {
+                    "title": "Use inline rules",
+                    "description": "determins if rules are created inline or as their own resources",
+                    "type": "boolean",
+                    "default": "false"
+                },
+                "rules": {
+                    "title": "Rules",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nsg_rule"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        },
+        "nsg_rule": {
+            "title": "rule",
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "access": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "source_port_range": {
+                    "type": "string"
+                },
+                "source_port_ranges": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_port_range": {
+                    "type": "string"
+                },
+                "destination_port_ranges": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source_address_prefix": {
+                    "type": "string"
+                },
+                "source_address_prefixes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_address_prefix": {
+                    "type": "string"
+                },
+                "destination_address_prefixes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "network": {
+                    "type": "string"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "destination_application_security_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source_application_security_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": []
+        }
+    },
+    "additionalProperties": false
+}

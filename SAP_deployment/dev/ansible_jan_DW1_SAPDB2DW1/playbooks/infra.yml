@@ -1,0 +1,11 @@
+---
+# This forces a gather facts across all hosts
+- hosts: all  
+
+- hosts: std
+  vars:
+    root_dir: /installers
+  roles:
+     - hostfile_generation    
+     - filesystem_lvm    
+     - swapfile

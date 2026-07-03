@@ -1,0 +1,30 @@
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+
+- name: sybase_sdk | permission on sybase_sdk instaler
+  file:
+    path: "{{ install_dir }}/sapinst/SYBASECLIENT"
+    mode: "+x"
+    recurse: yes
+    state: directory
+
+- name: main | create sdk.params
+  template:
+    src: "asesdk.params.j2"
+    dest: "{{ install_dir }}/{{ansible_hostname}}_asesdk.params"
+
+- name: sybase_sdk | install sybase_sdk
+  command:  
+    cmd: ./setup.bin -f {{ install_dir }}/{{ansible_hostname}}_asesdk.params -i silent -DRUN_SILENT=true -DAGREE_TO_SYBASE_LICENSE=true -DAGREE_TO_SAP_LICENSE=true
+    creates: /var/tmp/asesdkinst_output*.log
+  args:
+    chdir: "{{ install_dir }}/sapinst/SYBASECLIENT/"
+  register: asesdkinstresult
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: sybase_sdk | write log file
+  copy:
+    dest: /var/tmp/asesdkinst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ asesdkinstresult.stdout }}"

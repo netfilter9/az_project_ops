@@ -1,0 +1,69 @@
+---
+
+# default verbosity level for debug output
+verbosity_level: 2
+
+# set variable to hold repository root path
+repo_root: "{{ lookup('env','PWD') }}"
+
+# requirements of linux distribution to be used as a bastion host
+bastion_host_os_family: 'RedHat'
+bastion_host_distribution: 'CentOS'
+bastion_host_min_distribution_version: '7.7'
+
+# control behavior
+bastion_host_use_python3_venv: yes
+
+# might be best to avoid managing/mixing installed ansible versions at the
+# system level and virtual environment level although if wanting to use
+# ansible to manage virtual python environments it will be required
+bastion_host_remove_system_ansible: no
+
+# packages to remove if using a python virtual environment
+bastion_host_venv_absent_packages:
+  - "{{ bastion_host_remove_system_ansible |
+        ternary('ansible', omit) }}"
+
+# packages to be added if using python3
+bastion_host_venv_present_packages:
+  - python3
+  - screen
+
+# python3 virtual environment root path
+bastion_host_venvs_path: /usr/local/share/py3_venvs
+
+# specify a read-only user group for venv
+bastion_host_venv_ro_group: ansible_bastion_venv_users
+
+# specify permissions for python3 virtual environments
+bastion_host_venvs_owner: admin_accenture
+#bastion_host_venvs_owner: "{{ ansible_user }}"
+bastion_host_venvs_group: "{{ bastion_host_venv_ro_group }}"
+bastion_host_venvs_mode: '0755'
+
+# umask to be applied to the virtual environment
+bastion_host_venvs_umask: '0022'
+
+# whether to update the bash profile of the owner
+# so that the venv is loaded automatically
+bastion_host_venvs_owner_update_profile: yes
+
+# name of the bash profile file to update
+bastion_host_venvs_owner_profile_file: .bash_profile
+
+# inherit global system site packages
+bastion_host_venv_site_packages: no
+
+# python3 virtual environment name
+bastion_host_venv_name: ansible_bastion
+
+# whether to configure pywinrm for kerberos
+bastion_host_use_kerberos: yes
+
+# system packages required for kerberos
+bastion_host_kerberos_packages:
+  - python3-devel
+  - krb5-devel
+  - krb5-libs
+  - krb5-workstation
+  - gcc

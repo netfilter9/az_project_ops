@@ -1,0 +1,31 @@
+#- name: swapfile.azure | disable mnt from fstab entry
+#  replace:
+#    path: /etc/fstab
+#    regexp: '#?\/dev\/disk\/cloud\/azure_resource-part1\s*\/mnt'
+#    replace: "#/dev/disk/cloud/azure_resource-part1    /mnt"
+
+#- name: swapfile.azure | unmount mnt
+#  mount:
+#    path: /mnt
+#    state: unmounted
+
+- name: swapfile.azure | Ensure /mnt/resource directory exists.
+  file:
+    path: "/mnt/resource"
+    state: directory
+    mode: "0755"
+
+- name: swapfile.azure | tweak waagent config
+  lineinfile:
+    regexp: "{{ item.regex }}"
+    line: "{{ item.line }}"
+    path: /etc/waagent.conf
+  loop:
+    - { regex: "ResourceDisk.Format=", line: "ResourceDisk.Format=y" }
+    - { regex: "ResourceDisk.EnableSwap=", line: "ResourceDisk.EnableSwap=y" }
+    - { regex: "ResourceDisk.SwapSizeMB=", line: "ResourceDisk.SwapSizeMB={{ swapfile_size | default(2052) }}" }
+
+- name: swapfile.azure | restart waagent
+  service: 
+    name: waagent 
+    state: restarted

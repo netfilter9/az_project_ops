@@ -1,0 +1,43 @@
+---
+
+- name: get disk facts
+  win_disk_facts:
+
+- name: set disk unique id
+  vars:
+    regex: '^Integrated.+LUN\s({{ item.lun }})$'
+  set_fact:
+    disk_id: "{{ ansible_facts.disks |
+              selectattr('location', 'match', regex) |
+              map(attribute='unique_id') |
+              list | first }}"
+  when: platform == 'azure'
+
+- name: set disk unique id
+  vars:
+    revised_regex: '^{{ (item.device_id | int) }}$'
+  set_fact:
+    disk_id: "{{ ansible_facts.disks |
+              selectattr('physical_disk.device_id','match',revised_regex) |
+              map(attribute='unique_id') |
+              list | first }}"
+  when: platform == 'gcp'
+
+- name: wait for disk
+  win_dsc:
+    resource_name: WaitForDisk
+    DiskId: "{{ disk_id }}"
+    DiskIdType: 'UniqueId'
+    RetryIntervalSec: 60
+    RetryCount: 60
+
+- name: create single disk volume
+  win_dsc:
+    resource_name: Disk
+    DiskId: "{{ disk_id }}"
+    DiskIdType: 'UniqueId'
+    DriveLetter: "{{ item.drive_letter }}"
+    FSLabel: "{{ item.fs_label }}"
+    FSFormat: 'NTFS'
+    AllocationUnitSize: "{{ item.allocation_size|int *1024 }}"
+  when: item.disk_type == "driveletter"

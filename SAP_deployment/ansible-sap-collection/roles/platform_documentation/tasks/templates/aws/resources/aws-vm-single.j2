@@ -1,0 +1,135 @@
+{# 
+    generate vm summary 
+#}
+{%- for i in range(0,status_vm|length) %}
+# VM Summary ( {{ vm_list[i] }} )
+---
+|Instance Name|InstanceId|InstanceType|PrivateIpAddress|SubnetId|Deployment Status|
+|-|-|-|-|-|-|
+{% if status_vm[i] == '0' %}
+{%- set row = [
+    vm_list[i],
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not applicable"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if status_vm[i] == '1' %}
+{%- for resource in tfstate_inputdata.resources %}
+{%- if resource.type == "aws_instance" -%}
+{% for instancetname in resource.instances %}
+{%- if  vm_list[i]== instancetname.index_key %}
+{%- set row = [
+      vm_list[i],
+      instancetname.attributes.id,
+      instancetname.attributes.instance_type,
+      instancetname.attributes.private_ip,
+      instancetname.attributes.subnet_id,
+      "Successful" 
+    ] 
+  -%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+## Network Summary 
+---
+|Instance Name|InstanceID|AvailabilityZone|Description|InterfaceType|MacAddress|NetworkInterfaceId|SubnetId|VpcId|Status|Primary|PrivateDnsName|PrivateIpAddress|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|
+{% if status_vm[i] == '0' %}
+{%- set row = [
+    vm_list[i],
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if status_vm[i] == '1' %}
+{% for netin in network_json.NetworkInterfaces %}
+{%- if netin.Attachment.InstanceId is defined -%}
+{%- if  vm_id[i] == netin.Attachment.InstanceId -%}
+{% for ip in netin.PrivateIpAddresses %}
+{%- set row = [
+      vm_list[i],
+      vm_id[i],
+      netin.AvailabilityZone,
+      netin.Description,
+      netin.InterfaceType,
+      netin.MacAddress,
+      netin.NetworkInterfaceId,
+      netin.SubnetId,
+      netin.VpcId,
+      netin.Status,
+      ip.Primary,
+      ip.PrivateDnsName,
+      ip.PrivateIpAddress
+      ] -%}
+|{{ row | join('|') }}|
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+## Volume Summary 
+---
+|Instance Name|InstanceId|VolumeId|DeleteOnTermination|Device|Size|Encrypted|VolumeType|Iops|State|
+|-|-|-|-|-|-|-|-|-|-|
+{% if status_vm[i] == '0' %}
+{%- set row = [
+    vm_list[i],
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if status_vm[i] == '1' %}
+{% for volin in volume_json.Volumes %}
+{%- if volin.State == "in-use" -%}
+{% for attachment in volin.Attachments %}
+{%- if vm_id[i] == attachment.InstanceId -%}  
+   {%- set vol = [
+      vm_list[i],
+      attachment.InstanceId,
+      attachment.VolumeId,
+      attachment.DeleteOnTermination,
+      attachment.Device,
+      volin.Size,
+      volin.Encrypted,
+      volin.VolumeType,
+      volin.Iops,
+      volin.State     
+    ]
+  -%}
+|{{ vol | join('|') }}|
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

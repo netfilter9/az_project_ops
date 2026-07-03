@@ -1,0 +1,102 @@
+{# 
+    generate individual host specifications
+#}
+{% if deployment.server_groups is defined %}
+  {% for group_k, group_v in deployment.server_groups.items() -%}
+    {% for host_k, host_v in group_v.hosts.items() %}
+      
+      {%- set vm_image = namespace(data=[]) -%}
+      {%- if group_v.image_details.resource_id is defined -%}
+        {%- set vm_image.data = vm_image.data + ["ImageId: "~group_v.image_details.resource_id] -%}
+      {%- else -%}
+        {%- set vm_image.data = vm_image.data + ["Publisher: "~group_v.image_details.marketplace_reference.publisher] -%}
+        {%- set vm_image.data = vm_image.data + ["Offer: "~group_v.image_details.marketplace_reference.offer] -%}
+        {%- set vm_image.data = vm_image.data + ["Sku: "~group_v.image_details.marketplace_reference.sku] -%}
+        {%- set vm_image.data = vm_image.data + ["Version: "~group_v.image_details.marketplace_reference.version] -%}
+      {%- endif -%}
+
+      {%- set vm_row = [
+        host_k,
+        group_v.sku,
+        group_v.os_type,
+        vm_image.data|join("<br>"|safe)
+        ]
+      -%}
+# VM Summary ( {{ host_k }} )
+|Hostname|Vm Size|Os Type|Image|
+|-|-|-|-|
+|{{ vm_row | join('|') }}|
+
+## Network Interfaces
+|Name|Ip Addresses|Allocation Method|Primary|Subnet|Enable Accelerated Networking|
+|-|-|-|-|-|-|
+{# generate NIC summary for VM #}
+      {%- for nic in host_v.nics -%}
+        {%- set nic_data = namespace(addresses=[], allocation_method=[], primary=false) -%}
+        
+        {%- if loop.first -%}
+          {%- set nic_data.primary = true -%}
+        {%- endif -%}
+        
+        {%- for ip in nic.ips -%}
+          {%- if ip -%}
+            {%- set nic_data.addresses = nic_data.addresses + [ip] -%}
+            {%- set nic_data.allocation_method = nic_data.allocation_method + ["Static"] -%}
+          {%- else -%}
+            {%- set nic_data.addresses = nic_data.addresses + ["To Be Assigned"] -%}
+            {%- set nic_data.allocation_method = nic_data.allocation_method + ["Dynamic"] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        
+        {%- set nic_row = [
+            nic.name | default(host_k~"_nic"~"%02d"|format(loop.index)),
+            nic_data.addresses|join("<br>"|safe),
+            nic_data.allocation_method|join("<br>"|safe),
+            nic_data.primary,
+            nic.subnet | default(group_v.subnet),
+            group_v.enable_accelerated_networking | default(false)
+          ]
+        -%}
+|{{ nic_row | join('|') }}|
+      {% endfor %} {#nics#}
+
+{# generate disk summary for VM #}
+      {%- if group_v.disks is defined -%}
+
+        {%- set os_disk_row = [
+          host_k~"_os",
+          "Premium_LRS",
+          group_v.os_disk_size,
+          "",
+          "ReadWrite",
+          false
+          ]
+        -%}
+
+## Disks
+|Name|Sku Name|Disk Size GB|Lun|Caching|Write Accelerator Enabled|
+|-|-|-|-|-|-|-|-|
+|{{ os_disk_row | join('|') }}|
+
+        {%- set lun = namespace(index = -1) %}
+        
+        {% for disk in group_v.disks %}
+          {% for num in range(0,disk.number_of_disks) %}
+            {% set lun.index = lun.index + 1 %}
+            {% set disk_row = [
+              host_k~"_"~disk.name~"%02d"|format(loop.index),
+              disk.storage_account_type|default("Premium_LRS"),
+              disk.disk_size,
+              lun.index|replace("-1",""),
+              disks[disk.name].caching,
+              disks[disk.name].write_accelerator_enabled|default("false",true)
+              ]
+            %}
+|{{ disk_row | join('|') }}|
+          {% endfor %}
+        {% endfor %} {#disks#}  
+      {% endif %}
+    {% endfor %} {#host#}
+  {% endfor %}  {#group#}
+
+{% endif %}

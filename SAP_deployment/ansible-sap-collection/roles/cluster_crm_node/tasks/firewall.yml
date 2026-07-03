@@ -1,0 +1,39 @@
+- name: Set FireWall Rules
+  command: "{{ item }}"
+  with_items: 
+    - systemctl start firewalld
+    - firewall-cmd --add-service=high-availability --permanent
+    - firewall-cmd --add-service=high-availability
+
+- name: Set FireWall Rules for ascs
+  command: "{{ item }}"
+  with_items: 
+    - firewall-cmd --zone=public --add-port=620{{ sap.instance_numbers.ascs }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=620{{ sap.instance_numbers.ascs }}/tcp
+    - firewall-cmd --zone=public --add-port=32{{ sap.instance_numbers.ascs }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=32{{ sap.instance_numbers.ascs }}/tcp
+    - firewall-cmd --zone=public --add-port=36{{ sap.instance_numbers.ascs }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=36{{ sap.instance_numbers.ascs }}/tcp
+    - firewall-cmd --zone=public --add-port=39{{ sap.instance_numbers.ascs }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=39{{ sap.instance_numbers.ascs }}/tcp
+    - firewall-cmd --zone=public --add-port=81{{ sap.instance_numbers.ascs }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=81{{ sap.instance_numbers.ascs }}/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}13/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}13/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}14/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}14/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}16/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ascs }}16/tcp
+    - firewall-cmd --zone=public --add-port=621{{ sap.instance_numbers.ers }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=621{{ sap.instance_numbers.ers }}/tcp
+    - firewall-cmd --zone=public --add-port=32{{ sap.instance_numbers.ers }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=32{{ sap.instance_numbers.ers }}/tcp
+    - firewall-cmd --zone=public --add-port=33{{ sap.instance_numbers.ers }}/tcp --permanent
+    - firewall-cmd --zone=public --add-port=33{{ sap.instance_numbers.ers }}/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}13/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}13/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}14/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}14/tcp
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}16/tcp --permanent
+    - firewall-cmd --zone=public --add-port=5{{ sap.instance_numbers.ers }}16/tcp
+  when: group_names != 'db'

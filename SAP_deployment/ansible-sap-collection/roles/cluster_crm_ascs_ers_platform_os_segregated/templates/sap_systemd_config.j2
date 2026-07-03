@@ -1,0 +1,5 @@
+[Unit]
+Requires=sapinit.service
+After=sapinit.service
+After=SAP{{ sap.sid }}_{{ sap.instance_numbers.ascs }}.service
+After=SAP{{ sap.sid }}_{{ sap.instance_numbers.ers }}.service

@@ -1,0 +1,32 @@
+---
+- name: check if databse exists else create new database
+  win_shell: Invoke-Sqlcmd -Query "IF NOT EXISTS(SELECT 1 FROM sys.databases WHERE name='{{ item }}')  CREATE DATABASE {{ item }}" -QueryTimeout 600
+  loop: "{{ bods.DB }}"
+
+- name: grant permission to sql server authentication
+  win_shell: Invoke-Sqlcmd -Query "USE [master] EXEC xp_instance_regwrite N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'LoginMode', REG_DWORD, 2" -QueryTimeout 600
+
+- name: create new login if not exists
+  win_shell: Invoke-Sqlcmd -Query "IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name= '{{ item }}') CREATE LOGIN {{ item }} WITH PASSWORD='{{ passwords.repodbpwd }}', DEFAULT_DATABASE=[master]" -QueryTimeout 600
+  loop: "{{ bods.users }}"
+
+- name: server role
+  win_shell: Invoke-Sqlcmd -Query "ALTER SERVER ROLE [sysadmin] ADD MEMBER {{ item }}" -QueryTimeout 600
+  loop: "{{ bods.users }}"
+
+- name: user mapping 
+  win_shell: |
+    Invoke-Sqlcmd -Query "USE [master] IF NOT EXISTS (SELECT * from sys.database_principals where NAME = '{{ item }}') CREATE USER {{ item }} FOR LOGIN {{ item }}" -QueryTimeout 600
+    Invoke-Sqlcmd -Query "USE [model] IF NOT EXISTS (SELECT * from sys.database_principals where NAME = '{{ item }}') CREATE USER {{ item }} FOR LOGIN {{ item }}" -QueryTimeout 600
+    Invoke-Sqlcmd -Query "USE [msdb] IF NOT EXISTS (SELECT * from sys.database_principals where NAME = '{{ item }}') CREATE USER {{ item }} FOR LOGIN {{ item }}" -QueryTimeout 600
+    Invoke-Sqlcmd -Query "USE [tempdb] IF NOT EXISTS (SELECT * from sys.database_principals where NAME = '{{ item }}') CREATE USER {{ item }} FOR LOGIN {{ item }}" -QueryTimeout 600
+  loop: "{{ bods.users }}"
+
+- name: Set service startup mode to auto and ensure it is started
+  win_service:
+    name: MSSQLSERVER
+    state: restarted 
+    force_dependent_services: yes
+
+- name: Authorzation
+  win_shell:  Invoke-Sqlcmd -Query "ALTER SERVER ROLE [sysadmin] ADD MEMBER [NT AUTHORITY\SYSTEM]"

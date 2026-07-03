@@ -1,0 +1,54 @@
+---
+- name: main | saptune configuration
+  include_role: 
+    name: sap_tune
+
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+
+- name: main | install packages
+  import_tasks: packages.yml
+  tags:
+    - packages
+
+- name: main | tweak grub
+  import_tasks: grub.yml
+  tags:
+    - grub
+
+- name: main | pre hanadb configurations
+  import_tasks: pre_hanadb.yml
+  tags:
+    - pre_hana_config
+
+- name: main | install hana
+  import_tasks: hana_install.yml
+  tags:
+    - hana_install
+  when: hana_scale_out is not defined
+
+- name: main | install hana
+  import_tasks: hana_install.yml
+  tags:
+    - hana_install
+  when: (hana_scale_out is defined and ansible_hostname == node1)
+
+# global INI changes post hana installation for scaleout configurations
+
+- name: main | host agent upgrade
+  import_tasks: host_agent.yml
+  tags:
+    - host_agent
+  when: sap.db.hostagent_upgrade is defined and sap.db.hostagent_upgrade == true
+
+- name: main | post hanadb configurations
+  import_tasks: post_hanadb.yml
+  tags:
+    - post_hanadb_config
+
+- name: main | post configurations for anf
+  import_tasks: scaleout_config.yml
+  tags:
+    - scaleout_config
+  when: (hana_scale_out.anf is defined and hana_scale_out.anf == true)

@@ -1,0 +1,16 @@
+---
+
+- name: add windows features
+  win_feature:
+    name: '{{ item }}'
+    state: present
+    include_sub_features: yes
+    include_management_tools: yes
+  loop:
+    - FS-FileServer
+  register: win_feature
+
+- name: reboot if installing any windows feature requires it
+  win_reboot:
+    post_reboot_delay: 20
+  when: (win_feature | json_query('results[*].reboot_required')) is any

@@ -1,0 +1,59 @@
+- name: packages | install packages
+  package:
+    name:
+      - libstdc++6-32bit
+    state: present
+  when: platform == 'azure' and ansible_os_family == 'Suse'
+
+- name: packages | install packages
+  package:
+    name:
+      - libstdc++.so.5
+    state: present
+  when:
+    - platform == 'azure' and ansible_os_family == 'Suse'
+    - dbtype == 'sybase'
+
+- name: packages | install packages
+  package:
+    name:
+      - unixODBC
+    state: present
+  when: platform == 'azure' and ansible_os_family == 'Suse' and ("{{ dbtype }}" == "hana" | default(false))
+
+- name: packages | install packages for rhel
+  package:
+    name:
+      -  unixODBC
+      -  libstdc++.i686
+      -  libstdc++.x86_64
+      -  glibc.i686
+      -  glibc.x86_64
+      -  libX11.i686
+      -  libX11.x86_64
+      -  libXext.i686
+      -  libXext.x86_64
+      -  expat.i686
+      -  expat.x86_64
+      -  libgcc.i686
+      -  libgcc.x86_64
+      -  libXcursor.i686
+      -  libXcursor.x86_64
+      -  libXrender.i686
+      -  libXrender.x86_64
+      -  libXfixes.i686
+      -  libXfixes.x86_64
+      -  libxcb.i686
+      -  libxcb.x86_64
+      -  libXau.i686
+      -  libXau.x86_64
+      -  xz-libs.i686
+      -  libnsl.i686
+      -  libnsl.x86_64
+      -  libxcrypt.i686
+      -  libxcrypt.x86_64
+      -  libxcrypt-4.1.1-4.el8.i686
+      -  xz-libs-5.2.4-3.el8.i686
+      -  ksh
+    state: present
+  when:  ansible_os_family == 'RedHat' and  dbtype  == "hana" 

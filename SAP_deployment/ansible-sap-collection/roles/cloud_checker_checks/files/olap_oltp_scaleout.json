@@ -1,0 +1,568 @@
+{
+    "hanavmchecks": [
+        {
+            "Solution": "S896",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448MA",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448A",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S224OM",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S224OOM",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S224OOO",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S224OO",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S896OM",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S672OM",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448OM",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M32dms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64ds_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64dms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128ds_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128dms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M192ids_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M192idms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M32ms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64s_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64ms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128s_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128ms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M192is_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M192ims_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S896M",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S672M",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S672",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448M",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_E64ds_v4",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "E48ds_v4",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_E32ds_v4",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "E20ds_v4",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128s",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M128ms",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64s",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64ms",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M64ls",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M32ls",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M32ts",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M416s_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S224",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S96",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M416ms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_E64sv3",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M208s_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "Standard_M208ms_v2",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S144",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S384xm",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S72",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S192",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S384",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "GS5",
+            "usage": "OLAP"
+        },
+        {
+            "Solution": "S448MA",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S448A",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224OOM",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224OOO",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224OO",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S896OM",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S672OM",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S448OM",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M32dms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64ds_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64dms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128ds_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128dms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M192ids_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M192idms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M32ms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64s_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64ms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128s_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128ms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M192is_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M192ims_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224OM",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S896",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S448M",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S448",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S672M",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S672",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_E64ds_v4",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "E48ds_v4",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_E32ds_v4",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "E20ds_v4",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S896M",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64s",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64ms",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M64ls",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M32ts",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M32ls",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128s",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M128ms",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224M",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M416s_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S224",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S96",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M416ms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_E64sv3",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S576m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M208s_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "Standard_M208ms_v2",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S384m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S144m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S960m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S384xm",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S144",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S72m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S192m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S768m",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S72",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S384",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S192",
+            "usage": "OLTP"
+        },
+        {
+            "Solution": "S896",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S896OM",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S672OM",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S448OM",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M128ds_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M192ids_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M192idms_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M128s_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M192is_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M192ims_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S672",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S448",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S896",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S448M",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S448",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S672M",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S672",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S896M",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M128s",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M416s_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M416s_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S224",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "Standard_M416ms_v2",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S576m",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S144",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S384xm",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S192",
+            "usage": "Scaleout"
+        },
+        {
+            "Solution": "S384",
+            "usage": "Scaleout"
+        }
+    ]
+}

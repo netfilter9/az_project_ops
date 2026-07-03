@@ -1,0 +1,152 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCM_SM58_EXPORT_FAILED_TRFC                 *
+* Title               :   Export Failed tRFCs                         *
+* Purpose             :   This report is used to query the ARFCSSTATE *
+*                     :   table and read the list of failed tRFCs as  *
+*                     :   seen in transaction SM58                    *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SM58                                                                *
+*---------------------------------------------------------------------*
+*Tables              :   SELECT    UPDATE      INSERT      DELETE     *
+* ARFCSSTATE                X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author         TR#/Local     Description       *
+*---------------------------------------------------------------------*
+*04-03-'21   Initial   Fathima Hussain   Local  To list the failed    *
+*                                               tRFCs                 *
+*---------------------------------------------------------------------*
+
+REPORT zcm_sm58_export_failed_trfc.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep         TYPE c       VALUE '|',
+             lc_export      TYPE char20   VALUE 'EXPORT',
+             lc_msg_title   TYPE char20 VALUE 'Title',
+             lc_msg_heading TYPE char20 VALUE 'Heading',
+             lc_msg_nodata  TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input    TYPE tab512,
+        ls_output   TYPE tab512,
+        ls_prefinal TYPE string,
+        lv_action   TYPE char8,
+        lt_trfc     TYPE TABLE OF arfcsstate,
+        ls_trfc     TYPE arfcsstate.
+
+  CLEAR: ls_input,
+         lv_action.
+
+* Read action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+*     Retrieve failed tRFC data from ARFCSSTATE
+      SELECT * FROM arfcsstate INTO TABLE lt_trfc.
+
+      IF sy-subrc <> 0.
+*       There is no data. Set the msg and return
+        ls_output = lc_msg_title.
+        APPEND ls_output TO lt_output.
+
+        ls_output = lc_msg_heading.
+        APPEND ls_output TO lt_output.
+
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      "Table Name
+      ls_output = 'ARFCSSTATE'.
+      APPEND ls_output TO lt_output.
+
+      "Column headings
+      CONCATENATE 'Caller'         lc_sep
+                  'FunctionModule' lc_sep
+                  'TargetSystem'   lc_sep
+                  'Date'           lc_sep
+                  'Time'           lc_sep
+                  'StatusText'     lc_sep
+                  'TransactionID'  lc_sep
+                  'Host'           lc_sep
+                  'Tcode'          lc_sep
+                  'Program'
+      INTO ls_output.
+      APPEND ls_output TO lt_output.
+
+      "Table data
+      LOOP AT lt_trfc INTO ls_trfc.
+
+       CONCATENATE ls_trfc-arfcipid  "Begin transaction ID
+                  ls_trfc-arfcpid
+                  ls_trfc-arfctime
+                  ls_trfc-arfctidcnt  "End transaction ID
+                  INTO DATA(lv_transaction_id).
+
+      SPLIT ls_trfc-arfcreserv AT space INTO DATA(lv_program)
+      ls_trfc-arfcreserv.
+      CONCATENATE ls_trfc-arfcuser lc_sep
+                  ls_trfc-arfcfnam lc_sep
+                  ls_trfc-arfcdest lc_sep
+                  ls_trfc-arfcdatum lc_sep
+                  ls_trfc-arfcuzeit lc_sep
+                  ls_trfc-arfcmsg lc_sep
+                  lv_transaction_id lc_sep
+                  ls_trfc-arfcrhost lc_sep
+                  ls_trfc-arfctcode lc_sep
+                  lv_program
+                  INTO ls_prefinal.
+      PERFORM end_null_check CHANGING ls_prefinal.
+      ls_output = ls_prefinal.
+      APPEND ls_output TO lt_output.
+      CLEAR: ls_output, ls_prefinal, lv_transaction_id.
+      ENDLOOP.
+
+
+      PERFORM null_check TABLES  lt_output.
+
+      WHEN OTHERS.
+
+      ENDCASE.
+
+      ENDFORM.
+
+
+      FORM end_null_check CHANGING ls_string TYPE string.
+
+      DATA lv_last_char TYPE char1.
+
+      lv_last_char = substring( val = ls_string
+      off = strlen( ls_string ) - 1
+      len = 1 ).
+      IF lv_last_char = '|'.
+      CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+      ENDIF.
+
+      ENDFORM.
+
+
+      FORM null_check TABLES lt_table TYPE table.
+
+      DO .
+      REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+      IN TABLE lt_table WITH '|NULL|'.
+      FIND '||' IN TABLE lt_table.
+      IF sy-subrc <> 0.
+      EXIT .
+      ENDIF.
+      ENDDO.
+
+      ENDFORM.

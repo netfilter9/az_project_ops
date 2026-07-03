@@ -1,0 +1,9 @@
+---
+- name: main | delete lines from icm_filter_rules.txt
+  lineinfile:
+    path: /sapmnt/{{ sap.sid|upper }}/global/security/data/icm_filter_rules.txt
+    regexp: '{{ item }}'
+    state: absent
+  loop: 
+    - if %{REMOTE_ADDR}
+    - RegIRedirectUrl

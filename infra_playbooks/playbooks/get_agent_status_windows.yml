@@ -1,0 +1,37 @@
+---
+- name: Check if Zabbix 2, VMware Tools, and NetBackup services are running
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become_method: enable
+  gather_facts: false
+  vars:
+    ansible_connection: ssh
+    ansible_remote_tmp: 'C:Windows\Temp\.ansible'
+    ansible_shell_type: cmd
+
+
+  tasks:
+    - name: Get Zabbix Agent 2 service info
+      ansible.windows.win_service_info:
+        name: Zabbix Agent 2
+      register: zabbix2_info
+      failed_when: false
+
+    - name: Get VMware Tools service info
+      ansible.windows.win_service_info:
+        name: VMTools
+      register: vmtools_info
+      failed_when: false
+
+    - name: Get NetBackup Client Service info
+      ansible.windows.win_service_info:
+        name: NetBackup Client Service
+      register: netbackup_info
+      failed_when: false
+
+    - name: Show service status
+      ansible.builtin.debug:
+        msg:
+          - "Zabbix Agent 2: {{ zabbix2_info.services[0].state if (zabbix2_info.services | length > 0) else 'not installed' }}"
+          - "VMware Tools: {{ vmtools_info.services[0].state if (vmtools_info.services | length > 0) else 'not installed' }}"
+          - "NetBackup Client Service: {{ netbackup_info.services[0].state if (netbackup_info.services | length > 0) else 'not installed' }}"

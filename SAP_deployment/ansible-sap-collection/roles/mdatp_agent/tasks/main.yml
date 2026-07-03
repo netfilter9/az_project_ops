@@ -1,0 +1,85 @@
+---
+- name: Create MDATP directories
+  file:
+    path: /etc/opt/microsoft/mdatp/
+    recurse: true
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Register mdatp_onboard.json
+  stat:
+    path: /etc/opt/microsoft/mdatp/mdatp_onboard.json
+  register: mdatp_onboard
+
+- name: Extract WindowsDefenderATPOnboardingPackage.zip into /etc/opt/microsoft/mdatp
+  unarchive:
+    src: /etc/opt/microsoft/mdatp/WindowsDefenderATPOnboardingPackage.zip
+    dest: /etc/opt/microsoft/mdatp
+    remote_src : yes
+    mode: 0600
+    owner: root
+    group: root
+  when: not mdatp_onboard.stat.exists
+
+- set_fact:
+    distribution: rhel
+  when: ansible_os_family == "RedHat"
+
+- set_fact:
+    distribution: debian
+  when: ansible_os_family == "Debian"
+
+- set_fact:
+    distribution: sles
+  when: ansible_os_family == "Suse"
+
+- name: Add Microsoft APT key
+  apt_key:
+    keyserver: https://packages.microsoft.com/
+    id: "{{ mdatp.id }}"
+  when: ansible_os_family == "Debian"
+    
+- name: Add Microsoft apt repository for MDATP for Debian OS
+  apt_repository:
+    repo: https://packages.microsoft.com/config/{​​​​​​​{​​​​​​​ distribution }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ ansible_distribution_major_version }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​.list
+    update_cache: yes
+    state: present
+    filename: microsoft-{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​.list
+  when: ansible_os_family == "Debian"
+
+- name: Add  Microsoft yum repository for MDATP for RedHat OS
+  yum_repository:
+      name: packages-microsoft-com-prod-{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​
+      description: Microsoft Defender for Endpoint
+      file: microsoft-{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​
+      baseurl: https://packages.microsoft.com/config/{​​​​​​​{​​​​​​​ distribution }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ ansible_distribution_version }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​.repo
+      gpgcheck: yes
+      enabled: Yes
+  when: ansible_os_family == "RedHat"
+
+- name: Add  Microsoft yum repository for MDATP for SUSE
+  zypper_repository:
+    repo: https://packages.microsoft.com/config/{​​​​​​​{​​​​​​​ distribution }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ ansible_distribution_major_version }​​​​​​​}​​​​​​​/{​​​​​​​{​​​​​​​ mdatp.channel }​​​​​​​}​​​​​​​.repo
+    state: present
+  when: ansible_os_family == "Suse"
+
+- name: Packages update
+  command: rpm --import http://packages.microsoft.com/keys/microsoft.asc
+
+## below tasks throws error for multiple packages installation but mdatp installation succeeds. Hence ignore_errors has been added.
+
+- name: mdatp install
+  package:
+    name: mdatp
+    state: present
+  ignore_errors: true
+ 
+
+
+
+
+
+
+

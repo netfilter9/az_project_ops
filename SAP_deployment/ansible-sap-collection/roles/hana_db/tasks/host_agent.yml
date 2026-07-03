@@ -1,0 +1,7 @@
+---
+- name: host_agent | upgarde host agent
+  command:  
+    cmd: "./saphostexec -upgrade -archive {{ install_dir }}/sapinst/{{ hostagent | default('HOSTAGENT') }}"
+    creates: /hana/log/hostagent_upgrade*.log
+  args:
+    chdir: "/usr/sap/hostctrl/exe"

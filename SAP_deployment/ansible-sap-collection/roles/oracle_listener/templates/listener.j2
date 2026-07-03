@@ -1,0 +1,43 @@
+################
+# Filename......: listener.ora
+# Created.......: created by SAP AG, R/3 Rel. >= 6.10
+# Name..........:
+# Date..........:
+# @(#) $Id: //inst/inst_scripts/lmti_007_REL/tpls/ora/LISTENER.ORA#1 $
+################
+ADMIN_RESTRICTIONS_LISTENER_{{ sap.db.sid | upper }} = ON
+LISTENER_{{ sap.db.sid | upper }} =
+  (ADDRESS_LIST =
+        (ADDRESS =
+          (PROTOCOL = IPC)
+          (KEY = {{ sap.db.sid | upper }}.WORLD)
+        )
+        (ADDRESS=
+          (PROTOCOL = IPC)
+          (KEY = {{ sap.db.sid | upper }})
+        )
+        (ADDRESS =
+          (COMMUNITY = SAP.WORLD)
+          (PROTOCOL = TCP)
+          (HOST = {{ virtual_hostname | default(ansible_hostname) }})
+          (PORT = {{ port | default('1521') }})
+        )
+  )
+STARTUP_WAIT_TIME_LISTENER_{{ sap.db.sid | upper }} = 0
+CONNECT_TIMEOUT_LISTENER_{{ sap.db.sid | upper }} = 10
+TRACE_LEVEL_LISTENER_{{ sap.db.sid | upper }} = OFF
+SID_LIST_LISTENER_{{ sap.db.sid | upper }} =
+  (SID_LIST =
+    (SID_DESC =
+      (SID_NAME = {{ sap.db.sid | upper }})
+      (GLOBAL_DBNAME = {{ sap.db.sid | upper }}{{ instance_ch | upper }})
+      (ORACLE_HOME = {{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }})
+    )
+   (SID_DESC =
+      (SID_NAME = {{ sap.db.sid | upper }})
+      (GLOBAL_DBNAME = {{ sap.db.sid | upper }}{{ instance_ch | upper }}_DGMGRL)
+      (ORACLE_HOME = {{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }})
+    )
+  )
+ADR_BASE_LISTENER_{{ sap.db.sid | upper }} = {{ root_dir }}/{{ sap.db.sid | upper }}/saptrace
+VALID_NODE_CHECKING_REGISTRATION_LISTENER_{{ sap.db.sid | upper }} = 1

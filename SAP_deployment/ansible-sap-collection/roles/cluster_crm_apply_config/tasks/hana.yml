@@ -1,0 +1,23 @@
+---
+- name: main | install sap-suse-cluster-connector for azure
+  package:
+    name: 
+     - nfs-utils
+     - resource-agents
+     - resource-agents-sap-hana
+  when: platform == 'azure'
+
+- name: main | install sap-suse-cluster-connector for aws
+  package:
+    name: 
+     - resource-agents-sap
+     - resource-agents-sap-hana     
+  when: platform == 'aws'
+
+- name: main | db primitives
+  block: 
+    
+    - name: main | set up pcs cluster hana resource(if required)
+      include_tasks: pcs_resource_hana_{{ platform }}.yml
+
+  when: ansible_hostname == node1

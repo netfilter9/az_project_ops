@@ -1,0 +1,77 @@
+- name: create empty file
+  file:
+     path: "/tmp/{{ item.name }}.sql"
+     state: touch
+     mode: 0777
+  with_items:
+     - "{{ oracle_queries }}"
+     - "{{ oracle_queries_txt }}" 
+
+- name: line insert
+  lineinfile:
+     path: /tmp/{{ item.name }}.sql
+     line: "{{ item.query }}"
+  with_items:
+     - "{{ oracle_queries }}"
+     - "{{ oracle_queries_txt }}"
+
+- name: line insert
+  lineinfile:
+     path: "/tmp/{{ item.name }}.sql"
+     line: exit;
+  with_items:
+     - "{{ oracle_queries }}"
+     - "{{ oracle_queries_txt }}"
+
+-  shell: sudo su - {{ db_sid | lower }}adm -c "sqlplus -s '/ as sysdba' @/tmp/{{ item.name }}.sql"
+   register: output
+   args:
+     executable: /bin/bash
+   with_items:
+      - "{{ oracle_queries }}"
+   loop_control:
+      index_var: index   
+
+-  shell: sudo su - {{ db_sid | lower }}adm -c "sqlplus -s '/ as sysdba' @/tmp/{{ item.name }}.sql"
+   register: output_txt
+   args:
+     executable: /bin/bash
+   with_items:
+      - "{{ oracle_queries_txt }}"
+   loop_control:
+      index_var: index
+
+- debug: var=output_txt
+
+- name: Write output json format
+  template: 
+    src: "{{ item.name }}.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/{{ item.name }}_outputs.json'
+  become: yes
+  delegate_to: localhost
+  with_items:
+     - "{{ oracle_queries }}" 
+  loop_control:
+      index_var: index
+
+- name: Write output on text format
+  template:
+    src: "{{ item.name }}.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/{{ item.name }}_outputs.txt'
+  become: yes
+  delegate_to: localhost
+  with_items:
+     - "{{ oracle_queries_txt }}"
+  loop_control:
+      index_var: index
+  when: 
+  - item.name == output_txt.results[index].item.name
+
+- name: delete sql file on the remote target
+  file:
+     path: /tmp/{{ item.name }}.sql
+     state: absent
+  with_items:
+     - "{{ oracle_queries }}"
+     - "{{ oracle_queries_txt }}"
+

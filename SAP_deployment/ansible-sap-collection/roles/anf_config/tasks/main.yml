@@ -1,0 +1,17 @@
+---
+#tasks for ANF configurations recommended here https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse#operating-system-configuration-and-preparation 
+- name: main | dhcp and route configuration
+  include_tasks: "{{ ansible_os_family }}.yml"
+  tags:
+    - dhcp-config
+  when: hana_scale_out.anf | default (false)
+
+- name: main | os configuration
+  import_tasks: os-config.yml
+  tags:
+    - os-config
+
+- name: main | mapping
+  import_tasks: mapping.yml
+  tags:
+    - mapping

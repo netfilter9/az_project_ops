@@ -1,0 +1,61 @@
+---
+
+- name: post_hanadb_config | ini file configurations change for AWS and Azure disk scaleout
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+    marker: "# {mark} AWS Configuration"
+    block: |  
+      [persistence]   
+      basepath_shared = no  
+  when: (hana_scale_out is defined and platform == 'aws' and ansible_hostname == node1) or
+        (hana_scale_out.disks is defined and platform == 'azure' and ansible_hostname == node1)
+
+- name: post_hanadb_config | copy scale out template file for AWS and Azure for disk layout
+  template:
+    src: "scaleout.config.j2"
+    dest: "{{ install_dir }}/sapinst/scaleout.config"
+  when: (hana_scale_out is defined and platform == 'aws'  and ansible_hostname == node1) or
+        (hana_scale_out.disks is defined and platform == 'azure' and ansible_hostname == node1)
+
+- name: reboot server
+  reboot:
+  when: hdblcmresult.changed and (hana_scale_out is defined and platform == 'aws' and ansible_hostname == node1) or
+        (hana_scale_out.disks is defined and platform == 'azure' and ansible_hostname == node1)
+
+- name: Pause for 1 minutes 
+  pause:
+    minutes: 1
+  when: hdblcmresult.changed and (hana_scale_out is defined and platform == 'aws' and ansible_hostname == node1) or
+        (hana_scale_out.disks is defined and platform == 'azure' and ansible_hostname == node1)
+
+  
+
+- name: post_hanadb_config | add hosts   
+  command:  
+    cmd: "./hdblcm --configfile={{ install_dir }}/sapinst/scaleout.config -b"
+    creates: /hana/log/{{ sap.db.sid|lower }}_hdblcm_addhosts_output*.log
+  args:
+    chdir: /hana/shared/{{ sap.db.sid|upper }}/hdblcm/
+  register: hdblcmresult  
+  when: (hana_scale_out is defined and platform == 'aws'  and ansible_hostname == node1) or
+        (hana_scale_out.disks is defined and platform == 'azure' and ansible_hostname == node1)
+
+ 
+
+- name: post_hanadb_config | write log file
+  copy:
+    dest: /hana/log/{{ sap.db.sid|lower }}_hdblcm_addhosts_output{{ ansible_date_time.iso8601 }}.log
+    content: "{{ hdblcmresult.stdout | default('Executed successfully') }}"
+
+- name: post_hanadb_config | sshd-config 
+  block:
+    - name: password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication yes"
+        line: "PasswordAuthentication no"
+    - name: sshd restart
+      service:
+        name: sshd
+        state: restarted
+  when: hana_scale_out.anf is defined

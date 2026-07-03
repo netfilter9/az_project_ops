@@ -1,0 +1,153 @@
+{# 
+  create a local variables for the SAP instance references 
+  e.g. A4H_ASCS00, A4H_ERS01
+#}
+{% set ascs_instance = sap.sid + "_" + sap.ascs_type + sap.instance_numbers.ascs %}
+{% set ers_instance = sap.sid + "_ERS" + sap.instance_numbers.ers %}
+
+{#
+  include common header to define nodes and STONITH approach
+#}
+{#
+  Select STONITH strategy
+#}
+{% if stonith_type == "sbd" %}
+{# Traditional SBD STONITH #}
+primitive stonith-sbd stonith:external/sbd \
+    params pcmk_delay_max="15" op monitor interval="15" timeout="15"
+
+{% elif stonith_type == "azure_shared_disk" %}
+{# Traditional SBD STONITH #}
+primitive stonith-sbd stonith:external/sbd \
+    params pcmk_delay_max="15" op monitor interval="15" timeout="15"
+
+{% elif stonith_type == "azure_fence_agent" %}      
+primitive rsc_st_azure stonith:fence_azure_arm \
+    params subscriptionId={{ subscription_id }} resourceGroup={{ resource_group }} tenantId={{ tenant_id }} login={{ app_id }} passwd={{ app_pass }} \ 
+    pcmk_monitor_retries=4 pcmk_action_limit=3 power_timeout=240 pcmk_reboot_timeout=900 \ 
+    op monitor interval=3600 timeout=120
+{% endif %}
+{#
+  Setup common ASCS/ERS cluster primitives
+#}
+{#
+    Add "loadbalancer primitives"
+#}
+primitive nc_{{ ascs_instance }} azure-lb \
+  port=620{{ sap.instance_numbers.ascs }}
+
+primitive nc_{{ ers_instance }} azure-lb \
+  port=621{{ sap.instance_numbers.ers }}
+
+{#
+    Add vip resource
+#}
+{# Azure LB #}
+primitive vip_{{ ascs_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ascs.ip }} cidr_netmask={{ sap.logical_hosts.ascs.cidr }} nic=eth0 \
+  op monitor interval=10 timeout=20
+
+primitive vip_{{ ers_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ers.ip }} cidr_netmask={{ sap.logical_hosts.ers.cidr }} nic=eth0 \
+  op monitor interval=10 timeout=20
+
+{#
+    set up file system failover if using traditional NFS or ANF
+#}
+
+{% set ascs_device = sap.nfs.ascs_device %}
+{% set ers_device = sap.nfs.ers_device %}
+primitive fs_{{ ascs_instance }} Filesystem \  
+  device={{ ascs_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' options='{{ sap.nfs.options | default() }}' \
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+
+primitive fs_{{ ers_instance }} Filesystem \  
+  device={{ ers_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' options='{{ sap.nfs.options | default() }}' \
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+
+{#
+    Add standard primitives for SAP component
+#}
+primitive rsc_sap_{{ ascs_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ascs_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }}" \
+  AUTOMATIC_RECOVER=false \
+  meta resource-stickiness=5000 \
+  {% if sap.enq_architecture == "ENSA1" %}
+  failure-timeout=60 migration-threshold=1 priority=10
+  {% else %}
+  priority=1000
+{% endif %}
+
+primitive rsc_sap_{{ ers_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ers_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }}" \
+  AUTOMATIC_RECOVER=false IS_ERS=true {% if sap.enq_architecture == "ENSA1" %}\ 
+  meta priority=1000
+{% endif %}
+
+{# 
+    set up groups
+#}
+group SAP-{{ ascs_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ascs_instance }} \
+{% endif %}
+  nc_{{ ascs_instance }} \
+  vip_{{ ascs_instance }} \
+  rsc_sap_{{ ascs_instance }} \
+  meta resource-stickiness=3000
+
+group SAP-{{ ers_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ers_instance }} \
+{% endif %}
+  nc_{{ ers_instance }} \
+  vip_{{ ers_instance }} \
+  rsc_sap_{{ ers_instance }}
+
+{#
+    set rules for coloaction
+#}
+colocation col_sap_{{ sap.sid }}_no_both -5000: SAP-{{ ers_instance }} SAP-{{ ascs_instance }}
+{% if sap.enq_architecture == "ENSA1" %}
+
+location loc_sap_{{ sap.sid }}_failover_to_ers \
+  rsc_sap_{{ ascs_instance }} \
+  rule 2000: runs_ers_{{ sap.sid }} eq 1
+{% endif %}
+
+order ord_sap_{{ sap.sid }}_first_start_ascs Optional: \
+  rsc_sap_{{ ascs_instance }}:start \
+  rsc_sap_{{ ers_instance }}:stop symmetrical=false
+  
+{#
+    Set general properties
+#}
+property cib-bootstrap-options: \
+  maintenance-mode=false \
+  stonith-enabled=true{% if stonith_type == "azure_fence_agent" %} \
+  concurrent-fencing=true \
+  stonith-timeout=900{% endif %}{% if sap.enq_architecture == "ENSA2" %} \
+  priority-fencing-delay=30 {% endif %} 
+
+rsc_defaults rsc-options: \
+  resource-stickiness=1 \
+  migration-threshold=3
+op_defaults op-options: \
+  timeout=300 \
+  record-pending=true

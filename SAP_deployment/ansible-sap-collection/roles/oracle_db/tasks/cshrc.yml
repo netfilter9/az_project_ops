@@ -1,0 +1,8 @@
+---
+- name: cshrc | copy in .cshrc file
+  template:
+    src: cshrc.j2
+    dest: "/home/{{ oracle_installation_user }}/.cshrc"
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  register: cshrc

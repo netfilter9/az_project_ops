@@ -1,0 +1,5 @@
+{% for item in mounts %}
+{% if item.use_autofs | default(false) %}
+{{ item.path }} {{ item.opts | default ('-nfsvers=4.1,nobind,sec=sys') }} {{ item.source }}
+{% endif %}
+{% endfor %}

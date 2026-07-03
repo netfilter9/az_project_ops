@@ -1,0 +1,53 @@
+- name: sybase | create cmsdb sql
+  template:
+    src: "cms.config.j2"
+    dest: "{{ install_dir }}/createcmsdb.sql"
+
+- name: sybase | create auditdb sql
+  template:
+    src: "audit.config.j2"
+    dest: "{{ install_dir }}/createauditdb.sql"
+
+- name: sybase | create cmsdb
+  command:  
+    cmd: ./isql -U sa -P {{passwords.systemdb}} -S {{sap.db.sid}} -i "{{ install_dir }}/createcmsdb.sql"
+    creates: /var/tmp/cmsdb_output*.log
+  no_log: true
+  args:
+    chdir: /sybase/{{sap.db.sid | upper}}/{{ sap.db.sybase_ocs | default('OCS-16_0') }}/bin/
+  register: cmsdbresult
+  environment:
+    LANG: 'us_english.utf8'
+    SHELL: '/sybase/{{sap.db.sid | upper}}/SYBASE.sh'
+    SYBASE_OCS: '{{ sap.db.sybase_ocs | default("OCS-16_0") }}'
+    SYBASE: '/sybase/{{sap.db.sid | upper}}'
+    SYBASE_ASE: '{{ sap.db.sybase_ase | default("ASE-16_0") }}'
+  become: yes
+  become_user: "{{admin_user}}"
+  
+- name: sybase | write log file
+  copy:
+    dest: /var/tmp/cmsdb_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ cmsdbresult.stdout }}"
+
+- name: sybase | create auditdb
+  command:  
+    cmd: "./isql -U sa -P {{passwords.systemdb}} -S {{sap.db.sid}} -i {{ install_dir }}/createauditdb.sql"
+    creates: /var/tmp/auditdb_output*.log
+  no_log: true
+  args:
+    chdir: /sybase/{{sap.db.sid | upper}}/{{ sap.db.sybase_ocs | default('OCS-16_0') }}/bin/
+  register: auditdbresult
+  environment:
+    LANG: 'us_english.utf8'
+    SHELL: '/sybase/{{sap.db.sid | upper}}/SYBASE.sh'
+    SYBASE_OCS: '{{ sap.db.sybase_ocs | default("OCS-16_0") }}'
+    SYBASE: '/sybase/{{sap.db.sid | upper}}'
+    SYBASE_ASE: '{{ sap.db.sybase_ase | default("ASE-16_0") }}'
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: sybase | write log file
+  copy:
+    dest: /var/tmp/auditdb_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ auditdbresult.stdout }}"

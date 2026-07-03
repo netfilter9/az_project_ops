@@ -1,0 +1,141 @@
+######################################################################
+#                       OS CHECKS                                 #
+######################################################################     
+
+- name: Fetching the value of UserTasksMax
+  shell: /usr/sbin/saptune solution list | awk '{print $1,$2}' | sed -n '/\* /s///p' | cut -d "*" -f2
+  become: yes
+  register: output_saptune
+
+- debug: var=output_saptune
+
+- debug: msg="{{ output_saptune.stdout_lines | replace('\u001b[32m', '') | to_json }}"
+
+- name: Fetching the value of UserTasksMax
+  shell: cat /etc/systemd/logind.conf.d/sap.conf |grep UserTasksMax | cut -d "=" -f2
+  become: yes
+  register: output_usertasksmax 
+
+- debug: var=output_usertasksmax
+
+- name: Checking if transparent hugepages disabled
+  shell: cat /sys/kernel/mm/transparent_hugepage/enabled
+  become: yes
+  register: output_hugepage
+
+- debug: var=output_hugepage
+
+- name: Checking for Kernel samepage merging (KSM) value
+  shell: cat /sys/kernel/mm/ksm/run
+  become: yes
+  register: output_ksm
+
+- debug: var=output_ksm
+
+# - name: Checking for Linux Pagecache Limit
+#   shell: cat /proc/sys/vm/pagecache_limit_mb
+#   become: yes
+#   register: output_pagecache
+
+# - debug: var=output_pagecache
+
+- name: Checking the size of swap
+  shell: free -g | grep Swap | awk '{print $2}'
+  become: yes
+  register: output_swap
+
+- debug: var=output_swap
+
+- name: Command to get the user id of users
+  shell: id -u {{ sid | lower }}adm
+  become: yes
+  register: output_uid
+
+- debug: var=output_uid
+
+- name: Command to get the user id of users
+  shell: id -u sapadm
+  become: yes
+  register: output_sapadmuid
+
+- debug: var=output_sapadmuid
+
+- name: Command to get the gid of sapsys
+  shell: groups {{ item }} | cut -d ':' -f2
+  become: yes
+  register: output_groups
+  loop:
+    - "{{sid|lower}}adm"
+    - sapadm
+
+- debug: var=output_groups
+
+- name: Command to get the gid of sapsys
+  shell: getent group sapsys | cut -d 'x' -f2 | cut -d ':' -f2 | cut -d ':' -f1
+  become: yes
+  register: output_gid
+
+- debug: var=output_gid
+
+- name: Command to check the value of open files
+  shell: ulimit -n
+  become: yes
+  register: output_ulimit
+
+- debug: var=output_ulimit
+
+- name: Fetching the value of net.ipv4.ip_local_port_range
+  shell: /usr/sbin/sysctl -a | grep net.ipv4.ip_local_port_range  | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_portrange
+
+- debug: var=output_portrange
+
+- name: Fetching the value of net.ipv4.tcp_slow_start_after_idle
+  shell: /usr/sbin/sysctl -a | grep net.ipv4.tcp_slow_start_after_idle | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_slowstart
+
+- debug: var=output_slowstart
+
+- name: Displaying the values of net.ipv4.tcp_wmem
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_wmem | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_tcpwmem
+
+- debug: var=output_tcpwmem
+
+- name: Displaying the values of net.ipv4.tcp_rmem
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_rmem | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_tcprmem
+
+- debug: var=output_tcprmem
+
+- name: Displaying the values of net.core.wmem_max
+  shell: /usr/sbin/sysctl -a  | grep net.core.wmem_max | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_wmemmax
+
+- debug: var=output_wmemmax
+
+- name: Displaying the values of net.core.rmem_max
+  shell: /usr/sbin/sysctl -a  | grep net.core.rmem_max | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_rmemmax
+
+- debug: var=output_rmemmax
+
+- name: Fetching the value of net.ipv4.tcp_window_scaling
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_window_scaling | cut -d '=' -f2 | cut -d ' ' -f2
+  become: yes
+  register: output_windowscaling
+
+- debug: var=output_windowscaling
+
+- name: OS checks
+  template:
+    src: "os-checks-md.j2"
+    dest: ../md-collection/{{ ansible_date_time.iso8601_micro }}_os-checks-md.md
+  delegate_to: localhost  
+  when: output == "md"

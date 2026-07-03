@@ -1,0 +1,12 @@
+---
+# tasks file for aws-setup-profile-cluster
+- name: Setting up Profile
+  blockinfile:
+    path: /root/.aws/config
+    create: yes
+    block: |
+      [default]
+      region = {{ region }}
+      [profile cluster]
+      region = {{ region }}
+      output = text

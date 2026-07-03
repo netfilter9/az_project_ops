@@ -1,0 +1,247 @@
+*&********************************************************************&*
+* Report              :   ZCM_SE06_EXP_SYSTEM_SETTINGS                 *
+* Title               :   Export SE06 Settings                         *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   19/08/2020                                   *
+* Purpose             :   This report is for exporting SE06 setting    *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+REPORT zcm_se06_exp_system_settings.
+
+TYPES:
+  BEGIN OF lty_namespace,
+    namespace  LIKE trnspace-namespace,
+    text       LIKE trnspacett-descriptn,
+    prefix     LIKE trnspace-namespace,
+    changeable TYPE trchange,
+  END OF lty_namespace.
+
+CONSTANTS: lc_x                 TYPE c VALUE 'X'             LENGTH 1,
+           lc_n                 TYPE c VALUE 'N'             LENGTH 1,
+           lc_sep               TYPE c VALUE '|'             LENGTH 1,
+           lc_null              TYPE c VALUE 'NULL'          LENGTH 4,
+           lc_export            TYPE c VALUE 'EXPORT'        LENGTH 6,
+           lc_value             TYPE c VALUE 'Value'         LENGTH 5,
+           lc_global            TYPE c VALUE 'Global'        LENGTH 6,
+           lc_title             TYPE c VALUE 'SE06 Settings' LENGTH 20,
+           lc_global_setting    TYPE c VALUE 'GlobalSetting' LENGTH 20,
+           lc_modifiable        TYPE c VALUE 'Modifiable'    LENGTH 20,
+           lc_not_modifiable    TYPE c VALUE 'Notmodifiable' LENGTH 20,
+           lc_full_changeability    TYPE dlv_change  VALUE 'F',
+           lc_reduced_changeability TYPE dlv_change  VALUE 'R',
+           lc_only_extendable       TYPE dlv_change  VALUE 'E',
+           lc_no_changeability      TYPE dlv_change  VALUE 'N',
+           lc_extendable            TYPE dlv_extendable VALUE 'X',
+           lc_non_extendable        TYPE dlv_extendable VALUE space,
+           lc_head                  TYPE pgmid       VALUE 'HEAD',
+           lc_syst                  TYPE trobjtype   VALUE 'SYST',
+           lc_soft_comp             TYPE c VALUE
+           'SoftwareComponent'                              LENGTH 30,
+           lc_technical_name        TYPE c VALUE
+           'TechnicalName'                                  LENGTH 25,
+           lc_namespace             TYPE c VALUE
+           'Namespace'                                      LENGTH 25,
+           lc_name_range            TYPE c VALUE
+           'NameRange'                                      LENGTH 15,
+           lc_prefix                TYPE c VALUE 'Prefix'   LENGTH 6,
+           lc_tech_id               TYPE c VALUE 'TechID'   LENGTH 10,
+           lc_err_global            TYPE c VALUE
+           'Unable to read global setting'                  LENGTH 30
+           ##NO_TEXT,
+           lc_err_sw                TYPE c VALUE
+           'Unable to read Software Components'             LENGTH 40
+           ##NO_TEXT,
+           lc_err_nm                TYPE c VALUE
+           'Unable to read Namespaces'                      LENGTH 40
+           ##NO_TEXT.
+
+DATA: ls_output     TYPE tab512,
+      ls_input      TYPE tab512,
+      lt_output     TYPE TABLE OF tab512,
+      lt_dlvunits   TYPE trdlvunits,
+      lt_namespaces TYPE lty_namespace OCCURS 0 WITH HEADER LINE,
+      ls_namespace  TYPE lty_namespace,
+      lt_trnspace   LIKE trnspace OCCURS 0,
+      lt_trnspacett LIKE trnspacett OCCURS 0,
+      ls_trnspacett LIKE trnspacett,
+      ls_trnspace   LIKE trnspace,
+      lv_action     TYPE char20,
+      lv_client     TYPE mandt,
+      lv_edtflg     TYPE edtflag.
+
+FIELD-SYMBOLS: <ls_dlvunit> TYPE trdlvunit.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  SPLIT ls_input AT lc_sep INTO
+  lv_action     " Action
+  lv_client.    " Client
+
+  CASE lv_action.
+
+    WHEN lc_export.      " If action is Export
+
+      SELECT SINGLE edtflag
+           INTO lv_edtflg
+      FROM tadir BYPASSING BUFFER
+      WHERE pgmid = lc_head
+        AND object = lc_syst
+        AND obj_name = ' '.
+
+        " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      IF sy-subrc EQ 0.
+
+        " Adding global setting title to the output
+        CONCATENATE lc_global_setting lc_sep lc_value
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        IF lv_edtflg = lc_n.
+          CONCATENATE lc_global lc_sep lc_not_modifiable
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ELSE.
+          CONCATENATE lc_global lc_sep lc_modifiable
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ENDIF.
+      ELSE.
+        ls_output = lc_err_global.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+      " Reading software components
+
+      " FM to get software components
+      CALL FUNCTION 'TR_GET_DLVUNITS'
+        EXPORTING
+          iv_with_changeability = lc_x
+          iv_with_description   = lc_x
+        IMPORTING
+          et_dlvunits           = lt_dlvunits[].
+
+        " Adding blank space between records
+        ls_output = space.
+        APPEND ls_output TO lt_output.
+
+        " Adding Software component title
+        ls_output = lc_soft_comp.
+        APPEND ls_output TO lt_output.
+
+      IF lt_dlvunits IS NOT INITIAL.
+
+        " Constructing headings for Software components
+
+        CONCATENATE lc_soft_comp      lc_sep
+                    lc_technical_name lc_sep
+                    lc_modifiable
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+
+        LOOP AT lt_dlvunits ASSIGNING <ls_dlvunit>.
+          IF    <ls_dlvunit>-changeable EQ lc_no_changeability
+            AND <ls_dlvunit>-extendable EQ lc_extendable.
+            <ls_dlvunit>-changeable = lc_only_extendable.
+          ENDIF.
+
+          CONCATENATE <ls_dlvunit>-desc_text    lc_sep
+                      <ls_dlvunit>-dlvunit      lc_sep
+                      <ls_dlvunit>-changeable
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+      ELSE.
+        " Unable to read Software components data
+        ls_output = lc_err_sw.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+      " Reading namespaces
+
+      SELECT * FROM trnspace
+               INTO TABLE lt_trnspace
+               ORDER BY namespace.
+
+      SELECT * FROM trnspacett
+               INTO TABLE lt_trnspacett
+               WHERE spras = sy-langu
+               ORDER BY namespace.
+
+      CLEAR: lt_namespaces[].
+
+      LOOP AT lt_trnspace INTO ls_trnspace.
+        CLEAR ls_namespace.
+        ls_namespace-namespace  = ls_trnspace-namespace.
+
+        IF ls_trnspace-editflag = lc_x.
+          ls_namespace-changeable = ls_trnspace-editflag.
+        ELSE.
+          ls_namespace-changeable = lc_n.
+        ENDIF.
+
+        READ TABLE lt_trnspacett INTO ls_trnspacett
+                   WITH KEY namespace = ls_trnspace-namespace.
+        IF sy-subrc = 0.
+          ls_namespace-text = ls_trnspacett-descriptn.
+        ENDIF.
+
+        APPEND ls_namespace TO lt_namespaces.
+      ENDLOOP.
+
+
+        " Adding blank space between records
+        ls_output = space.
+        APPEND ls_output TO lt_output.
+
+        " Adding Namespace title
+        ls_output = lc_namespace.
+        APPEND ls_output TO lt_output.
+
+      IF lt_namespaces[] IS NOT INITIAL.
+
+        " Constructing headings for Namespaces
+
+        CONCATENATE lc_name_range    lc_sep
+                    lc_prefix        lc_sep
+                    lc_modifiable    lc_sep
+                    lc_tech_id
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_namespaces INTO ls_namespace.
+
+          IF ls_namespace-text IS INITIAL.
+            ls_namespace-text = lc_null.
+          ENDIF.
+
+          IF ls_namespace-prefix IS INITIAL.
+            ls_namespace-prefix = lc_null.
+          ENDIF.
+
+          CONCATENATE ls_namespace-text       lc_sep
+                      ls_namespace-prefix     lc_sep
+                      ls_namespace-changeable lc_sep
+                      ls_namespace-namespace
+                    INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ENDLOOP.
+      ELSE.
+        " Unable to read Namespace data
+        ls_output = lc_err_nm.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+  ENDCASE.
+ENDFORM.

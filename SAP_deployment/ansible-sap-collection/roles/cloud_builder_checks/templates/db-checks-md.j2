@@ -1,0 +1,99 @@
+{%- set errormsg = 'su: user ' + dbsid + 'adm does not exist' -%}
+{%- if output_hanaversionaz.rc is defined -%}
+{%- set output_hanaversion = output_hanaversionaz -%}
+{% else %}
+{%- set output_hanaversion = output_hanaversionot -%}
+{% endif %}
+{%- if output_hanaversion.rc != 0 and output_hanaversion.stderr is defined and output_hanaversion.stderr | length > 0 -%} 
+{%- set dataToCheckHanaVersion = output_hanaversion.stderr -%}
+{% else %} 
+{%- set dataToCheckHanaVersion = output_hanaversion.stdout -%}
+{% endif %}
+
+{%- if output_hanaversion.rc != 0 and output_hdbsuserstore.stderr is defined and output_hdbsuserstore.stderr | length > 0 -%}
+{%- set dataToCheckhdbuserstore = output_hdbsuserstore.stderr -%}
+{% else %}
+{%- set dataToCheckhdbuserstore = output_hdbsuserstore.stdout_lines | to_json -%}
+{% endif %}
+
+{# 
+    generate tag entries 
+#}
+# {{ ansible_hostname | upper }} {{ hostvars[ansible_hostname].group_names[0] | upper }}
+# DB Checks
+---
+{% if errormsg in dataToCheckHanaVersion %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "checking for the version of HANA in the system",
+  "This check is not applicable for this system",
+  "HANA needs to be installed"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "checking for the version of HANA in the system",
+  dataToCheckHanaVersion,
+  "HANA needs to be installed"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if errormsg in dataToCheckhdbuserstore %}
+# HDB userstorelist
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "Checking for the hdbuserstorelist",
+  "This check is not applicable for this system",
+  "HDB userstorelist"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "Checking for the hdbuserstorelist",
+  dataToCheckhdbuserstore,
+  "HDB userstorelist"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_numabal.stdout == 'disable' %}
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "Checking if autoNUMA balance is disabled",
+  output_numabal.stdout,
+  "Disable"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  dbsid ,
+  "DB",
+  "Checking if autoNUMA balance is disabled",
+  output_numabal.stdout,
+  "Disable"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+

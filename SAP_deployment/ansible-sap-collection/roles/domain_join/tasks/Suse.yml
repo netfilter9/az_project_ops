@@ -1,0 +1,89 @@
+---
+
+- name: edit /etc/samba/smb.conf
+  blockinfile:
+    path: /etc/samba/smb.conf
+    create: yes
+    block: |
+      workgroup = AZSQLHA
+      usershare allow guests = NO 
+      idmap gid = 10000-20000
+      idmap uid = 10000-20000
+      kerberos method = secrets and keytab
+      realm = {{ domain.fqdn }}
+      security = ads
+      template homedir = /home/%D/%U
+      template shell = /bin/bash
+      winbind offline logon = yes
+      winbind refresh tickets = yes
+
+- name: template /etc/krb5.conf
+  template:
+    src: krb5_suse.j2
+    dest: /etc/krb5.conf
+  register: domain_join_krb5_conf
+  notify:
+    - restart-sssd
+  become: yes
+
+- name: debug domain_join_krb5_conf
+  debug:
+    var: domain_join_krb5_conf
+    verbosity: "{{ verbosity_level }}"
+
+- name: edit /etc/security/pam_winbind.conf
+  blockinfile:
+    path: /etc/security/pam_winbind.conf
+    create: yes
+    block: |
+      [global]
+        cached_login = yes
+        krb5_auth = yes
+        krb5_ccache_type = FILE
+
+- name: edit /etc/nsswitch.conf for passwd
+  lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: 'passwd'
+    line: 'passwd: compat winbind'
+
+- name: edit /etc/nsswitch.conf for group
+  lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: 'group:  compat'
+    line: 'group: compat winbind'
+
+- name: install required packages
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  package:
+    name: "{{ domain_join_packages }}"
+    state: present
+  register: domain_join_package_result
+  become: yes
+
+- name: debug domain_join_package_result
+  debug:
+    var: domain_join_package_result
+    verbosity: "{{ verbosity_level }}"
+
+- name: include ntp configuration tasks
+  include_tasks:
+    file: ntp_config.yml
+  when:
+    - domain_join_configure_ntp | bool
+
+- name: join the domain
+  command: net ads join -U {{ domain_join_username }}%{{ domain_join_password }}
+
+- name: winbind restart
+  service:
+    name: winbind
+    state: restarted
+    enabled: yes
+
+- name: enable winbind as login source in pam
+  command: pam-config --add --winbind
+
+- name: enable automatic creation of homedir so that users can log in
+  command: pam-config -a --mkhomedir

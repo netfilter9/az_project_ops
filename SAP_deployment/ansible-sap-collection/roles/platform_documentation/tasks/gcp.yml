@@ -1,0 +1,50 @@
+--- 
+- name: gather compute instance data
+  command: gcloud compute instances list --format=json --project={{ project_id }}
+  register: gce_data 
+ 
+- name: convert stdout to a fact
+  set_fact:
+    gce_json: "{{gce_data.stdout}}"
+ 
+- debug: msg="{{ gce_json }}"
+ 
+- name: gcp.yml | generating vmlist
+  template:
+    src: gcp/resources/infra-vm-name.j2
+    dest: ./vm_list
+ 
+- name: gcp.yml | read ./vm_list
+  command: cat ./vm_list
+  register: vm_row
+ 
+- debug: msg="{{ vm_row }}"
+ 
+- name: gcp.yml | convert stdout to a fact
+  set_fact:
+    vm_list: "{{vm_row.stdout_lines}}"
+ 
+- debug: msg="{{ item }}"
+  loop: "{{ vm_list }}"  
+ 
+- name: gcp.yml | create folder to store outputs
+  file:
+    path: ../md-collection
+    mode: '0755'
+    recurse: yes
+    state: directory
+ 
+- name: dump json to file
+  copy: 
+    dest: ../md-collection/{{ ansible_date_time.iso8601_basic }}_platform_documentation.json
+    content: "{{ vm_list }}"
+  when: output == "json"
+ 
+- name: generating markdown
+  template:
+    src: gcp/gcp_environment.j2
+    dest: ../md-collection/01_{{ ansible_date_time.iso8601_basic }}_platform_documentation.md
+    lstrip_blocks: yes
+
+- name: azure.yml | deleting ./vm_list
+  command: rm -rf ./vm_list

@@ -1,0 +1,9 @@
+{# 
+    constructing load balancers from input json
+#}
+{% if deployment.load_balancers is defined %}
+{% for lb, lb_details in deployment.load_balancers.items() -%}
+{%- set lb_row = lb -%}
+{{ lb_row }}
+{% endfor %}
+{% endif %}

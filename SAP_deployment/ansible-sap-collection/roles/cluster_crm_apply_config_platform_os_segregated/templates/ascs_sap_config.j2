@@ -1,0 +1,123 @@
+{# 
+  create a local variables for the SAP instance references 
+  e.g. A4H_ASCS00, A4H_ERS01
+#}
+{% set ascs_instance = sap.sid + "_" + sap.ascs_type + sap.instance_numbers.ascs %}
+{% set ers_instance = sap.sid + "_ERS" + sap.instance_numbers.ers %}
+
+{#
+  include common header to define nodes and STONITH approach
+#}
+{% include 'base_config.j2' %}
+
+{#
+  Setup common ASCS/ERS cluster primitives
+#}
+{% include 'common_ascs.j2' %}
+
+{#
+    Add standard primitives for SAP component
+#}
+primitive rsc_sap_{{ ascs_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ascs_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }}" \
+  AUTOMATIC_RECOVER=false \
+  meta resource-stickiness=5000 \
+  {% if sap.enq_architecture == "ENSA1" %}
+  failure-timeout=60 migration-threshold=1 priority=10
+  {% else %}
+  priority=1000
+{% endif %}
+
+primitive rsc_sap_{{ ers_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ers_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }}" \
+  AUTOMATIC_RECOVER=false IS_ERS=true {% if sap.enq_architecture == "ENSA1" %}\ 
+  meta priority=1000
+{% endif %}
+
+{# 
+    set up groups
+#}
+{% if platform == "azure" or platform == "gcp" %}
+group SAP-{{ ascs_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ascs_instance }} \
+{% endif %}
+  nc_{{ ascs_instance }} \
+  vip_{{ ascs_instance }} \
+  rsc_sap_{{ ascs_instance }} \
+  meta resource-stickiness=3000
+
+group SAP-{{ ers_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ers_instance }} \
+{% endif %}
+  nc_{{ ers_instance }} \
+  vip_{{ ers_instance }} \
+  rsc_sap_{{ ers_instance }}
+{% endif %}
+
+{% if platform == "aws" %}
+group grp_{{ ascs_instance }} \
+rsc_ip_{{ ascs_instance }} \
+rsc_fs_{{ ascs_instance }} \
+rsc_sap_{{ ascs_instance }} \
+meta resource-stickiness=3000
+
+group grp_{{ ers_instance }} \
+rsc_ip_{{ ers_instance }} \
+rsc_fs_{{ ers_instance }} \
+rsc_sap_{{ ers_instance }}
+{% endif %}
+
+{#
+    set rules for coloaction
+#}
+{% if platform == "azure" or platform == "gcp" %}
+colocation col_sap_{{ sap.sid }}_no_both -5000: SAP-{{ ers_instance }} SAP-{{ ascs_instance }}
+{% if sap.enq_architecture == "ENSA1" %}
+
+location loc_sap_{{ sap.sid }}_failover_to_ers \
+  rsc_sap_{{ ascs_instance }} \
+  rule 2000: runs_ers_{{ sap.sid }} eq 1
+{% endif %}
+{% endif %}
+{% if platform == "aws" %}
+colocation col_sap_{{ sap.sid |upper}}_no_both -5000: grp_{{ ers_instance }} grp_{{ ascs_instance }} 
+{% if sap.enq_architecture == "ENSA1" %}
+
+location loc_sap_{{ sap.sid }}_failover_to_ers \
+  rsc_sap_{{ ascs_instance }} \
+  rule 2000: runs_ers_{{ sap.sid }} eq 1
+{% endif %}
+{% endif %}
+
+order ord_sap_{{ sap.sid }}_first_start_ascs Optional: \
+  rsc_sap_{{ ascs_instance }}:start \
+  rsc_sap_{{ ers_instance }}:stop symmetrical=false
+  
+{#
+    Set general properties
+#}
+property cib-bootstrap-options: \
+  cluster-infrastructure=corosync \  
+  stonith-enabled=true \
+  stonith-action=off \   
+  stonith-timeout=300s \
+  maintenance-mode=false \
+  last-lrm-refresh=1632815429 {% if sap.enq_architecture == "ENSA2" %}\
+  priority-fencing-delay=30s 
+{% endif %} \
+rsc_defaults rsc-options: \
+  resource-stickiness=1 \
+  migration-threshold=3
+op_defaults op-options: \
+  timeout=300 \
+  record-pending=true

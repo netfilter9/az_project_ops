@@ -1,0 +1,178 @@
+[General]
+
+# Use Simplified Installation UI
+simplified_ui=y
+
+# Skip all SAP Host Agent calls
+skip_hostagent_calls=n
+
+# Remote Execution
+remote_execution=ssh
+
+# Use single master password for all users, created during installation
+use_master_password=n
+
+# Master Password
+master_password={{ passwords.master }}
+
+# System Administrator Password
+#password=Cloudcoe123#
+
+# SAP Host Agent User (sapadm) Password
+#sapadm_password=Cloudcoe123#
+
+# Root User Password
+root_password={{ passwords.root | default(passwords.master) }}
+
+# Verify the authenticity of SAP HANA components
+verify_signature=n
+
+# Components
+components={{sap.db.cockpit.components}}
+
+# Install Execution Mode
+install_execution_mode=optimized
+
+# Do not Modify '/etc/sudoers' File
+skip_modify_sudoers=n
+
+[Server]
+
+# Enable usage of persistent memory
+use_pmem=n
+
+# Enable the installation or upgrade of the SAP Host Agent
+install_hostagent=y
+
+# Database Mode
+db_mode=multidb
+
+# Database Isolation
+db_isolation=low
+
+# Create initial tenant database
+create_initial_tenant=n
+
+# System Administrator 
+password={{ passwords.admin | default(passwords.master) }}
+
+# SAP Host Agent User (sapadm) Password
+sapadm_password={{ passwords.sapadm | default(passwords.master) }}
+
+# Installation Path
+sapmnt=/hana/shared
+
+# Local Host Name
+hostname={{ virtual_hostname | default (ansible_hostname) }}
+
+# SAP HANA System ID
+sid={{ sap.db.sid|upper }}
+
+# Instance Number
+number={{ sap.instance_numbers.db }}
+
+# Local Host Worker Group
+workergroup=default
+
+# System Usage
+system_usage=custom
+
+# Location of Data Volumes
+datapath=/hana/data/{{ sap.db.sid|upper }}
+
+# Location of Log Volumes
+logpath=/hana/log/{{ sap.db.sid|upper }}
+
+# Directory containing custom configurations
+#custom_cfg=/hana/backup/installer_source/HANACockpit/HDB_SERVER_LINUX_X86_64/configurations/custom
+
+# SAP HANA Database secure store
+secure_store=ssfs
+
+# Restrict maximum memory allocation?
+restrict_max_mem=n
+
+# Maximum Memory Allocation in MB
+max_mem=0
+            
+# Certificate Host Names
+certificates_hostmap={{ virtual_hostname | default (ansible_hostname) }}={{ virtual_hostname | default (ansible_hostname) }}
+
+# System Administrator Home Directory
+home=/usr/sap/{{ sap.db.sid|upper }}/home
+
+# System Administrator Login Shell
+shell=/bin/bash
+
+# Database User (SYSTEM) Password
+system_user_password={{ passwords.system | default(passwords.master) }}
+
+# System Administrator User ID
+userid={{ users.dbsidadm.uid | default () }}
+
+# ID of User Group (sapsys)
+groupid={{ users.sapsys.gid | default () }}
+# Do not start the instance after installation
+nostart=n
+
+# Restart system after machine reboot?
+autostart=y
+
+# Enable HANA repository
+repository=y
+
+# Inter Service Communication Mode
+isc_mode=standard
+
+# Enable XS Engine
+hdbinst_server_xs_engine=n
+
+# Import delivery units
+hdbinst_server_import_content=n
+
+[AddHosts]
+
+# Auto Initialize Services
+auto_initialize_services=y
+
+# Automatically assign XS Advanced Runtime roles to the hosts with database roles (y/n)
+autoadd_xs_roles=y
+
+# Import initial content of XS Advanced Runtime
+import_xs_content=y
+
+[XS_Advanced]
+
+# XS Advanced App Working Path
+xs_app_working_path=/hana/shared/{{ sap.db.sid|upper }}/xs/app_working
+
+# Organization Name For Space "SAP"
+org_name={{ sap.db.cockpit.org_name }}
+
+# XS Advanced Admin User
+org_manager_user={{ sap.db.cockpit.org_manager_user }}
+
+# Customer Space Name
+prod_space_name={{ sap.db.cockpit.prod_space_name }}
+
+# Routing Mode
+xs_routing_mode=ports
+
+# XS Advanced Admin User Password
+org_manager_password={{ passwords.org_manager | default(passwords.master) }}
+
+# XS Advanced Domain Name (see SAP Note 2245631)
+xs_domain_name=
+
+# Run Applications in SAP Space with Separate OS User (y/n)
+xs_sap_space_isolation=n
+
+# Run Applications in Customer Space with Separate OS User (y/n)
+xs_customer_space_isolation=n
+
+# XS Advanced Components
+xs_components=all
+
+# Do not start the selected XS Advanced components after installation
+xs_components_nostart=none
+

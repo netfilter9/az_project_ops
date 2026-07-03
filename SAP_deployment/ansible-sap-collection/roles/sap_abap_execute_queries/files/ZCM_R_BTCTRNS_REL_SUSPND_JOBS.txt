@@ -1,0 +1,84 @@
+*&********************************************************************&*
+* Report              : ZCM_R_BTCTRNS_REL_SUSPND_JOBS                  *
+* Title               : Suspend and Resume Jobs                        *
+* Created by          : Fathima Hussain                                *
+* Created on          : 22/09/2020                                     *
+* Purpose             : Reports BTCTRNS1 and BTCTRNS2 will be executed *
+*                       to suspend and resume background jobs resp     *
+*----------------------------------------------------------------------*
+REPORT ZCM_R_BTCTRNS_REL_SUSPND_JOBS.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS : lc_sep   TYPE char1 VALUE '|',
+              l_c_true TYPE char1 VALUE 'X'.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        lv_action TYPE char20,
+        BEGIN OF lt_ascilist OCCURS 0 ,
+          line(200),
+        END OF lt_ascilist,
+        ls_ascilist TYPE char200,
+        lt_list     TYPE TABLE OF abaplist,
+        lt_lines    TYPE TABLE OF soli,
+        ls_lines    TYPE soli.
+
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN 'SUSPEND'.  "BTCTRNS1
+      SUBMIT btctrns1 AND RETURN EXPORTING LIST TO MEMORY.
+
+      ls_output = 'SuspendJobs'.
+      APPEND ls_output TO lt_output.
+
+    WHEN 'RESUME'.   "BTCTRNS2
+      SUBMIT btctrns2 AND RETURN EXPORTING LIST TO MEMORY.
+
+      ls_output = 'ResumeJobs'.
+      APPEND ls_output TO lt_output.
+
+    WHEN OTHERS.
+  ENDCASE.
+
+
+  ls_output = 'Result'.
+  APPEND ls_output TO lt_output.
+
+  CALL FUNCTION 'LIST_FROM_MEMORY'
+    TABLES
+      listobject = lt_list
+    EXCEPTIONS
+      not_found  = 1
+      OTHERS     = 2.
+  IF sy-subrc EQ 0.
+
+    CALL FUNCTION 'LIST_TO_ASCI'
+      TABLES
+        listasci           = lt_ascilist
+        listobject         = lt_list
+      EXCEPTIONS
+        empty_list         = 1
+        list_index_invalid = 2
+        OTHERS             = 3.
+
+    LOOP AT lt_ascilist INTO ls_ascilist.
+      IF ls_ascilist IS INITIAL.
+        ls_ascilist = 'NULL'.
+      ENDIF.
+      ls_output = ls_ascilist.
+      APPEND ls_output TO lt_output.
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.

@@ -1,0 +1,13 @@
+---
+# This forces a gather facts across all hosts
+- hosts: all
+
+- hosts: std
+  vars:
+    role: std
+    root_dir: /installers 
+    virtual_hostname: "{{ sap.logical_hosts.ascs.hostname }}"
+    virtual_ip: "{{ sap.logical_hosts.ascs.ip }}"   
+  roles:
+    #- sap_tune      
+    - sap_install 

@@ -1,0 +1,26 @@
+---
+- name: main | set eth file name
+  set_fact:
+    eth_path: "{% if ansible_os_family == 'Suse' %}/etc/sysconfig/network{% else %}/etc/sysconfig/network-scripts{% endif %}"
+
+- name: main | create file
+  command: 'touch ifcfg-eth0:{{ item.eth_file }}'
+  args:
+    chdir: "{{ eth_path }}"
+  loop: "{{ additionalIp }}"
+
+- name: main | adding IP
+  blockinfile:
+    path: "{{ eth_path }}/ifcfg-eth0:{{ item.eth_file }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK added"
+    block: |
+      DEVICE=eth0:{{ item.eth_file }}
+      BOOTPROTO=static
+      ONBOOT=yes
+      IPADDR={{ item.hostIp }}
+      NETMASK={{ item.netmask | default ("255.255.255.0") }}
+  loop: "{{ additionalIp }}"
+
+- name: main | reboot servers
+  reboot:  
+  

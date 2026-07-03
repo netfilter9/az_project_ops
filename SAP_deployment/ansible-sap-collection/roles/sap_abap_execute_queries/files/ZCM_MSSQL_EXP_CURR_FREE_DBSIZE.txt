@@ -1,0 +1,162 @@
+*&********************************************************************&*
+* Report              :   ZCM_MSSQL_EXP_CURR_FREE_DBSIZE               *
+* Title               :   Capture current & free DB size for MSSQL     *
+* Created by          :   Ashwini B G                                  *
+* Created on          :   01/04/2021                                   *
+* Purpose             :   This report is used to fetch current and     *
+*                     :   free database size for MSSQL server          *
+*----------------------------------------------------------------------*
+REPORT zcm_mssql_exp_curr_free_dbsize.
+
+FORM get_config                   ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_fetch       TYPE c VALUE 'FETCH'          LENGTH 5,
+             lc_x           TYPE c VALUE 'X'              LENGTH 1,
+             lc_sep         TYPE c VALUE '|'              LENGTH 1,
+             lc_per         TYPE c VALUE ' %'             LENGTH 2,
+             lc_current     TYPE c VALUE 'Current DB[MB]' LENGTH 15,
+             lc_current_per TYPE c VALUE 'Current DB[%]'  LENGTH 15,
+             lc_free        TYPE c VALUE 'Free DB[MB]'    LENGTH 15,
+             lc_free_per    TYPE c VALUE 'Free DB[%]'     LENGTH 15,
+             lc_title       TYPE c VALUE
+             'Current & Free DB size'                     LENGTH 25.
+
+  DATA: ls_input     TYPE tab512,
+        ls_output    TYPE tab512,
+        lv_action    TYPE char10,
+        ls_conn      TYPE mssconndata,
+        lt_inparams  TYPE STANDARD TABLE OF mssseria,
+        lt_files     TYPE STANDARD TABLE OF mssfiles,
+        ls_files     TYPE mssfiles,
+        ls_view_data TYPE msscc_action_db02,
+        lv_alloc_per TYPE char10,
+        lv_free_per  TYPE char10,
+        lv_alloc     TYPE char10,
+        lv_free      TYPE char10.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read input file from Python
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_fetch. " FETCH
+
+      " FM to get connection details
+      CLEAR: ls_conn.
+      CALL FUNCTION 'SMSS_GET_CONNECTION'
+        EXPORTING
+          auto_conn = lc_x
+        IMPORTING
+          currcon   = ls_conn.
+
+      FREE: lt_inparams[].
+      APPEND ls_conn-dbschema TO lt_inparams. "object source schema
+      APPEND ls_conn-dbname TO lt_inparams.
+
+      " FM to get DB details
+      FREE: lt_files[].
+      CALL FUNCTION 'SMSS_RAT_GENERIC'
+        EXPORTING
+          conn     = ls_conn
+          objname  = 'sap_mon_sqldbfiles'    "#EC NOTEXT
+        TABLES
+          inparams = lt_inparams
+          t_result = lt_files
+        EXCEPTIONS
+          OTHERS   = 1.
+      IF sy-subrc EQ 0.
+
+* The following logic is taken from the standard code and edited
+* to suit our requirement. This can be restored if the addl logic
+* is found to be required.
+
+        CLEAR: ls_view_data.
+        ls_view_data-datatotalmb = 0.
+        ls_view_data-datallocmb = 0.
+
+        CLEAR: ls_files.
+        LOOP AT lt_files INTO ls_files.
+          IF ls_files-logdev NE lc_x.
+            " Total DB size
+            ls_view_data-datatotalmb =
+            ls_view_data-datatotalmb + ls_files-flsizemb.
+            " Allocated DB size
+            ls_view_data-datallocmb =
+            ls_view_data-datallocmb + ls_files-allocmb.
+          ENDIF.
+        ENDLOOP.
+
+        " Free DB size
+        ls_view_data-datafreemb =
+        ls_view_data-datatotalmb - ls_view_data-datallocmb.
+
+        IF ls_view_data-datafreemb < 0.
+          ls_view_data-datafreemb = 0.
+        ENDIF.
+
+        lv_alloc = ls_view_data-datallocmb.
+        lv_free  = ls_view_data-datafreemb.
+
+        " Free DB percentage
+        ls_view_data-datafreepct =
+        ( ls_view_data-datafreemb / ls_view_data-datatotalmb ) * 100 .
+
+        lv_free_per = |{ ls_view_data-datafreepct } { lc_per }|.
+
+        " Allocated DB percentage
+        ls_view_data-datallocpct = 100 - ls_view_data-datafreepct.
+
+        lv_alloc_per = |{ ls_view_data-datallocpct } { lc_per }|.
+
+
+        " Title
+        CLEAR: ls_output.
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+        " Heading Columns
+        CLEAR: ls_output.
+        CONCATENATE lc_current     lc_sep
+                    lc_current_per lc_sep
+                    lc_free        lc_sep
+                    lc_free_per INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        " Data
+        CLEAR: ls_output.
+        CONCATENATE lv_alloc     lc_sep
+                    lv_alloc_per lc_sep
+                    lv_free      lc_sep
+                    lv_free_per INTO ls_output.
+        CONDENSE ls_output.
+        APPEND ls_output TO lt_output.
+
+      ELSE.
+
+        " Title
+        CLEAR: ls_output.
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+        " Display error message if any
+        CLEAR: ls_output.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+        INTO ls_output.
+        APPEND ls_output TO lt_output.
+        RETURN.
+
+      ENDIF.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.

@@ -1,0 +1,20 @@
+# We should probably put in a crm_mon check here instead.  
+- name: ha_cluster | set hacluster password
+  user:
+    name: hacluster
+    password: "{{ passwords.admin | password_hash('sha512') }}"
+
+- name: ha_cluster | create ha cluster
+  command: "{{ item }}"
+  with_items: 
+    - pcs cluster auth {{ node1 }} {{ node2 }} -u hacluster -p {{ passwords.admin }}
+    - pcs cluster setup --name pcmk-azr {{ node1 }} {{ node2 }} --token 30000
+    - pcs cluster start --all
+  when: ansible_hostname == node1
+
+- name: ha_cluster | set quorum votes
+  command: pcs quorum expected-votes 2
+
+- name: ha_cluster | set fencing
+  command: pcs property set concurrent-fencing=true
+  when: ansible_hostname == node1

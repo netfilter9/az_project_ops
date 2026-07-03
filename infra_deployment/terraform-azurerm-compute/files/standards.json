@@ -1,0 +1,72 @@
+{
+    "disks": {
+        "data": {
+            "caching": "ReadWrite"
+        },
+        "usrsap": {
+            "caching": "None"
+        },
+        "staging": {
+            "caching": "None"
+        },
+        "appinstallation": {
+            "caching": "ReadWrite"
+        },
+        "migration": {
+            "caching": "None"
+        },
+        "sapmnt": {
+            "caching": "None"
+        },
+        "hanadata": {
+            "caching": "None"
+        },
+        "hanalog": {
+            "caching": "None",
+          	"write_accelerator_enabled" : true
+        },
+        "hanashared": {
+            "caching": "None"
+        },
+        "hanabackup": {
+            "caching": "None"
+        },
+        "dbinstallation": {
+            "caching": "ReadWrite"
+        },
+        "sqldata": {
+            "caching": "ReadOnly"
+        },
+        "sqllog": {
+            "caching": "ReadOnly",
+            "write_accelerator_enabled" : true
+        },
+        "sqlbackup": {
+            "caching": "None"
+        },
+        "sqltempdb": {
+            "caching": "ReadOnly"
+        },
+        "storage_pool": {
+            "caching": "ReadWrite"
+        },
+        "iqdata": {
+            "caching": "None"
+        },
+        "iqbackup": {
+            "caching": "None"
+        },
+        "iqtemp": {
+            "caching": "None"
+        },
+        "iqstaging": {
+            "caching": "None"
+        },
+        "ora": {
+            "caching": "None"
+        },
+        "oralog": {
+            "caching": "None"
+        }
+    }
+}

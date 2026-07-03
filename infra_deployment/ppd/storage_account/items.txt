@@ -1,0 +1,4 @@
+private endpoint
+storage account
+containers
+lifecycle

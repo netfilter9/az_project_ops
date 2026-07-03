@@ -1,0 +1,7 @@
+alter system set db_unique_name = '{{ sap.db.sid | lower }}{{ instance_ch | lower }}' scope=spfile;
+alter system set log_archive_max_processes=4 scope = both;
+alter system set local_listener='(ADDRESS=(PROTOCOL=TCP)(HOST={{ db_secondary_hostname | default(dbnode2) }})(PORT={{ port | default('1521') }}))' scope=both;
+alter system set open_cursors=2000 scope=both;
+alter database flashback on ;
+shutdown immediate;
+exit 0;

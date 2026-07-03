@@ -1,0 +1,37 @@
+- name: ssh_key_setup | create directory for ssh key
+  file:
+    path: /root/.ssh
+    state: directory
+
+- name: ssh_key_setup | ssh key generation
+  openssh_keypair:
+    path: /root/.ssh/id_rsa
+    state: present
+  register: keypair_output
+  when: ansible_hostname == node1
+
+- name: ssh_key_setup | share keys with second node
+  delegate_to: "{{ node2 }}"
+  lineinfile:
+    line: "{{ keypair_output.public_key }}"
+    path: /root/.ssh/authorized_keys
+    state: present
+    create: yes
+  when: ansible_hostname == node1
+
+- name: ssh_key_setup | ssh key generation
+  openssh_keypair:
+    path: /root/.ssh/id_rsa
+    state: present
+  register: keypair_output
+  when: ansible_hostname == node2
+
+- name: ssh_key_setup | share keys with first node
+  delegate_to: "{{ node1 }}"
+  lineinfile:
+    line: "{{ keypair_output.public_key }}"
+    path: /root/.ssh/authorized_keys
+    state: present
+    create: yes
+  when: ansible_hostname == node2
+

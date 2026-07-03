@@ -1,0 +1,63 @@
+---
+
+- name: permission | owner group change
+  file:
+    path: "{{ root_dir }}"
+    owner: "{{ sap.sid | lower }}adm"
+    group: sapsys
+    recurse: yes
+
+- name: wily introscope | unzip the file
+  unarchive:
+    src: "{{ root_dir }}/sapinst/wily/WILYISEM00P_5-70005226.ZIP"
+    dest: "{{ root_dir }}/sapinst/wily"
+    remote_src: yes
+
+- name: permission | owner group change 
+  file:
+    path: "{{ root_dir }}/sapinst/wily"
+    owner: "{{ sap.sid | lower }}adm"
+    group: sapsys
+    mode: "775" 
+    recurse: yes
+
+- name: wily introscope | Update ca-eula.txt
+  lineinfile:
+    regexp: '^CA-EULA=reject'
+    line: CA-EULA=accept
+    path: "{{ root_dir }}/sapinst/wily/ca-eula.txt"
+
+- name: Expand partition
+  shell: 
+    cmd: |
+      lvextend -L+4G /dev/rootvg/tmplv
+      xfs_growfs /tmp
+  when: platform == 'azure'
+
+- name: wily introscope | install wily agent
+  become_user: wiladm
+  become_method: su
+  command: ./introscope10.7.0.323linuxAMD64SAP.bin
+  args:
+    chdir: "{{ root_dir }}/sapinst/wily"
+
+- name: wily introscope | unzip the file
+  unarchive:
+    src: "{{ root_dir }}/sapinst/wily/WILYISMM00P_9-70005232.ZIP"
+    dest: "{{ root_dir }}/ccms/apmintroscope/"
+    remote_src: yes
+
+- name: permission | mode change
+  file:
+    path: "{{ root_dir }}/sapinst/hostagent"
+    mode: "775" 
+
+- name: wily introscope | uncar the .SAR file
+  command: ./SAPCAR_1010-70006178.EXE -xvf SAPHOSTAGENT53_53-80004822.SAR 
+  args:
+    chdir: "{{ root_dir }}/sapinst/hostagent"
+
+- name: wily introscope | install hostagent
+  command: ./saphostexec -install
+  args:
+    chdir: "{{ root_dir }}/sapinst/hostagent"

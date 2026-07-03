@@ -1,0 +1,2 @@
+default_audit_dbserver: "{{sap.db.sid}}Audit"
+default_cms_dbserver:  "{{sap.db.sid}}CMS"

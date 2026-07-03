@@ -1,0 +1,138 @@
+*&********************************************************************&*
+* Report              :   ZCM_ORACLE_TOP_TABLES_EXP                    *
+* Title               :   Top 100 Tables for Oracle Database           *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   10/07/2020                                   *
+* Purpose             :   This report is used to fetch top 100 tables  *
+*                     :   in the system                                *
+*----------------------------------------------------------------------*
+
+REPORT zcm_oracle_top_tables_exp.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'                LENGTH 1,
+           lc_top        TYPE c VALUE 'Top'              LENGTH 3,
+           lc_ownr       TYPE extents_ti-owner           VALUE '*',
+           lc_db_object  TYPE extents_ti-db_object       VALUE '*',
+           lc_typ        TYPE extents_ti-s_type          VALUE 'TABLE',
+           lc_tabspace   TYPE extents_ti-table_spc       VALUE '*',
+           lc_extent     TYPE dbflags-nr_extents         VALUE '10',
+           lc_fetch      TYPE c VALUE 'FETCH'            LENGTH 5,
+           lc_table_name TYPE c VALUE 'Table name'       LENGTH 10,
+           lc_size       TYPE c VALUE 'Size in KB'       LENGTH 15
+           ##no_text,
+           lc_no_rows    TYPE c VALUE 'Number of rows'   LENGTH 15
+           ##no_text,
+           lc_title      TYPE c VALUE 'Large Tables'     LENGTH 15,
+           lc_err_msg    TYPE c VALUE 'No Records found' LENGTH 20
+           ##no_text.
+
+DATA: ls_input     TYPE tab512,
+      ls_output    TYPE tab512,
+      lv_action    TYPE char10,
+      lv_num_tab   TYPE char10,
+      lv_count     TYPE char3,
+      lv_kbytes    TYPE char15,
+      lv_no_rows   TYPE char10,
+      lv_row_count TYPE int4,
+      lt_tablrows  TYPE TABLE OF exp_tablrows WITH HEADER LINE,
+      lt_largetabs TYPE TABLE OF extents_ti,
+      ls_largetabs TYPE extents_ti.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                   ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  " Read input file from Python
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  SPLIT ls_input AT lc_sep INTO
+  lv_action       " Action
+  lv_num_tab.     " Number of tables to be fetched
+
+  CASE lv_action.
+
+    WHEN lc_fetch.
+
+      FREE: lt_largetabs.
+
+      " FM to fetch tables
+      CALL FUNCTION 'DB_ORA_EXTENTS'
+        EXPORTING
+          owner            = lc_ownr
+          db_object        = lc_db_object
+          type             = lc_typ
+          tabspace         = lc_tabspace
+          extents          = lc_extent
+        TABLES
+          table_of_extents = lt_largetabs.
+
+      " Adding title to the output
+      CONCATENATE lc_top lv_num_tab lc_title
+                  INTO ls_output
+                  SEPARATED BY space.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+      IF lt_largetabs IS NOT INITIAL.
+
+        " Sorting the tables to get large tables
+        SORT lt_largetabs DESCENDING BY k_bytes .
+
+        " Adding headings to the output
+        CONCATENATE lc_table_name     lc_sep
+                    lc_size           lc_sep
+                    lc_no_rows
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        CLEAR lv_count.
+
+        LOOP AT lt_largetabs INTO ls_largetabs.
+
+          lv_count = lv_count + 1.
+
+          FREE lt_tablrows.
+          lt_tablrows-tabname = ls_largetabs-db_object.
+          APPEND lt_tablrows.
+
+          " FM to get the number of rows in the table
+          CALL FUNCTION 'EM_GET_NUMBER_OF_ENTRIES'
+            TABLES
+              it_tables = lt_tablrows.
+
+          IF lt_tablrows-tabrows > 0.
+            lv_no_rows    = lt_tablrows-tabrows.
+          ELSE.
+            lv_no_rows    = 0.
+          ENDIF.
+
+          lv_kbytes     = ls_largetabs-k_bytes.
+
+          CONDENSE: lv_kbytes, lv_no_rows.
+
+          CONCATENATE ls_largetabs-db_object  lc_sep
+                      lv_kbytes               lc_sep
+                      lv_no_rows
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output, lv_kbytes.
+
+          " Using lv_count to get top n tables
+          IF lv_count EQ lv_num_tab.
+            EXIT.
+          ENDIF.
+
+        ENDLOOP.
+
+      ELSE.
+        " No records found
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+      ENDIF.
+  ENDCASE.
+ENDFORM.

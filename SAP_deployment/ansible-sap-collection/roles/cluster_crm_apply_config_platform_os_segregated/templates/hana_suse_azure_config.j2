@@ -1,0 +1,127 @@
+{#
+  include common header to define nodes and STONITH approach
+#}
+{#
+  Select STONITH strategy
+#}
+{% if stonith_type == "sbd" %}
+
+{# Traditional SBD STONITH #}
+primitive stonith-sbd stonith:external/sbd \
+    params pcmk_delay_max="15" op monitor interval="15" timeout="15"
+
+{% elif stonith_type == "azure_shared_disk" %}
+
+{# Traditional SBD STONITH #}
+primitive stonith-sbd stonith:external/sbd \
+    params pcmk_delay_max="15" op monitor interval="15" timeout="15"
+
+{% elif stonith_type == "azure_fence_agent" %}      
+
+primitive rsc_st_azure stonith:fence_azure_arm \
+    params {% if msi is defined and msi == true %}msi=true {% endif %}subscriptionId={{ subscription_id }} resourceGroup={{ resource_group }} {% if msi is not defined or msi != true %}tenantId={{ tenant_id }} login={{ app_id }} passwd={{ app_pass }} {% endif %}\ 
+    pcmk_monitor_retries=4 pcmk_action_limit=3 power_timeout=240 pcmk_reboot_timeout=900 pcmk_delay_max=15 \ 
+    op monitor interval=3600 timeout=120
+
+{% endif %}
+
+{#
+  Add Azure events check if we are running on Azure 
+#}
+primitive health-azure-events ocf:heartbeat:azure-events-az \
+meta allow-unhealthy-nodes=true failure-timeout=120s \ 
+op start start-delay=90s \ 
+op monitor interval=10s \
+clone health-azure-events-cln health-azure-events
+
+{# 
+  create a local variable for the SAP instance reference 
+  e.g. D4H_HDB00
+#}
+{% set instance = sap.db.sid + "_HDB" + sap.instance_numbers.db %}
+
+{#
+    Add HANA Topology resource (monitors across both nodes)
+#}
+primitive rsc_SAPHanaTopology_{{ instance }} ocf:suse:SAPHanaTopology \
+	operations $id="rsc_sap2_{{ instance }}-operations" \
+	op monitor interval="10" timeout="600" \
+	op start interval="0" timeout="600" \
+	op stop interval="0" timeout="300" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}"
+
+clone cln_SAPHanaTopology_{{ instance }} \
+  rsc_SAPHanaTopology_{{ instance }} \
+	meta clone-node-max="1" target-role="Started" interleave="true"
+
+{#
+    Add HANA resource (monitors active instance)
+#}
+primitive rsc_SAPHana_{{ instance }} ocf:suse:SAPHana \
+	operations $id="rsc_sap_{{ instance }}-operations" \
+	op start interval="0" timeout="3600" \
+	op stop interval="0" timeout="3600" \
+	op promote interval="0" timeout="3600" \
+	op monitor interval="60" role="Master" timeout="700" \
+	op monitor interval="61" role="Slave" timeout="700" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}" \
+  PREFER_SITE_TAKEOVER="true" \
+	DUPLICATE_PRIMARY_TIMEOUT="7200" \
+  AUTOMATED_REGISTER="{{ primitives.db.automatic_register | default('true') }}"
+
+ms msl_SAPHana_{{ instance }} \
+  rsc_SAPHana_{{ instance }} \
+  meta notify="true" clone-max="2" clone-node-max="1" \
+  target-role="Started" interleave="true" priority="100"
+
+{#
+    Add rsc resource
+#}
+{# Azure configure the VIP address in the operating system #}
+primitive rsc_ip_{{ instance }} ocf:heartbeat:IPaddr2 \
+  meta target-role="Started" \
+  operations $id="rsc_ip_{{ instance }}-operations" \
+  op monitor interval="10s" timeout="20s" \
+  params ip={{ sap.logical_hosts.db.ip }}
+
+{#
+    Add appropriate "loadbalancer"
+#}
+{# Traditional Azure loadbalancer #}
+primitive rsc_nc_{{ instance }} azure-lb \
+  port=625{{ sap.instance_numbers.db }} \
+  op monitor timeout=20s interval=10 \
+  meta resource-stickiness=0
+
+{#
+  Put network resources in group
+#}
+group g_ip_{{ sap.db.sid }} rsc_ip_{{ instance }} rsc_nc_{{ instance }}
+{#
+  Ensure that the network resources and HANA master run on the same server 
+#}
+colocation col_saphana_ip_{{ instance }} 4000: g_ip_{{ sap.db.sid }}:Started \
+        msl_SAPHana_{{ instance }}:Master
+
+{#
+  Ensure hana topology is running before the hana master
+#}
+order ord_SAPHana_{{ instance }} Optional: \
+        cln_SAPHanaTopology_{{ instance }} \
+        msl_SAPHana_{{ instance }}
+
+{#
+  General configuration standards
+#}
+property cib-bootstrap-options: \
+        stonith-enabled=true \
+        stonith-timeout=900s \
+        priority-fencing-delay=30 \
+        maintenance-mode=false {% if stonith_type == "azure_fence_agent" %}\
+        concurrent-fencing=true
+rsc_defaults build-resource-defaults: \
+        resource-stickiness=1000 \
+        migration-threshold=5000       
+{% endif %}

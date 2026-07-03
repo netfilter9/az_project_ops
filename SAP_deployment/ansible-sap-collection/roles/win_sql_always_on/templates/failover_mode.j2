@@ -1,0 +1,8 @@
+USE [master]
+GO
+ALTER AVAILABILITY GROUP [{{ cluster.sqlavailabilityGroup }}]
+MODIFY REPLICA ON N'{{ node1.split('.')[0] }}' WITH (AVAILABILITY_MODE = SYNCHRONOUS_COMMIT)
+GO
+ALTER AVAILABILITY GROUP [{{ cluster.sqlavailabilityGroup }}]
+MODIFY REPLICA ON N'{{ node1.split('.')[0] }}' WITH (FAILOVER_MODE = AUTOMATIC)
+GO

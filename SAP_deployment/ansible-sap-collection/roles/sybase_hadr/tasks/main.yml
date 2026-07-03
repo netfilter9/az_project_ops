@@ -1,0 +1,128 @@
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+
+- name: packages | install unzip
+  package:
+    name:
+     - unzip
+    state: present
+  when: platform == 'aws'
+
+- name: main | create response file
+  template:
+    src: "response.j2"
+    dest: "{{ install_dir }}/{{ansible_hostname}}.rs"
+    owner: "syb{{ sap.db.sid | lower}}"
+
+- name: main | get \*.ZIP name
+  command: find {{ install_dir }}/sapinst/SYBASE -name "*.ZIP"
+  register: zip_filename
+
+- name: main | print name
+  debug:
+    var: zip_filename.stdout_lines
+
+- name: main | Unarchive zip file
+  unarchive:
+    remote_src: true
+    src: "{{ zip_filename.stdout_lines[0]}}"
+    dest: "{{ install_dir }}/sapinst/SYBASE"
+    owner: "syb{{ sap.db.sid | lower }}"
+
+- name: main | get \*.ZIP name
+  command: find "{{ install_dir }}/sapinst/SYBASE" -name "BD*"
+  register: setup_file
+
+- name: main | set installation directory facts
+  set_fact:
+    bd_file: "{{ setup_file.stdout_lines[0].split('/')[-1] }}"
+
+- name: main | print name
+  debug:
+    msg: "{{ bd_file }}"
+
+- name: Change file ownership, group and permissions
+  file:
+    path: /sybase/{{ sap.db.sid | upper }}
+    mode: '0755'
+    recurse: yes
+    state: directory
+
+- name: main | run response file
+  command:
+    cmd: "./setup.bin -f {{ install_dir }}/{{ ansible_hostname }}.rs -i silent"
+    creates: "{{ install_dir }}/sapinst/LOGS/{{ ansible_hostname }}_data_movement_output*.log"
+  args:
+    chdir: "{{ install_dir }}/sapinst/SYBASE/{{ bd_file }}/SYBASE_LINUX_X86_64"
+  register: data_movement_result
+  become: yes
+  become_user: "syb{{ sap.db.sid | lower }}"
+
+- name: main | write data movement log file
+  copy:
+    dest: "{{ install_dir }}/sapinst/LOGS/{{ ansible_hostname }}_data_movement_output_{{ ansible_date_time.iso8601 }}.log"
+    content: "{{ data_movement_result.stdout }}"
+
+- name: main | create sauser.sql
+  template:
+    src: "sa_user.j2"
+    dest: "/usr/sap/sa_user.sql"
+
+- name: main | unlock user sa
+  command:
+    cmd: ./isql -U sapsso -P {{ passwords.systemdb }} -S {{ sap.db.sid | upper }} -X -i "/usr/sap/sa_user.sql"
+    creates: "{{ install_dir }}/sapinst/LOGS/{{ ansible_hostname }}_sa_user_output*.log"
+  no_log: true
+  args:
+    chdir: /sybase/{{sap.db.sid | upper}}/{{ sap.db.sybase_ocs | default('OCS-16_0') }}/bin/
+  register: sa_user_result
+  environment:
+    LANG: 'us_english.utf8'
+    SYBASE_OCS: '{{ sap.db.sybase_ocs | default("OCS-16_0") }}'
+    LIB: '/sybase/{{ sap.db.sid | upper }}/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib:'
+    LD_LIBRARY_PATH: '/sybase/{{ sap.db.sid | upper }}/{{ sap.db.sybase_ase | default("ASE-16_0") }}/lib:/sybase/{{ sap.db.sid | upper }}/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib:/sybase/{{ sap.db.sid | upper }}/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib3p64:/sybase/{{ sap.db.sid | upper }}/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/lib3p:'
+    SYBASE: '/sybase/{{ sap.db.sid | upper }}'
+    SYBASE_ASE: '{{ sap.db.sybase_ase | default("ASE-16_0") }}'
+  become: yes
+  become_user: "syb{{ sap.db.sid | lower }}"
+
+- name: main | write sa user log file
+  copy:
+    dest: "{{ install_dir }}/sapinst/LOGS/{{ ansible_hostname }}_sa_user_output_{{ ansible_date_time.iso8601 }}.log"
+    content: "{{ sa_user_result.stdout }}"
+
+- name: main | create {{ server_type }} response file
+  template:
+    src: "{{ server_type }}_response.j2"
+    dest: "{{ install_dir }}/{{ansible_hostname}}_{{ server_type }}.rs"
+    owner: "syb{{ sap.db.sid | lower}}"
+
+- name: main | run {{ server_type }} response file
+  command:
+    cmd: ./setuphadr {{ install_dir }}/{{ansible_hostname}}_{{ server_type }}.rs
+    creates: "{{ install_dir }}/sapinst/LOGS/hadr_{{ server_type }}*.log"
+  args:
+    chdir: /sybase/{{sap.db.sid | upper}}/{{ sap.db.sybase_ase | default('ASE-16_0') }}/bin/
+  environment:
+    LANG: 'us_english.utf8'
+    SYBASE_OCS: '{{ sap.db.sybase_ocs | default("OCS-16_0") }}'
+    SYBASE: '/sybase/{{ sap.db.sid | upper }}'
+    SYBASE_ASE: '{{ sap.db.sybase_ase | default("ASE-16_0") }}'
+    SAP_JRE8: '/sybase/{{ sap.db.sid | upper }}/shared/SAPJRE-8_1_062_64BIT'
+  register: hadr_result
+  become: yes
+  become_user: "syb{{ sap.db.sid | lower }}"
+
+- name: main | write hadr primary log file
+  copy:
+    dest: "{{ install_dir }}/sapinst/LOGS/hadr_{{ server_type }}_{{ ansible_date_time.iso8601 }}.log"
+    content: "{{ hadr_result.stdout }}"
+
+- name: main | add DR_ADMIN entry to SecureStore
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - su - {{ sap.sid|lower }}adm -c "rsecssfx put DB_CONNECT/SYB/DR_USER DR_admin -plain"
+    - su - {{ sap.sid|lower }}adm -c "rsecssfx put DB_CONNECT/SYB/DR_PASSWORD {{ passwords.systemdb }}"
+

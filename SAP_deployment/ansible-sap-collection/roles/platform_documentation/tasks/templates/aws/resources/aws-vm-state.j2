@@ -1,0 +1,16 @@
+{% for vm in jsoninputdata.deployment.server_groups %}
+{%- for host in jsoninputdata.deployment.server_groups[vm].hosts -%}
+{% set datafound = namespace(isdatapresent=0) %}
+{%- for instance_name in tfstate_vm_list %}
+{%- if host == instance_name %}
+{%- set datafound.isdatapresent = 1 %}
+{% endif %}
+{% endfor %}
+{%- if datafound.isdatapresent == 0 %}
+{{ 0 }}
+{% endif %}
+{%- if datafound.isdatapresent == 1 %}
+{{ 1 }}
+{% endif %}
+{% endfor %}
+{% endfor %}

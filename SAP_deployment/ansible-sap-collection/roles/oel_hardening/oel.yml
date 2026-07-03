@@ -1,0 +1,15 @@
+---
+- hosts: oel
+  become: yes
+  become_method: sudo
+  gather_facts: true
+  ignore_errors: false
+  ignore_unreachable: true
+  vars:
+    ignore_errors: false
+    ignore_unreachable: true
+    oelcis_level1: true
+    oelcis_level2: true
+  roles:
+    - role: oel_hardening
+  

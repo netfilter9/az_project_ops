@@ -1,0 +1,9 @@
+{
+{% for lscpu in lscpu_output.stdout_lines -%}
+{% if loop.index == loop.length %}
+ "{{ lscpu.split(':')[0] }}":"{{ lscpu.split(':')[1] | trim }}"
+{% else %}
+ "{{ lscpu.split(':')[0] }}":"{{ lscpu.split(':')[1] | trim }}",
+{% endif %}
+{% endfor %}
+}

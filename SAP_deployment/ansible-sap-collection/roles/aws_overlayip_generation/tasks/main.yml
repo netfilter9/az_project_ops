@@ -1,0 +1,35 @@
+---
+# tasks file for aws-overlayip-generation
+- name: set fact dbtype
+  set_fact:
+    dbtype: "{{ sap.db.type | lower }}"
+
+- name: Replace ascs/ers entries with empty string in /etc/hosts
+  lineinfile:
+       path: /etc/hosts
+       regexp:   "{{ item }}"
+       state: absent
+  with_items: 
+     - "{{ sap.logical_hosts.ascs.hostname }}"
+     - "{{ sap.logical_hosts.ers.hostname }}"
+
+- name: Replace db entries with empty string in /etc/hosts 
+  lineinfile:
+       path: /etc/hosts
+       regexp:   "{{ item }}"
+       state: absent
+  with_items: 
+     - "{{ sap.logical_hosts.db.hostname }}"
+  when: dbtype != 'sybase'  
+
+- name: "Build hosts file for ascs and ers"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ item.ip }} {{ item.name }}" state=present
+  with_items: 
+    - { ip: "{{ ascs_overlay_ip }}", name: "{{ sap.logical_hosts.ascs.hostname }}" }
+    - { ip: "{{ ers_overlay_ip }}", name: "{{ sap.logical_hosts.ers.hostname }}" }
+
+- name: "Build hosts file for db"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ item.ip }} {{ item.name }}" state=present
+  with_items: 
+    - { ip: "{{ db_overlay_ip }}", name: "{{ sap.logical_hosts.db.hostname }}" }
+  when: dbtype != 'sybase'

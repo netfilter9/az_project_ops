@@ -1,0 +1,78 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "os_account": {
+            "title": "Operating System Account Details",
+            "description": "provides key information about the admin user",
+            "type": "object",
+            "examples": [
+                {
+                    "admin_username": "",
+                    "ssh_key_file": ""
+                }
+            ],
+            "properties": {
+                "admin_username": {
+                    "title": "Admin username",
+                    "description": "name of the admin user",
+                    "type": "string",
+                    "examples": [
+                        "admin_accenture"
+                    ]
+                },
+                "ssh_key_file": {
+                    "title": "Public SSH key path",
+                    "description": "path to local ssh key to add to authorised keys file",
+                    "type": "string",
+                    "default": "~/.ssh/id_rsa.pub"
+                },
+                "admin_password": {
+                    "type": "string",
+                    "pattern": "^secret:*"
+                },
+                "password_key_vault": {
+                    "title": "Password Key Vault",
+                    "description": "key vault containing password",
+                    "type": "object",
+                    "properties": {
+                        "key_vault_name": {
+                            "title": "Key Vault Name",
+                            "description": "name of the key vault containing the password",
+                            "type": "string",
+                            "examples": [
+                                "//TODO"
+                            ]
+                        },
+                        "resource_group_name": {
+                            "$ref": "fields.json#/definitions/resource_group_name",
+                            "examples": [
+                                "example-rg-scNN"
+                            ]
+                        },
+                        "secret_name": {
+                            "title": "Secret Key",
+                            "description": "name of the secret which contains the password",
+                            "type": "string",
+                            "examples": [
+                                "mynotsosecretstring"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "key_vault_name",
+                        "resource_group_name",
+                        "secret_name"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "admin_username"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

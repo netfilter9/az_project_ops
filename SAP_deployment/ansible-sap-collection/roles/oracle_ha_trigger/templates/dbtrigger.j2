@@ -1,0 +1,11 @@
+create trigger SAP{{ sap.db.sid | upper }} after startup on database
+declare
+role varchar(30);
+begin
+select database_role into role from v$database;
+if role='PRIMARY' then
+DBMS_SERVICE.START_SERVICE('{{ sap.db.sid | upper }}');
+end if;
+end;
+/
+exit 0;

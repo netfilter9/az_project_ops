@@ -1,0 +1,33 @@
+---
+
+- name: validate that the domain vars have been supplied
+  assert:
+    that:
+      - domain is defined
+      - domain.fqdn is defined
+      - domain.controllers is defined
+      - domain.controllers | length
+
+- name: join windows active directory domain
+  win_domain_membership:
+    dns_domain_name: "{{ dns_domain_name }}"
+    domain_admin_user: "{{ domain_join_username }}@{{ dns_domain_name }}"
+    domain_admin_password: "{{ domain_join_password }}"
+    domain_ou_path: "{{ win_domain_ou_path }}"
+    state: domain
+  register: win_domain_state
+
+- name: debug win_domain_state
+  debug:
+    var: win_domain_state
+    verbosity: "{{ verbosity_level }}"
+
+- name: reboot system if joined to the domain
+  win_reboot:
+  when:
+    - win_domain_state.reboot_required
+
+- name: wait for connection after reboot
+  wait_for_connection:
+  when:
+    - win_domain_state.reboot_required

@@ -1,0 +1,80 @@
+- name: public_hostname_resolution
+  lineinfile:
+    line: '[public_hostname_resolution]'
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+
+- name: public_hostname_resolution_configurations | configuration for public host name
+  lineinfile:
+    line: map_{{ item }} = {{ hostvars[item]['ansible_default_ipv4']['address'] }}
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+  loop: "{{ groups['db'] }}"
+
+- name: anf_file_configuration | azure net app file configurations
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini
+    marker: "# {mark} ANF Configuration"
+    block: |     
+      [fileio]
+      max_parallel_io_requests = 128
+      async_read_submit = on
+      async_write_submit_active = on
+      async_write_submit_blocks = all
+      [persistence]
+      datavolume_striping = true     
+      datavolume_striping_size_gb = 15000
+
+- name: start firewall services
+  systemd:
+    name: firewalld
+    enabled: yes
+    state: started
+  when: ansible_os_family == 'RedHat'
+
+- name: enable firewall ports
+  firewalld:
+    zone: public
+    port: "{{ item.port }}/tcp"
+    permanent: "{{ item.permanent }}"
+    state: disabled
+  loop: 
+    - { port: "3{{ sap.instance_numbers.hana }}01", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}01", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}03", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}03", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}07", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}07", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}13", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}13", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}15", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}15", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}17", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}17", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}40", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}40", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}41", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}41", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}42", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}42", permanent: no }
+    - { port: "1128", permanent: yes }
+    - { port: "1128", permanent: no }
+    - { port: "1129", permanent: yes }
+    - { port: "1129", permanent: no }
+    - { port: "4{{ sap.instance_numbers.hana }}02", permanent: yes }
+    - { port: "4{{ sap.instance_numbers.hana }}02", permanent: no }
+    - { port: "4{{ sap.instance_numbers.hana }}01", permanent: yes }
+    - { port: "4{{ sap.instance_numbers.hana }}01", permanent: no }
+    - { port: "4{{ sap.instance_numbers.hana }}07", permanent: yes }
+    - { port: "4{{ sap.instance_numbers.hana }}07", permanent: no }
+    - { port: "4{{ sap.instance_numbers.hana }}03", permanent: yes }
+    - { port: "4{{ sap.instance_numbers.hana }}03", permanent: no }
+    - { port: "4{{ sap.instance_numbers.hana }}40", permanent: yes }
+    - { port: "4{{ sap.instance_numbers.hana }}40", permanent: no }
+    - { port: "5{{ sap.instance_numbers.hana }}13", permanent: yes }
+    - { port: "5{{ sap.instance_numbers.hana }}13", permanent: no }
+    - { port: "5{{ sap.instance_numbers.hana }}14", permanent: yes }
+    - { port: "5{{ sap.instance_numbers.hana }}14", permanent: no }
+    - { port: "3{{ sap.instance_numbers.hana }}10", permanent: yes }
+    - { port: "3{{ sap.instance_numbers.hana }}10", permanent: no }
+    - { port: "5{{ sap.instance_numbers.hana }}02", permanent: yes }
+    - { port: "5{{ sap.instance_numbers.hana }}02", permanent: no }
+  when: ansible_os_family == 'RedHat'

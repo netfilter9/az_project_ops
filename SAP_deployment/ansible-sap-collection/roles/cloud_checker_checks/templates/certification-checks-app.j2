@@ -1,0 +1,48 @@
+[
+{% if app_vmsize_list in storage_list %}
+{
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ sid }}",
+        "Category" : "OS",
+        "Description": "checking whether APP VM is Certified or not",
+        "Current Value": "{{ output_vmsize.stdout }} is certified",
+        "Recommended Value": "VM must be SAP Certified"
+}
+{% else %}
+{ 
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ sid }}",
+        "Category" : "OS",   
+        "Description": "checking whether APP VM is Certified or not",
+        "Current Value": "{{ output_vmsize.stdout }} not supported for SAP",
+        "Recommended Value": "Best Practice to use supported VM's. Refer Note - 1928533"
+}
+{% endif %},
+
+{% for disk in disk_list %}
+{% for item in disk %}
+{% if disk_list == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the disk storage account type",
+    "Current Value": "Error: {{ output_storage.stderr }}",
+    "Recommended Value": "Upgrade to Premium disks as Premium SSDs are high-performance Solid-State Drive (SSD) based Storage designed to support I/O intensive workloads"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "OS",
+    "Description": "Checking the disk storage account type",
+    "Current Value": "{{ item.Name }}: {{ item.StorgaeAccountType }}",
+    "Recommended Value": "Upgrade to Premium disks as Premium SSDs are high-performance Solid-State Drive (SSD) based Storage designed to support I/O intensive workloads"
+}
+{% endif %}
+{% endfor %}
+{% if not loop.last %}
+,
+{% endif %}
+{% endfor %}
+]

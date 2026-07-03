@@ -1,0 +1,696 @@
+[
+{% if output_host.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking hostname details",
+    "Current Value": "Error: {{ output_host.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking hostname details",
+    "Current Value": "{{ output_host.stdout }}"
+}
+{% endif %},
+{% if output_fqdn.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking fqdn details ",
+    "Current Value": "Error: {{ output_fqdn.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking fqdn details",
+    "Current Value": "{{ output_fqdn.stdout }}"
+}
+{% endif %}, 
+
+{% if output_privateip.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking Private IP details ",
+    "Current Value": "Error: {{ output_privateip.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking Private IP details",
+    "Current Value": "{{ output_privateip.stdout }}"
+}
+{% endif %},
+{% if output_OSRelease.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking OS Release details ",
+    "Current Value": "Error: {{ output_OSRelease.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking OS Release details ",
+    "Current Value": {{ output_OSRelease.stdout }}
+}
+{% endif %},
+{% if output_OSVersion.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking OS Kernel Version",
+    "Current Value": "Error: {{ output_OSVersion.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking OS Kernel Version",
+    "Current Value": "{{ output_OSVersion.stdout }}"
+}
+{% endif %},
+{% if output_NslookupIP.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking NS lookup IP details",
+    "Current Value": "Error: {{ output_NslookupIP.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking NS lookup IP details",
+    "Current Value": "{{ output_NslookupIP.stdout }}"
+}
+{% endif %},
+{% if output_cpucount.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking CPU count",
+    "Current Value": "Error: {{ output_cpucount.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking CPU count",
+    "Current Value": "{{ output_cpucount.stdout }}"
+}
+{% endif %},
+{% if output_ntpsync.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the NTP syncronization",
+    "Current Value": " Error: {{ output_ntpsync.stderr | upper }}",
+    "Recommended Value": "YES"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the NTP syncronizatione",
+    "Current Value": "{{ output_ntpsync.stdout | upper }}",
+    "Recommended Value": "YES"
+}
+{% endif %},
+{% if output_chronyconf.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the chronyconf ",
+    "Current Value": " Error: {{ output_chronyconf.stderr.split(':')[-1]  }}",
+    "Recommended Value": "Normal"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the chronyconf",
+    "Current Value": "{{ output_chronyconf.stdout_lines }}",
+    "Recommended Value": "Normal"
+}
+{% endif %},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the OS Release Server",
+    "Current Value": "{{ output_releaseserver.stdout }}"
+},
+{% if out_exclude.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Looking for exclude option in conf file",
+    "Current Value": "No such exclude entry present in the conf file "
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Looking for exclude option in conf file",
+    "Current Value": "{{ out_exclude.stdout }}"
+}
+{% endif %},
+{% if output_swap.stdout == ' ' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the size of swap in the system",
+    "Current Value": "{{ output_swap.stdout }}G"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the size of swap in the system",
+    "Current Value": "{{ output_swap.stdout }}G"
+}
+{% endif %},
+
+{% if output_ulimit.stdout == '1024' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "checking if the default Limit for Open files is 1024",
+    "Current Value": "{{ output_ulimit.stdout }}",
+    "Recommended Value": "1024"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "checking if the default Limit for Open files is 1024",
+    "Current Value": "{{ output_ulimit.stdout }}",
+    "Recommended Value": "1024"
+}
+{% endif %},
+{% if output_saptune.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "checking if saptune enabled in the system",
+    "Current Value": "Saptune not Enabled in the server",
+    "Recommended Value": "Saptune should be Enabled in the server"
+}
+{% else %}
+    {% if output_saptune.stdout == 'HANA' or 'NETWEAVER' %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "{{ ansible_os_family }}",
+            "Description": "checking if saptune enabled in the system",
+            "Current Value": "{{ output_saptune.stdout }}",
+	        "Recommended Value": "Saptune Enabled in the server"
+        }
+    {% else %}
+        {
+            "HostName" : "{{ ansible_hostname }}",
+            "SID": "{{ sid }}",
+            "Category" : "{{ ansible_os_family }}",
+            "Description": "checking if saptune enabled in the system",
+            "Current Value": "{{ output_saptune.stdout }}",
+	        "Recommended Value": "Saptune Enabled in the server"
+        }
+    {% endif %}
+{% endif %},
+{% if output_date.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetch date ",
+    "Current Value": "Error: {{ output_date.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetch date ",
+    "Current Value": "{{ output_date.stdout }}"
+}
+{% endif %},
+{% if SDA_disk_size.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDA Disk Size ",
+    "Current Value": " Error : {{ SDA_disk_size.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDA Disk Size ",
+    "Current Value": "{{ SDA_disk_size.stdout }}"
+}
+{% endif %},
+{% if SDA_partition_size.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDA / Partition Size",
+    "Current Value": "Error : {{ SDA_partition_size.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDA / Partition Size ",
+    "Current Value": "{{ SDA_partition_size.stdout_lines }}"
+}
+{% endif %},
+{% if SDB_disk_size.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDB Disk Size",
+    "Current Value": " Error : {{ SDB_disk_size.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDB Disk Size",
+    "Current Value": "{{ SDB_disk_size.stdout }}"
+}
+{% endif %},
+{% if SDB_partition_size.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDB/ partition Size",
+    "Current Value": " Error : {{ SDB_partition_size.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the SDB/ partition Size",
+    "Current Value": "{{ SDB_partition_size.stdout_lines }}"
+}
+{% endif %},
+{% if output_eth0details.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the eth0 details ",
+    "Current Value": "Error: {{ output_eth0details.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the eth0 details ",
+    "Current Value": "{{ output_eth0details.stdout_lines }}"
+}
+{% endif %},
+{% if output_mdatpstatus.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the mdatp status details ",
+    "Current Value": "mdatp is not enabled"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the mdatp status details ",
+    "Current Value": "{{ output_mdatpstatus.stdout }}"
+}
+{% endif %},
+{% if output_waagentstatus.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Waagent status ",
+    "Current Value": "Error: inactive(dead) {{ output_waagentstatus.stderr }}",
+    "Recommended Value": " Active(Running) "
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Waagent status ",
+    "Current Value": "{{ output_waagentstatus.stdout.split(':')[1]  }}",
+    "Recommended Value": "Active(Running)"
+}
+{% endif %},
+{% if output_waagentenabled.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Waagent Enabled (Auto Update) status ",
+    "Current Value": " Error: inactive(dead) {{ output_waagentenabled.stderr }}",
+    "Recommended Value": " Enabled "
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Waagent Enabled (Auto Update) status ",
+    "Current Value": "{{ output_waagentenabled.stdout }}",
+    "Recommended Value": "Enabled "
+}
+{% endif %},
+{% if output_fstab.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the fstab status details ",
+    "Current Value": " Error:  {{ output_fstab.stderr }}",
+    "Recommended Value": "There are no mounts with nointr|nofail|noatime"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the fstab status details ",
+    "Current Value": "{{ output_fstab.stdout }}",
+    "Recommended Value": "atleast one mount with status “noauto|nofail”"
+}
+{% endif %},
+{% if output_sysstat.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Sysstat status details ",
+    "Current Value": "Package not installed"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Sysstat status details ",
+    "Current Value": "{{ output_sysstat.stdout }}",
+    "Recommended Value": "Enable if service is inactive"
+}
+{% endif %},
+
+{% if output_crond.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the crond status details",
+    "Current Value": "Error: {{ output_crond.stderr }}",
+    "Recommended Value": "Enabled"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the crond status details",
+    "Current Value": "{{ output_crond.stdout }}",
+    "Recommended Value": "Enable as per customer requirement"
+}
+{% endif %},
+{% if output_puppetagent.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the puppet agent status details",
+    "Current Value": "Package is not installed"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the puppet agent status details ",
+    "Current Value": "{{ output_puppetagent.stdout }}",
+    "Recommended Value": "Enable as per customer requirement"
+}
+{% endif %},
+{% if output_rsyslog.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the rsyslog agent status details",
+    "Current Value": "{{ output_rsyslog.stderr }}",
+    "Recommended Value": "Enabled (Running)"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the rsyslog agent status details",
+    "Current Value": "{{ output_rsyslog.stdout.split(':')[1] }}",
+    "Recommended Value": "Enabled (Running)"
+}
+{% endif %},
+{% if output_Kdump.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Kdump status details",
+    "Current Value": "Error: {{ output_Kdump.stderr }}",
+    "Recommended Value": "presently inactive"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the Kdump status details ",
+    "Current Value": "{{ output_Kdump.stdout.split(':')[1] }}",
+    "Recommended Value": "Enable as per customer requirement"
+}
+{% endif %},
+
+{% if output_firewall.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the firewall status",
+    "Current Value": "Error: {{ output_firewall.stderr }}",
+    "Recommended Value": "Stopped (inactive)"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking  the firewall status",
+    "Current Value": "{{ output_firewall.stdout.split(':')[1] }}",
+    "Recommended Value": "Stopped (inactive)"
+}
+{% endif %},
+{% if output_Splunk.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the splunk process details",
+    "Current Value": "Package not installed"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the splunk process details",
+    "Current Value": "{{ output_Splunk.stdout }}",
+    "Recommended Value": "Enable as per customer requirement"
+}
+{% endif %},
+{% if output_nfsdomain.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the nfs domain Value details",
+    "Current Value": "Error: {{ output_nfsdomain.stdout }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the nfs domain Value details",
+    "Current Value": "{{ output_nfsdomain.stdout }}"
+}
+{% endif %},
+{% if output_floopy.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking the floopy module details",
+    "Current Value": "Error: {{ output_floopy.stderr.split(':')[-1] }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Checking  the floopy module details",
+    "Current Value": "{{ output_floopy.stdout }}"
+}
+{% endif %},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Last date and time OS patches applied on VMs",
+    "Current Value": "{{ ospatches.stdout }}"
+},
+{% if fsspace.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching File system details on which space utilisation is more that 90%",
+    "Current Value": "No such Filesystem has 90% utilized"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching File system details on which space utilisation is more that 90%",
+    "Current Value": "{{ fsspace.stdout }}"
+}
+{% endif %},
+{% if ntp_server.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Extracting NTP server details",
+    "Current Value": "No Server details found"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Extracting NTP server details",
+    "Current Value": "{{ ntp_server.stdout }}"
+}
+{% endif %},
+{% if out_anf.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching ANF details",
+    "Current Value": "No ANF mounts are present"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching ANF details",
+    "Current Value": "{{ out_anf.stdout }}"
+}
+{% endif %},
+{% if crontab.stdout == '' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching crontab details",
+    "Current Value": "Error: {{ crontab.stderr }}"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching crontab details",
+    "Current Value": "{{ crontab.stdout }}"
+}
+{% endif %},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Fetching Password expires information for sidadm",
+    "Current Value": "{{ psexpires.stdout }}"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Average CPU Utilization",
+    "Current Value": "{{ cpuutilization.stdout }}"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Average Memory Utilization",
+    "Current Value": "{{ memutilization.stdout }}"
+},
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ sid }}",
+    "Category" : "{{ ansible_os_family }}",
+    "Description": "Average SWAP Utilization",
+    "Current Value": "SWAP Usage: {{ swaputilization.stdout }}"
+}
+]

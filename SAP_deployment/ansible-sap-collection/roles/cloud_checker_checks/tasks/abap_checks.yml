@@ -1,0 +1,43 @@
+####    ###########################################################################   #####
+####    ############################ ABAP CHECKS #############################        #####
+####    ###########################################################################   #####
+
+- name: main | abap-checks
+  block: 
+      - name: set input file path and format
+        set_fact:
+           python_file_path: "{{ lookup('first_found','global_export.py') }}"
+           input: "{{ abapchecks | to_json }}" 
+           input_path: ../json-path
+
+      - name: set input to json format
+        set_fact:
+           jsoninput: "{{ input | to_json}}"
+
+      - name: get json output
+        debug:
+          var: jsoninput
+
+      - name: command to run abap checks
+        command: python {{ python_file_path }} {{ jsoninput }} 
+        register: output_abap_checks
+        become: true
+        delegate_to: localhost
+
+      - name: get output of abap checks
+        debug:
+          var: output_abap_checks
+      
+      - name: copy contents to a file
+        copy:
+          content: "{{ output_abap_checks.stdout | string }}"
+          dest: "{{ input_path }}/Abap-checks/abap.json"
+        delegate_to: localhost
+
+
+  when: "'pas' in group_names" 
+
+
+
+
+    

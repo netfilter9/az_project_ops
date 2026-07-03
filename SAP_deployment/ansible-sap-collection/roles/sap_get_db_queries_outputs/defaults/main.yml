@@ -1,0 +1,49 @@
+---
+ defaults file for get-db-commands-outputs
+sybase_queries:
+  - { name: "get-sybase-version", query: "select @@version" }
+  - { name: "get-sybase-logmode-check", query: "sp_helpdb SAS" }
+  - { name: "get-sybase-db-size", query: "sp_spaceused" }
+  - { name: "update-sybase-statistics",query: "run_update_index_stats_win.sql"}
+  - { name: "selective-sybase-tables",query: "use SAS go select count(*) row_count from {{ default_table_name_sybase }}" }
+  - { name: "get-sybase-datafile-layout",query: "sp_helpdevice" }
+
+db2_queries:
+  - { name: "get-db2-version", query: "db2 connect to {{ db_sid | lower }}" }
+  - { name: "get-db2-datafile-layout", query: "db2pd -d {{ db_sid }} -storagepaths" }
+  - { name: "fetch-db2-db-size", query: "db2 'CALL GET_DBSIZE_INFO(?, ?, ?, 0)'" }
+  - { name: "update-db2-statistics", query: "db2 REORGCHK UPDATE STATISTICS ON TABLE ALL" }
+  - { name: "selective-db2-tables", query: "db2 'select count(*) row_count from SAP{{ db_sid }}.{{ default_table_name_db2 }}'" }
+  - { name: "get_db2_last_backup", query: "db2 'select DB_NAME,LAST_BACKUP from sysibmadm.SNAPDB'" }
+
+oracle_queries:
+  - { name: "get-oracle-version", query: "select banner from V$version;" }
+  - { name: "get-oracle-datafile-layout", query: "select name, file#, status, enabled from v$datafile;" }
+  - { name: "get-oracle-log-mode", query: "SELECT NAME, LOG_MODE, OPEN_MODE, DATABASE_ROLE, PLATFORM_NAME  from V$database;" }
+  - { name: "fetch-oracle-db-size", query: "SELECT SUM(BYTES)/1024/1024/1024 AS DBSIZE_IN_GB FROM dba_data_files;" }
+  - { name: "update-oracle-statistics", query: "EXEC DBMS_STATS.GATHER_SCHEMA_STATS('{{ sap_schema_owner }}');" }
+  - { name: "selective-oracle-tables", query: "select count(*) row_count from {{ default_table_name_oracle }};" }
+  - { name: "get-oracledb-last-log-backup", query: "SELECT NAME, COMPLETION_TIME FROM V$ARCHIVED_LOG WHERE COMPLETION_TIME = (SELECT MAX(COMPLETION_TIME) FROM V$ARCHIVED_LOG WHERE COMPLETION_TIME <= SYSDATE);"}
+  - { name: "get-oracledb-last-backup", query: "SELECT * FROM (select FILE_TYPE,STATUS, BS_STATUS, COMPLETION_TIME from V$BACKUP_FILES where FILE_TYPE = 'DATAFILE' ORDER BY COMPLETION_TIME DESC) FETCH NEXT 1 ROWS ONLY;"}
+
+oracle_queries_txt:
+  - { name: "oracle-delta-growth", query: "select b.tsname tablespace_name , MAX(b.used_size_mb) cur_used_size_mb , round(AVG(inc_used_size_mb),2)avg_increas_mb  from  ( SELECT a.days,a.tsname , used_size_mb , used_size_mb - LAG (used_size_mb,1) OVER ( PARTITION BY a.tsname ORDER BY a.tsname,a.days) inc_used_size_mb from ( SELECT TO_CHAR(sp.begin_interval_time,'MM-DD-YYYY') days  ,ts.tsname ,MAX(round((tsu.tablespace_usedsize* dt.block_size )/(1024*1024),2)) used_size_mb from dba_hist_tbspc_space_usage  tsu , dba_hist_tablespace_stat  ts ,dba_hist_snapshot  sp, dba_tablespaces  dt   where tsu.tablespace_id= ts.ts# AND tsu.snap_id = sp.snap_id AND ts.tsname = dt.tablespace_name AND sp.begin_interval_time > sysdate-7 GROUP BY TO_CHAR(sp.begin_interval_time,'MM-DD-YYYY'), ts.tsname ORDER BY ts.tsname, days ) a) b GROUP BY b.tsname ORDER BY b.tsname;" }
+  - { name: "get-list-of-top-lob", query: "select chunk, owner, table_name from ALL_LOBS WHERE owner = 'SAPSR3' and ROWNUM <= 10 order by chunk desc;" }
+
+sql_queries:
+  - { name: "get-sql-version", query: "SELECT @@version" }
+  - { name: "get-datafile-layout", query: "SELECT DB_NAME(database_id) AS database_name,type_desc,name AS FileName,physical_name 'File Location',size/128 AS CurrentSizeMB FROM sys.master_files" }
+  - { name: "get-log-mode", query: "SELECT name, recovery_model_desc FROM sys.databases;" }
+  - { name: "fetch-db-size", query: "exec sp_spaceused" }
+  - { name: "update-statistics", query: "use {{ db_sid }}; EXEC sp_updatestats" }
+  - { name: "selective-tables", query: "select count(*) row_count from {{ sap.source.db_sid }}.{{ default_table_name_sql }}" }
+  - { name: "get-sqldb-last-log-backup", query: "use msdb; SELECT backupset.database_name,MAX(CASE WHEN backupset.type = 'D' THEN backupset.backup_finish_date ELSE NULL END) AS LastFullBackup,MAX(CASE WHEN backupset.type = 'I' THEN backupset.backup_finish_date ELSE NULL END) AS LastDifferential,MAX(CASE WHEN backupset.type = 'L' THEN backupset.backup_finish_date ELSE NULL END) AS LastLog FROM backupset GROUP BY backupset.database_name ORDER BY backupset.database_name DESC"}
+
+hana_queries:
+  - { name: "get-hana-logmode-check" }
+  - { name: "get-hana-db-size" }
+  - { name: "selective-hana-tables" }
+  - { name: "get-hana-datafile-layout" }
+  - { name: "get-last-log-backup" }
+  - { name: "get-hanadb_last_backup" }
+

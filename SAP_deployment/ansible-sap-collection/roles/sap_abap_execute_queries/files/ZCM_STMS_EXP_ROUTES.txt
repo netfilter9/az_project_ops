@@ -1,0 +1,370 @@
+*&*******************************************************************&*
+* Report              :   ZCM_STMS_EXP_ROUTES                         *
+* Title               :   STMS Configurations                         *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   04/09/2020                                  *
+* Purpose             :   This report is used to migrate STMS configs *
+*---------------------------------------------------------------------*
+REPORT ZCM_STMS_EXP_ROUTES.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_active     TYPE as4local VALUE 'A',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input    TYPE tab512,
+        ls_output   TYPE tab512,
+        ls_prefinal TYPE string,
+        lv_action   TYPE char8,
+        lv_version  TYPE tceversion.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+      SELECT * FROM tcevers INTO TABLE @DATA(lt_tcevers)
+         WHERE active = @lc_active.
+      PERFORM set_data TABLES lt_tcevers lt_output
+      USING 'TCEVERS'
+      CHANGING ls_output .
+
+      IF lt_tcevers  IS NOT INITIAL.
+        READ TABLE lt_tcevers INTO DATA(ls_tcevers) INDEX 1.
+        lv_version = ls_tcevers-version.
+      ENDIF.
+
+
+*      PERFORM read_data TABLES lt_output
+*      USING 'TCEVERS'
+*      CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM tceverst INTO TABLE @DATA(lt_tceverst)
+        WHERE version = @lv_version.
+      PERFORM set_data TABLES lt_tceverst lt_output
+          USING 'TCEVERST'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM tcesyst INTO TABLE @DATA(lt_tcesyst)
+        WHERE version = @lv_version.
+      PERFORM set_data TABLES lt_tcesyst lt_output
+          USING 'TCESYST'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM tcesystt INTO TABLE @DATA(lt_tcesystt)
+        WHERE version = @lv_version.
+      PERFORM set_data TABLES lt_tcesystt lt_output
+          USING 'TCESYSTT'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      SELECT * FROM tcetral INTO TABLE @DATA(lt_tcetral)
+        WHERE version = @lv_version.
+
+      PERFORM set_data TABLES lt_tcetral lt_output
+          USING 'TCETRAL'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      SELECT * FROM tcetralt INTO TABLE @DATA(lt_tcetralt)
+        WHERE version = @lv_version.
+
+      PERFORM set_data TABLES lt_tcetralt lt_output
+          USING 'TCETRALT'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM tcerele INTO TABLE @DATA(lt_tcerele)
+        WHERE version = @lv_version.
+
+      PERFORM set_data TABLES lt_tcerele lt_output
+          USING 'TCERELE'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+
+	SELECT * FROM tcedeli INTO TABLE @DATA(lt_tcedeli)
+        WHERE version = @lv_version.
+
+      PERFORM set_data TABLES lt_tcedeli lt_output
+          USING 'TCEDELI'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TCECPSTAT'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TMSCSYS'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TMSCNFS'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TMSMCONF'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      SELECT SINGLE MAX( version ) FROM tmspvers
+        INTO @DATA(lv_tp_version).
+      SELECT * FROM tmspvers  INTO TABLE @DATA(lt_tmspvers)
+            WHERE   version = @lv_tp_version.
+
+      PERFORM set_data TABLES lt_tmspvers lt_output
+          USING 'TMSPVERS'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      SELECT * FROM tmspconf  INTO TABLE @DATA(lt_tmspconf)
+            WHERE   version = @lv_tp_version.
+
+      PERFORM set_data TABLES lt_tmspconf lt_output
+          USING 'TMSPCONF'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TMSCNFST'
+          CHANGING ls_output .
+
+      "Blank line between tables
+      CLEAR ls_output.
+      APPEND ls_output TO lt_output.
+
+
+      PERFORM read_and_set_data TABLES lt_output
+          USING 'TMSCDES'
+          CHANGING ls_output .
+
+
+      PERFORM null_check TABLES  lt_output.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+
+
+FORM end_null_check CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.
+
+FORM read_and_set_data TABLES lt_output TYPE table
+  USING iv_tablename TYPE tabname
+  CHANGING ls_output TYPE tab512.
+
+  CONSTANTS: lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  FIELD-SYMBOLS : <ft_table> TYPE ANY TABLE.
+  DATA lt_table TYPE REF TO data.
+
+  CREATE DATA lt_table TYPE TABLE OF (iv_tablename).
+
+
+  ASSIGN lt_table->* TO <ft_table>.
+
+  "Table Name
+  ls_output = iv_tablename.
+  APPEND ls_output TO lt_output.
+
+  SELECT * FROM (iv_tablename) INTO TABLE <ft_table>.
+  IF sy-subrc <> 0.
+    ls_output = lc_msg_nodata.
+    APPEND ls_output TO lt_output.
+    RETURN.
+  ENDIF.
+
+  DATA : idetails     TYPE abap_compdescr_tab,
+         xdetails     TYPE abap_compdescr,
+         lv_fieldname TYPE string.
+  DATA : ref_table_des TYPE REF TO cl_abap_structdescr.
+  DATA ls_prefinal TYPE string.
+
+  "Column headings
+  ref_table_des ?= cl_abap_typedescr=>describe_by_name( iv_tablename ).
+  idetails[] = ref_table_des->components[].
+  LOOP AT idetails INTO xdetails.
+*    lv_fieldname = xdetails.
+    CONCATENATE ls_prefinal xdetails-name '|' INTO ls_prefinal.
+  ENDLOOP.
+  ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+  ls_output = ls_prefinal.
+  APPEND ls_output TO lt_output.
+
+  "Table data
+  LOOP AT <ft_table> ASSIGNING FIELD-SYMBOL(<fs_structure>).
+    CLEAR: ls_prefinal, ls_output.
+    DO .
+      ASSIGN COMPONENT sy-index OF STRUCTURE <fs_structure>
+        TO FIELD-SYMBOL(<comp>).
+      IF sy-subrc <> 0.
+        EXIT .
+      ENDIF.
+      CONCATENATE ls_prefinal <comp> '|' INTO ls_prefinal.
+    ENDDO.
+    ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+    PERFORM end_null_check CHANGING ls_prefinal.
+    ls_output = ls_prefinal.
+    APPEND ls_output TO lt_output.
+  ENDLOOP.
+
+ENDFORM.
+
+
+FORM set_data TABLES lt_tms_table TYPE table
+                    lt_output TYPE table
+  USING iv_tablename TYPE tabname
+  CHANGING ls_output TYPE tab512.
+
+  CONSTANTS: lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  FIELD-SYMBOLS : <ft_table> TYPE ANY TABLE.
+  DATA lt_table TYPE REF TO data.
+
+  CREATE DATA lt_table TYPE TABLE OF (iv_tablename).
+  ASSIGN lt_table->* TO <ft_table>.
+
+  "Table Name
+  ls_output = iv_tablename.
+  APPEND ls_output TO lt_output.
+
+  IF lt_tms_table[] IS INITIAL.
+    ls_output = lc_msg_nodata.
+    APPEND ls_output TO lt_output.
+    RETURN.
+  ENDIF.
+  <ft_table> = lt_tms_table[].
+
+  DATA : idetails     TYPE abap_compdescr_tab,
+         xdetails     TYPE abap_compdescr,
+         lv_fieldname TYPE string.
+  DATA : ref_table_des TYPE REF TO cl_abap_structdescr.
+  DATA ls_prefinal TYPE string.
+
+  "Column headings
+  ref_table_des ?= cl_abap_typedescr=>describe_by_name( iv_tablename ).
+  idetails[] = ref_table_des->components[].
+  LOOP AT idetails INTO xdetails.
+*    lv_fieldname = xdetails.
+    CONCATENATE ls_prefinal xdetails-name '|' INTO ls_prefinal.
+  ENDLOOP.
+  ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+  ls_output = ls_prefinal.
+  APPEND ls_output TO lt_output.
+
+  "Table data
+  LOOP AT <ft_table> ASSIGNING FIELD-SYMBOL(<fs_structure>).
+    CLEAR: ls_prefinal, ls_output.
+    DO .
+      ASSIGN COMPONENT sy-index OF STRUCTURE <fs_structure>
+        TO FIELD-SYMBOL(<comp>).
+      IF sy-subrc <> 0.
+        EXIT .
+      ENDIF.
+      CONCATENATE ls_prefinal <comp> '|' INTO ls_prefinal.
+    ENDDO.
+    ls_prefinal = shift_right( val = ls_prefinal  places = 1 ).
+    PERFORM end_null_check CHANGING ls_prefinal.
+    ls_output = ls_prefinal.
+    APPEND ls_output TO lt_output.
+  ENDLOOP.
+
+ENDFORM.

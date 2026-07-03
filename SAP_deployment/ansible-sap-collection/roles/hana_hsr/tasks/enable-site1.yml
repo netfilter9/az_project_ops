@@ -1,0 +1,7 @@
+- name: cluster | enable site1
+  command: su - {{ sap.db.sid|lower }}adm -c "hdbnsutil -sr_enable --name={{ sap.db.site.primary_name | default ('SITE1') }}"
+  when: ansible_hostname == node1
+  register: result
+  failed_when: 
+    - result.rc != 0
+    - not "this site is already enabled as source site" in result.stdout 

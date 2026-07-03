@@ -1,0 +1,72 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "availability_sets": {
+            "title": "Availability Sets",
+            "description": "List of availability sets used in this deployment",
+            "type": "object",
+            "examples": [
+                {
+                    "app": {
+                        "ppg_name": "example-ppg-scNN-app"
+                    }
+                },
+                {
+                    "ascs": {
+                        "ppg_name": "example-ppg-scNN-app"
+                    },
+                    "app": {
+                        "ppg_name": "example-ppg-scNN-app"
+                    },
+                    "db": {
+                        "ppg_name": "example-ppg-scNN-app"
+                    }
+                }
+            ],
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "platform_update_domain_count": {
+                        "title": "Platform Update Domain Count",
+                        "description": "(Optional) defines the number of update domain counts to be used. Defaults to 2",
+                        "type": "integer",
+                        "default": 2,
+                        "minimum": 2,
+                        "maximum": 5
+                    },
+                    "platform_fault_domain_count": {
+                        "title": "platform fault domain count",
+                        "description": "(Optional) defines the number of fault domain counts to be used. Defaults to 2",
+                        "type": "integer",
+                        "default": 2,
+                        "minimum": 2,
+                        "maximum": 3
+                    },
+                    "ppg_name": {
+                        "title": "Proximity Placement Group Name",
+                        "description": "name of the associated proximity placement group",
+                        "type": "string",
+                        "example": "example-ppg-scNN-app"
+                    },
+                    "managed": {
+                        "title": "Managed",
+                        "description": "tbc",
+                        "type": "boolean",
+                        "default": true,
+                        "const": true
+                    },
+                    "location": {
+                        "$ref": "fields.json#/definitions/location"
+                    },
+                    "tags": {
+                        "$ref": "tags.json#/definitions/tags"
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    },
+    "additionalProperties": false
+}

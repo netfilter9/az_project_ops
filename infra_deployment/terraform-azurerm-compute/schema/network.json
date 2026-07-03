@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "network": {
+            "title": "Network",
+            "description": "A network block as defined below",
+            "type": "object",
+            "examples": [
+                {
+                    "resource_group_name": "",
+                    "name": ""
+                }
+            ],
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name",
+                    "examples": [
+                        "example-rg-sc01"
+                    ]
+                },
+                "name": {
+                    "$ref": "fields.json#/definitions/vnet_name",
+                    "examples": [
+                        "vnet-prod"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "resource_group_name",
+                "name"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

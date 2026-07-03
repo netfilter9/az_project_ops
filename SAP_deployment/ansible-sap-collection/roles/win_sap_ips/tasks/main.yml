@@ -1,0 +1,31 @@
+---
+- name: get status of odbc dsn
+  win_shell: Get-OdbcDsn -Name "{{ item.dsnname }}" -DriverName "SQL Server Native Client 11.0" -DsnType "System"
+  register: dsn_odbc 
+  ignore_errors: yes
+  loop: "{{ bods.DSN }}"
+
+- debug:
+    var: dsn_odbc
+
+- name: creating ODBC DSN 
+  win_shell: Add-OdbcDsn -Name {{ item.dsnname }} -DriverName "SQL Server Native Client 11.0" -DsnType "System" -SetPropertyValue @("Server={{ sap.logical_hosts.db }}", "Trusted_Connection={{ item.connectiontype | default('No') }}", "Database={{ item.dbname }}") -PassThru
+  when: dsn_odbc.stdout_lines is not defined
+  loop: "{{ bods.DSN }}"
+  ignore_errors: yes
+
+- name: create ips.params
+  template:
+    src: ips.params.j2
+    dest: "{{ sap.install_drive }}:\\SilentInstall\\{{ansible_hostname}}_ips.params"
+
+- name: reboot
+  win_reboot:
+
+- name: install IPS
+  win_shell : setup.exe -r "{{ sap.install_drive }}:\\SilentInstall\\{{ansible_hostname}}_ips.params"
+  args:
+    executable: cmd
+    chdir: "{{ sap.install_drive }}:\\SilentInstall\\IPS\\"
+
+

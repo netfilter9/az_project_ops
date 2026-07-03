@@ -1,0 +1,9 @@
+[{% for disk in disk_layout_outputs.stdout_lines -%}
+{% if loop.index == loop.length %}
+  {"Filesystem":"{{ disk.split()[0] }}","Size":"{{ disk.split()[1] }}","Used":"{{ disk.split()[2] }}","Avail":"{{ disk.split()[3] }}","Use%":"{{ disk.split()[4] }}","Mounted_on":"{{ disk.split()[5] }}"}
+{% else %}
+    {% if loop.index != 1 %}
+       {"Filesystem":"{{ disk.split()[0] }}","Size":"{{ disk.split()[1] }}","Used":"{{ disk.split()[2] }}","Avail":"{{ disk.split()[3] }}","Use%":"{{ disk.split()[4] }}","Mounted_on":"{{ disk.split()[5] }}"},
+    {% endif %} 
+{% endif %}    
+{% endfor %}]

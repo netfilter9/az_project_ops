@@ -1,0 +1,113 @@
+node1: "{{ groups['std'][0] }}"
+swapfile_size: 640000000 #65536
+tune: "{{ sap.tune }}"
+product_id: "{{ sap.product_ids.std }}"
+
+
+users:
+  bin:
+    uid: 1010
+  bingroup:
+    gid: 82
+  sidadm:
+    uid: 1003
+  dbsidadm:
+    uid: 1012
+  sapinst:
+    gid: 1101
+  sapsys:
+    gid: 1100
+  db2sid:
+    uid: 1014
+  sapsid:
+    uid: 1016
+  dbsidadmgroup:
+    gid: 1120
+  dbsidctl:
+    gid: 1121
+  dbsidmon:
+    gid: 1122
+  dbsidmnt:
+    gid: 1123
+
+groupsetup:
+  - name: sapsys
+    gid: "{{ users.sapsys.gid }}"
+  - name: sapinst
+    gid: "{{ users.sapinst.gid }}"
+  - name: bin
+    gid: "{{ users.bingroup.gid }}"  
+  - name: "db{{ sap.db.sid|lower }}adm"
+    gid: "{{ users.dbsidadmgroup.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}ctl"
+    gid: "{{ users.dbsidctl.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mon"
+    gid: "{{ users.dbsidmon.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mnt"
+    gid: "{{ users.dbsidmnt.gid }}" 
+  
+usersetup:
+  - name: bin
+    uid: "{{ users.bin.uid }}"
+    group: bin
+    shell: /bin/sh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "{{ sap.sid|lower }}adm"
+    uid: "{{ users.sidadm.uid }}"
+    group: sapsys
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "db2{{ sap.db.sid|lower }}"
+    uid: "{{ users.db2sid.uid }}"
+    group: "db{{ sap.db.sid|lower }}adm"
+    groups: sapinst
+    home: /db2/db2{{ sap.db.sid|lower }}
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "sap{{ sap.sid|lower }}"    
+    uid: "{{ users.sapsid.uid }}"
+    group: "db{{ sap.db.sid|lower }}mon"
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+
+volume_groups:  
+  - ref: usrsap-usrsap
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAP
+    lv: lv_usrsap
+    size: 15g
+    mount: /usr/sap
+  - ref: usrsap-sapmnt
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAP
+    lv: lv_sapmnt
+    size: 5g
+    mount: /sapmnt
+  - ref: usrsap-scc
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAP
+    lv: lv_usrsapscc
+    size: 5g
+    mount: /usr/sap/scc
+  - ref: usrsap-java
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAP
+    lv: lv_usrjava
+    size: 2g
+    mount: /usr/java
+  - ref: opt_traps
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VG_CORTEX
+    lv: lv_cortex
+    size: 10g
+    mount: /opt/traps
+  - ref: sapcd
+    pvs: /dev/disk/azure/data/by-lun/2
+    vg: VG_MISC
+    lv: lv_sapcd
+    size: 250g
+    mount: /sapcd

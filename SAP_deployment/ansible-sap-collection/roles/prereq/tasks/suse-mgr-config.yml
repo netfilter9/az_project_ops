@@ -1,0 +1,20 @@
+- name: suse-mgr-config | download bootstrap
+  get_url:
+    url: "{{ bootstrap.download_path }}"
+    dest: "{{ bootstrap.dest }}"
+    mode: "0500"
+    validate_certs: no
+
+- name: suse-mgr-config | execute downloaded shell
+  shell: "{{ bootstrap.dest }}"
+
+- name: suse-mgr-config | insert value in /etc/salt/minion
+  lineinfile:
+    path: /etc/salt/minion
+    line: "{{ minion_path }}"
+
+- name: suse-mgr-config | restart service salt-minion
+  service:
+    name: salt-minion
+    state: restarted
+    enabled: yes

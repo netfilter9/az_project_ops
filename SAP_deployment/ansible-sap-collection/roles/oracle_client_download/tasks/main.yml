@@ -1,0 +1,21 @@
+---
+- name: set username and primary group
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    oracle_installation_primary_group: "{{ sap.db.primary_installation_group | default('oinstall') }}"
+
+- name: main | client download 
+  include_tasks: client_download.yml
+
+- name: main |set permission 
+  include_tasks: permission.yml
+
+- name: Unzip a file 
+  become: yes
+  become_user: oracle
+  unarchive:
+    src: "{{ root_dir }}/sapinst/CLIENT/LINUX.X64_193000_client.zip"
+    dest: "{{ root_dir }}/sapinst/CLIENT"
+    remote_src: yes
+  
+  

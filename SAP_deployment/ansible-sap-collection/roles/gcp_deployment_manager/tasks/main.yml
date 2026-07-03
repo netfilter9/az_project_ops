@@ -1,0 +1,8 @@
+
+- name: Template to YAML file
+  template:
+    src: hana_scaleout.j2
+    dest: ./hana_scaleout.yaml
+  
+- name : Deployment Hanascaleout
+  command : "gcloud deployment-manager deployments create {{ deployment_manager.deployment_name }} --config hana_scaleout.yaml"

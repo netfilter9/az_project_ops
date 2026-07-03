@@ -1,0 +1,149 @@
+### #property.CMSAUTHENTICATION.description#
+cmsauthentication=secEnterprise
+
+### CMS administrator password
+cmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### #property.CMSUSERNAME.description#
+cmsusername=Administrator
+
+### #property.CMSAuthMode.description#
+dscmsauth=secEnterprise
+
+### #property.CMSEnabledSSL.description#
+dscmsenablessl=0
+
+### CMS administrator password
+dscmspassword={{ passwords.cmsadmin| default(passwords.master) }}
+
+### #property.CMSServerPort.description#
+dscmsport={{ bods.ds.ports.cmsport |default('6400') }}
+
+### #property.CMSServerName.description#
+dscmssystem={{ ansible_hostname }}:{{ bods.ds.ports.cmsport }}
+
+### #property.CMSUser.description#
+dscmsuser=Administrator
+
+### #property.DSCommonDir.description#
+dscommondir=C:\ProgramData\SAP BusinessObjects\Data Services\
+
+### #property.DSConfigCMSSelection.description#
+dsconfigcmsselection=install
+
+### #property.DSInstallTypeSelection.description#
+dsinstalltypeselection=Express
+
+### #property.DSLocalCMS.description#
+dslocalcms=true
+
+### #property.DSLoginInfoAccountSelection.description#
+dslogininfoaccountselection=this
+
+### #property.DSLoginInfoThisPassword.description#
+dslogininfothispassword={{ vault_passwords.domain }}
+ 
+### #property.DSLoginInfoThisUser.description#
+dslogininfothisuser={{ domain_fqdn }}\{{ domain_ansible_username }}
+
+### #property.DSRepoCreateUpgrade.description#
+dsrepocreateupgrade=Create
+
+### #property.DSRepoDBDataSource.description#
+dsrepodbdatasource=
+
+### #property.DSRepoDBHost.description#
+dsrepodbhost={{ sap.logical_hosts.db | default (ansible_hostname) }}
+
+### #property.DSRepoDBName.description#
+dsrepodbname={{ bods.ds.dbname }}
+
+### #property.DSRepoDBPasswd.description#
+dsrepodbpasswd={{ passwords.dsrepodb | default(passwords.master) }}
+
+### #property.DSRepoDBPort.description#
+dsrepodbport={{ bods.ds.ports.dsrepodbport |default('1433') }}
+
+### #property.DSRepoDBType.description#
+dsrepodbtype=Microsoft_SQL_Server
+
+### #property.DSRepoDBUser.description#
+dsrepodbuser={{ bods.ds.dbuser }}
+
+### #property.DSRepoNameForCMS.description#
+dsreponameforcms=Repo_{{ ansible_hostname }}
+
+### #property.DSRepoOracleConnStr.description#
+dsrepooracleconnstr=
+
+### #property.DSRepoOracleRAC.description#
+dsrepooraclerac=No
+
+### #property.DSRepoOracleSID.description#
+dsrepooraclesid=
+
+### #property.DSRepoWindowsAuth.description#
+dsrepowindowsauth=0
+
+### Installation folder for SAP products
+installdir= {{ sap.install_drive }}:\{{ IPS_dir | default('SAPBusinessObjects') }}\
+
+### #property.IsCommonDirChanged.description#
+iscommondirchanged=0
+
+### #property.MasterCmsName.description#
+mastercmsname={{ ansible_hostname }}
+
+### #property.MasterCmsPort.description#
+mastercmsport={{ bods.ds.ports.cmsport |default('6400') }}
+
+### Keycode for the product.
+productkey={{ passwords.dsproductkey | default('CA318-902HU3G-00MVX4X-NH7U') }} 
+
+### *** property.SelectedLanguagePacks.description ***
+selectedlanguagepacks=en
+
+### Available features
+### ------------------
+### root
+###   DataServicesServer
+###     DataServicesJobServer
+###     DataServicesAccessServer
+###   DataServicesClient
+###     DataServicesDesigner
+###   DataServicesManagementConsole
+###   DataServicesEIMServices
+###   DataServicesMessageClient
+###   TextDataProcessingLanguages
+###     TextDataProcessingArabic
+###     TextDataProcessingBokmal
+###     TextDataProcessingCatalan
+###     TextDataProcessingChinese
+###     TextDataProcessingCroatian
+###     TextDataProcessingCzech
+###     TextDataProcessingDanish
+###     TextDataProcessingDutch
+###     TextDataProcessingFarsi
+###     TextDataProcessingFrench
+###     TextDataProcessingGerman
+###     TextDataProcessingGreek
+###     TextDataProcessingHebrew
+###     TextDataProcessingHungarian
+###     TextDataProcessingItalian
+###     TextDataProcessingJapanese
+###     TextDataProcessingKorean
+###     TextDataProcessingNynorsk
+###     TextDataProcessingPolish
+###     TextDataProcessingPortuguese
+###     TextDataProcessingRomanian
+###     TextDataProcessingRussian
+###     TextDataProcessingSerbian
+###     TextDataProcessingSlovakn
+###     TextDataProcessingSlovenian
+###     TextDataProcessingSpanish
+###     TextDataProcessingSwedish
+###     TextDataProcessingThai
+###     TextDataProcessingTurkish
+###   DataServicesDataDirect
+###   DataServicesDocumentation
+features=DataServicesJobServer,DataServicesAccessServer,DataServicesServer,DataServicesDesigner,DataServicesClient,DataServicesManagementConsole,DataServicesEIMServices,DataServicesMessageClient,DataServicesDataDirect,DataServicesDocumentation

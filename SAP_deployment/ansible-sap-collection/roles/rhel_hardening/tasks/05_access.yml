@@ -1,0 +1,560 @@
+- name: "Ensure permissions on /etc/crontab are configured"
+  file:
+      dest: /etc/crontab
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+      - level1
+      
+- name: "Ensure permissions on /etc/cron.hourly are configured"
+  file:
+      dest: /etc/cron.hourly
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/cron.daily are configured"
+  file:
+      dest: /etc/cron.daily
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/cron.weekly are configured"
+  file:
+      dest: /etc/cron.weekly
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "nsure permissions on /etc/cron.monthly are configured"
+  file:
+      dest: /etc/cron.monthly
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/cron.d are configured"
+  file:
+      dest: /etc/cron.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure at/cron is restricted to authorized users"
+  file:
+      dest: /etc/at.deny
+      state: absent
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure at/cron is restricted to authorized users"
+  file:
+      dest: /etc/at.allow
+      state: touch
+      owner: root
+      group: root
+      mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure at/cron is restricted to authorized users"
+  file:
+    dest: /etc/cron.deny
+    state: absent
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure at/cron is restricted to authorized users"
+  file:
+    dest: /etc/cron.allow
+    state: touch
+    owner: root
+    group: root
+    mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure at/cron is restricted to authorized users"
+  template:
+    src: etc/cron.allow.j2
+    dest: /etc/cron.allow
+    owner: root
+    group: root
+    mode: 0600
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_cron_allow_apply_template is defined and rhel7cis_cron_allow_apply_template
+  tags:
+    - level1
+    
+- name: "Ensure password creation requirements are configured"
+  lineinfile:
+    state: present
+    dest: /etc/security/pwquality.conf
+    regexp: '^{{ item.key }}'
+    line: '{{ item.key }} = {{ item.value }}'
+  with_items:
+    - { key: 'minlen',  value: '14' }
+    - { key: 'dcredit', value: '-1' }
+    - { key: 'ucredit', value: '-1' }
+    - { key: 'ocredit', value: '-1' }
+    - { key: 'lcredit', value: '-1' }
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_password_creation_requirements is defined and rhel7cis_password_creation_requirements 
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{item}}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_faillock.so
+    module_arguments: preauth audit silent deny=5 unlock_time=900
+    state: before
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{item}}'
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: preauth audit silent deny=5 unlock_time=900
+    state: args_present
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured - Removal"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: preauth audit silent deny=5 unlock_time=900
+    state: absent
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured - pam_unix.so"
+  pamd:
+    name: "{{ item }}"
+    type: auth
+    control: "[success=1 default=bad]"
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: sufficient
+    new_module_path: pam_unix.so
+    module_arguments: nullok try_first_pass
+    state: updated
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure lockout for failed password attempts is configured - pam_unix.so'
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: 'sufficient'
+    module_path: pam_unix.so
+#    new_control: 'sufficient'
+    module_arguments: 'nullok try_first_pass'
+    state: updated
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure lockout for failed password attempts is configured - pam_unix.so'
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: 'pam_unix.so'
+    new_control: 'sufficient'
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure lockout for failed password attempts is configured - pam_unix.so'
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: 'sufficient'
+    module_path: pam_unix.so
+    module_arguments: 'nullok try_first_pass'
+    state: updated
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure lockout for failed password attempts is configured - pam_unix.so'
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: 'sufficient'
+    module_path: pam_unix.so
+    module_arguments: 'nullok try_first_pass'
+    state: args_present
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: 'sufficient'
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: authfail audit deny=5 unlock_time=900
+    state: after
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: authfail audit deny=5 unlock_time=900
+    state: after
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: authfail audit deny=5 unlock_time=900
+    state: args_present
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured - Removal"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: authfail audit deny=5 unlock_time=900
+    state: absent
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    new_type: auth
+    new_control: sufficient
+    new_module_path: pam_faillock.so
+    module_arguments: authsucc audit deny=5 unlock_time=900
+    state: after
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_faillock.so
+    module_arguments: authsucc audit deny=5 unlock_time=900
+    state: args_present
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and not rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: "Ensure lockout for failed password attempts is configured - Removal"
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_faillock.so
+    module_arguments: authsucc audit deny=5 unlock_time=900
+    state: absent
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_ad_ldap_joined_machine is defined and rhel7cis_ad_ldap_joined_machine
+  tags:
+    - level1
+    
+- name: 'Ensure password reuse is limited'
+  shell: 'grep -q "^password\s*sufficient\s*pam_unix\.so" /etc/pam.d/system-auth'
+  register: system_auth_password_check_pam_unix
+  failed_when: 'system_auth_password_check_pam_unix.rc > 1'
+  changed_when: false
+  ignore_errors: yes
+  become: yes
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure password reuse is limited'
+  shell: 'grep -q "^password\s+required\s+pam_pwhistory\.so" /etc/pam.d/system-auth'
+  register: system_auth_password_check_pam_pwhistory
+  failed_when: 'system_auth_password_check_pam_pwhistory.rc > 1'
+  changed_when: false
+  ignore_errors: yes
+  become: yes
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: 'Ensure password hashing algorithm is SHA-512'
+  pamd:
+    name: '{{ item }}'
+    type: password
+    control: sufficient
+    module_path: 'pam_unix.so'
+    module_arguments: 'sha512'
+    state: args_present
+  ignore_errors: yes
+  loop:
+    - system-auth
+    - password-auth
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+     - level1
+     
+- name: "Ensure password expiration warning days is 7 or more"
+  lineinfile:
+    state: present
+    dest: /etc/login.defs
+    regexp: '^PASS_WARN_AGE'
+    line: 'PASS_WARN_AGE 7'
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure default group for the root account is GID 0"
+  command: usermod -g 0 root
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure default user umask is 027 or more restrictive"
+  lineinfile:
+    state: present
+    dest: /etc/bashrc
+    regexp: 'umask'
+    line: 'umask {{ rhel7cis_default_user_umask }}'
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_modify_default_user_umask is defined and rhel7cis_modify_default_user_umask
+  tags:
+    - level1
+    
+- name: "Ensure default user umask is 027 or more restrictive"
+  lineinfile:
+      state: present
+      dest: /etc/profile
+      regexp: 'umask'
+      line: 'umask {{ rhel7cis_default_user_umask }}'
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_modify_default_user_umask is defined and rhel7cis_modify_default_user_umask
+  tags:
+    - level1
+    
+- name: "Ensure default user umask is 027 or more restrictive"
+  find:
+    paths: /etc/profile.d/
+    recurse: yes
+    patterns: "*.sh"
+  register: profiled_dir
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - rhel7cis_modify_default_user_umask is defined and rhel7cis_modify_default_user_umask
+  tags:
+    - level1
+    
+- name: "Ensure default user shell timeout is 900 seconds or less"
+  lineinfile:
+    state: present
+    dest: /etc/bashrc
+    regexp: '^TMOUT'
+    line: 'TMOUT=600'
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+    - level2
+    
+- name: "Ensure default user shell timeout is 900 seconds or less"
+  lineinfile:
+    state: present
+    dest: /etc/profile
+    regexp: '^TMOUT'
+    line: 'TMOUT=600'
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+    - level2
+    
+- name: "Ensure access to the su command is restricted"
+  lineinfile:
+    state: present
+    dest: /etc/group
+    regexp: '^wheel:x:10:(.*)$'
+    line: 'wheel:x:10:\1,root'
+    backrefs: yes
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure access to the su command is restricted"
+  lineinfile:
+    state: present
+    dest: /etc/pam.d/su
+    regexp: '^#auth\s+required\s+pam_wheel\.so'
+    line: 'auth           required        pam_wheel.so use_uid'
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1

@@ -1,0 +1,110 @@
+- name: "Ensure permissions on /etc/passwd are configured"
+  file:
+    dest: /etc/passwd
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/shadow are configured"
+  file:
+    dest: /etc/shadow
+    owner: root
+    group: root
+    mode: 0640
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/group are configured"
+  file:
+    dest: /etc/group
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/passwd- are configured"
+  file:
+    dest: /etc/passwd-
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/shadow- are configured"
+  file:
+    dest: /etc/shadow-
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/group- are configured"
+  file:
+    dest: /etc/group-
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure users own their home directories"
+  copy:
+    src: scripts/userhome.sh
+    dest: /opt/userhome.sh
+    owner: root
+    group: root
+    mode: 0700
+  changed_when: no
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure users own their home directories"
+  shell: /opt/userhome.sh
+  args:
+    executable: /bin/bash
+  register: home_directories_own
+  no_log: yes
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure users own their home directories"
+  debug:
+    msg: "PASS | userhome | Users' own their home directories."
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+    - home_directories_own is defined and home_directories_own.stdout == ""
+  tags:
+    - level1
+    
+- name: "Ensure users own their home directories"
+  file:
+    path: /opt/userhome.sh
+    owner: root
+    group: root
+    state: absent
+  changed_when: no
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1

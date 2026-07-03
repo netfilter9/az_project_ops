@@ -1,0 +1,447 @@
+---
+######################################################################
+#                       OS CHECKS                                 #
+######################################################################     
+
+- name: Fetching the Hostname
+  shell: hostname | awk '{printf $0}' 
+  become: yes
+  register: output_host
+  ignore_errors: true
+
+- name: get output host 
+  debug:
+    var: output_host
+
+- name: Fetching the FQDN
+  shell: hostname -f
+  become: yes
+  register: output_fqdn
+  ignore_errors: true
+
+- name: get output fqdn
+  debug: 
+    var: output_fqdn
+
+- name: Fetching the Private_IP
+  shell: ip a| grep -w inet | awk 'NR==2{print $2}'|cut -d '/' -f1
+  become: yes
+  register: output_privateip
+  ignore_errors: true
+
+- name: get output private ip
+  debug: 
+   var: "{{ output_privateip }}"
+
+- name: Fetching the OS Release 
+  shell: cat /etc/os-release|grep PRETTY_NAME|awk '{printf $0}'| cut -d '=' -f2
+  become: yes
+  register: output_OSRelease 
+  ignore_errors: true
+
+- name: get output osrelease
+  debug: 
+    var: output_OSRelease 
+
+- name: Fetching the OS Version
+  shell: uname -r
+  become: yes
+  register: output_OSVersion
+  ignore_errors: true
+
+- name: get output OS version
+  debug: 
+    var: output_OSVersion 
+
+- name: Fetching the Nslookup IP
+  shell: ip a| grep -w inet | awk 'NR==2{print $2}'|cut -d '/' -f1 | xargs -I{} nslookup {}
+  become: yes
+  register: output_NslookupIP
+  ignore_errors: true
+
+- name: get output nslookup ip
+  debug: 
+    var: output_NslookupIP
+
+- name: Command to check the CPU Count
+  shell: nproc
+  become: yes
+  register: output_cpucount
+  ignore_errors: true
+
+- name: get output cpucount
+  debug:
+    var: output_cpucount
+
+- name: Command to check the NTP syncronization
+  shell: timedatectl status|grep synchronized | cut -d ':' -f2
+  become: yes
+  register: output_ntpsync
+  ignore_errors: true
+
+- name: get output ntpsync 
+  debug:
+   var: output_ntpsync
+
+- name: Command to check the chronyconf
+  shell: chronyc tracking | grep Leap
+  become: yes
+  register: output_chronyconf
+  ignore_errors: true
+
+- name: get output chronyconf
+  debug: 
+    var: output_chronyconf
+
+- name: Fetching the saptune name
+  shell: /usr/sbin/saptune solution list | awk '{print $1,$2}' | sed -n '/\* /s///p'
+  become: yes
+  register: output_saptune
+
+- name: saptune output
+  debug: 
+    var: output_saptune
+
+# - name: Checking for Linux Pagecache Limit
+#   shell: cat /proc/sys/vm/pagecache_limit_mb
+#   become: yes
+#   register: output_pagecache
+
+# - debug: var=output_pagecache
+
+- name: Checking the size of swap
+  shell: free -g | grep Swap | awk '{print $2}'
+  become: yes
+  register: output_swap
+
+- name: get output swap 
+  debug: 
+    var: output_swap
+
+- name: Command to check the value of open files
+  shell: ulimit -n
+  become: yes
+  register: output_ulimit
+
+- name: get output ulimit
+  debug: 
+    var: output_ulimit
+
+- name: Fetching the Date
+  shell: date
+  become: yes
+  register: output_date
+  ignore_errors: true
+
+- name: get date
+  debug: 
+    var: output_date
+
+- name: Command to check the SDA Disk Size
+  shell: lsblk -no NAME,SIZE  /dev/sda|awk 'NR==1'
+  become: yes
+  register: SDA_disk_size
+  ignore_errors: true
+
+- name: get output of disk size
+  debug: 
+    var: SDA_disk_size
+
+- name: Command to check the SDA / Partition Size
+  shell: lsblk -no NAME,SIZE  /dev/sda
+  become: yes
+  register: SDA_partition_size
+  ignore_errors: true
+
+- name: get output of sda partition size
+  debug: 
+    var: SDA_partition_size
+
+- name: Command to check the SDB Disk Size
+  shell: lsblk -no NAME,SIZE  /dev/sdb|awk 'NR==1'
+  become: yes
+  register: SDB_disk_size
+  ignore_errors: true
+
+- name: get output sdb disk size
+  debug:
+    var: SDB_disk_size
+
+- name: Command to check the SDB/ partition Size
+  shell: lsblk -no NAME,SIZE  /dev/sdb
+  become: yes
+  register: SDB_partition_size
+  ignore_errors: true
+
+- name: get output partition size 
+  debug:
+    var: SDB_partition_size
+
+- name: Command to check the eth0 details
+  shell: ip a s eth0
+  become: yes
+  register: output_eth0details
+  ignore_errors: true
+
+- name: get output eth0
+  debug:
+    var: output_eth0details
+
+- name: Command to check the mdatp status
+  shell: systemctl status mdatp| awk 'NR==3' | cut -d ':' -f2
+  become: yes
+  register: output_mdatpstatus
+  ignore_errors: true
+
+- name: get output mdatpstatus
+  debug: 
+    var: output_mdatpstatus
+
+- name: Command to check the Waagent status
+  shell: systemctl status waagent| awk 'NR==3'
+  become: yes
+  register: output_waagentstatus
+  ignore_errors: true
+
+- name: get output waagent
+  debug: 
+   var: output_waagent
+
+- name: Command to check the Waagent Enabled ( Auto Update)
+  shell: cat /etc/waagent.conf|grep AutoUpdate.Enabled
+  become: yes
+  register: output_waagentenabled
+  ignore_errors: true
+
+- name: get output waagent enable status
+  debug:
+    var: output_waagentenabled
+
+- name: Command to check the fstab(no intr|no nofail|no noatime)
+  shell: egrep 'nointr|nofail|noatime' /etc/fstab
+  become: yes
+  register: output_fstab
+  ignore_errors: true
+
+- name: get output of fstab
+  debug:
+    var: output_fstab
+
+- name: Command to check the Sysstat status
+  shell: systemctl status sysstat| awk 'NR==3' | cut -d ':' -f2
+  become: yes
+  register: output_sysstat
+  ignore_errors: true
+
+- name: get output of sysstat
+  debug:
+   var: output_sysstat
+
+- name: Command to check the crond status
+  shell: systemctl status crond | awk 'NR==3'| cut -d ':' -f2
+  become: yes
+  register: output_crond
+  ignore_errors: true
+ 
+
+- name: get output of crond
+  debug:
+    var: output_crond
+
+- name: Command to check the puppet agent status
+  shell: systemctl status puppet| awk 'NR==3' | cut -d ':' -f2
+  become: yes
+  register: output_puppetagent
+  ignore_errors: true
+ 
+
+- name: get output of puppet agent
+  debug: 
+    var: output_puppetagent
+
+- name: Command to check the rsyslog status
+  shell: systemctl status rsyslog| awk 'NR==3'
+  become: yes
+  register: output_rsyslog
+  ignore_errors: true
+
+- name: output of rsyslog
+  debug:
+    var: output_rsyslog
+
+- name: Command to check the Kdump status
+  shell: systemctl status kdump | awk 'NR==3'
+  become: yes
+  register: output_Kdump 
+  ignore_errors: true
+ 
+
+- name: output of kdump
+  debug: 
+    var: output_Kdump 
+
+- name: Command to check the Firewall status
+  shell: systemctl status firewalld | awk 'NR==3'
+  become: yes
+  register: output_firewall
+  ignore_errors: true
+
+- name: output of firewall
+  debug:
+    var: output_firewall
+
+- name: Command to check the Splunk Process
+  shell: systemctl status splunkd pid | awk 'NR==3' | cut -d ':' -f2
+  become: yes
+  register: output_Splunk
+  ignore_errors: true
+ 
+
+- name: output of splunk
+  debug:
+    var: output_Splunk
+
+- name: Command to check the NFS Domain Value
+  shell: cat /etc/idmapd.conf |grep Domain |awk '{print $3}'
+  become: yes
+  register: output_nfsdomain
+  ignore_errors: true
+
+- name: output of nfsdomain
+  debug:
+    var: output_nfsdomain
+
+- name: Command to check the Floopy Module
+  shell: /lib/modules/4.12.14-150.75-default/kernel/drivers/block/floppy.ko
+  become: yes
+  register: output_floopy
+  ignore_errors: true
+
+- name: output of floopy
+  debug:
+    var: output_floopy
+
+- name: Command to check the os patches applied
+  shell: rpm -qa --last | head -10
+  become: yes
+  register: ospatches
+
+- name: Command to check the FS which is more than 90% Utilization
+  shell: df -P | awk '0+$5 >= 90 {print}'
+  become: yes
+  register: fsspace
+
+- name: output of fs
+  debug:
+    var: fsspace
+
+- name: command to check OS release server
+  shell: cat /etc/yum/vars/releasever
+  become: yes
+  register: output_releaseserver
+  ignore_errors: true
+
+- name: command to check OS release server
+  shell: cat /etc/os-release|grep VERSION_ID|awk '{printf $0}'| cut -d '=' -f2 | sed -e 's/^"//' -e 's/"$//'
+  become: yes
+  register: output_releaseserver
+  ignore_errors: true
+
+  
+- name: get output release server
+  debug:
+    var: output_releaseserver
+
+- name: Fetch password expires details from sidadm
+  shell: chage -l "{{ sid | lower }}adm" | awk 'FNR == 2 {print}' | tr -d " \t\n\r"
+  become: yes
+  register: psexpires
+  ignore_errors: true
+
+- name: get password expires details
+  debug:
+    var: psexpires
+
+- name: Command to Check CPU Utilization
+  shell: top -bn1 | grep "Cpu(s)" | \
+           sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | \
+           awk '{print 100 - $1"%"}'
+  become: yes
+  register: cpuutilization
+
+- name: output of cpu Utilization
+  debug:
+    var: cpuutilization
+
+- name: Command to Check Memory Utilization
+  shell: free | awk '/^Mem/ { printf("Used %.2f %\n", $3/$2 * 100.0) }'
+  become: yes
+  register: memutilization
+
+- name: output of mem Utilization
+  debug:
+    var: memutilization
+
+- name: Command to Check SWAP Utilization
+  shell: free -h | grep Swap | awk '{printf $3}'
+  become: yes
+  register: swaputilization
+
+- name: output of swap Utilization
+  debug:
+    var: swaputilization
+
+- name: Command to look for exclude option in suse
+  shell: grep "^exclude" /etc/zypp/zypp.conf
+  become: yes
+  register: out_exclude
+  ignore_errors: true
+
+- name: output of exclude 
+  debug:
+    var: out_exclude
+
+- name: Command to look for exclude option in rhel
+  shell: grep "exclude" /etc/yum.conf
+  become: yes
+  register: out_exclude
+  ignore_errors: true
+
+- name: output of exclude 
+  debug:
+    var: out_exclude
+
+- name: Extracting NTP server details
+  shell: grep "^server" /etc/ntp.conf
+  become: yes
+  register: ntp_server
+  ignore_errors: true
+
+- name: output of ntp server 
+  debug:
+    var: ntp_server
+
+- name: Extracting Crontab details
+  shell: crontab -l
+  become: yes
+  register: crontab
+  ignore_errors: true
+
+- name: output of crontab 
+  debug:
+    var: crontab
+
+- name: Fetching ANF Mount Details
+  shell: grep '^[0-9]' /etc/fstab
+  become: yes
+  register: out_anf
+  ignore_errors: true
+
+- name: output of anf 
+  debug:
+    var: out_anf
+- name: OS checks
+  template:
+    src: "os-checks.j2"
+    dest: "{{ input_path }}/OS-checks/{{ ansible_hostname }}_os-checks.{{ output }}"
+  delegate_to: localhost  

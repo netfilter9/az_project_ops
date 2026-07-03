@@ -1,0 +1,4 @@
+default_audit_dbserver: "{{sap.db.sid}}Audit"
+default_cms_dbserver: "{{sap.db.sid}}CMS"
+default_audit_dbuser: cmsaudit
+default_cms_dbuser: cmsuser

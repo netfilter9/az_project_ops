@@ -1,0 +1,404 @@
+- name: "Ensure chargen services are not enabled | chargen-dgram"
+  stat:
+      path: /etc/xinetd.d/chargen-dgram
+  register: chargen_dgram_service
+  tags:
+      - level1
+     
+- name: "Ensure chargen services are not enabled | chargen-dgram"
+  command: chkconfig chargen-dgram off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - chargen_dgram_service is defined
+    - chargen_dgram_service.stat.exists
+  tags:
+      - level1
+     
+- name: "Ensure chargen services are not enabled | chargen-stream"
+  stat:
+      path: /etc/xinetd.d/chargen-stream
+  register: chargen_stream_service
+  tags:
+      - level1
+     
+- name: "Ensure chargen services are not enabled | chargen-stream"
+  command: chkconfig chargen-stream off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - chargen_stream_service is defined
+    - chargen_stream_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure daytime services are not enabled | daytime-dgram"
+  stat:
+      path: /etc/xinetd.d/daytime-dgram
+  register: daytime_dgram_service
+  tags:
+      - level1
+      
+- name: "Ensure daytime services are not enabled | daytime-dgram"
+  command: chkconfig daytime-dgram off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - daytime_dgram_service is defined
+    - daytime_dgram_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure daytime services are not enabled | daytime-stream"
+  stat:
+      path: /etc/xinetd.d/daytime-stream
+  register: daytime_stream_service
+  tags:
+      - level1
+      
+- name: "Ensure daytime services are not enabled | daytime-stream"
+  command: chkconfig daytime-stream off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - daytime_stream_service is defined
+    - daytime_stream_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure discard services are not enabled | discard-dgram"
+  stat:
+      path: /etc/xinetd.d/discard-dgram
+  register: discard_dgram_service
+  tags:
+      - level1
+      
+- name: "Ensure discard services are not enabled | discard-dgram"
+  command: chkconfig discard-dgram off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - discard_dgram_service is defined
+    - discard_dgram_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure discard services are not enabled | discard-stream"
+  stat:
+      path: /etc/xinetd.d/discard-stream
+  register: discard_stream_service
+  tags:
+      - level1
+      
+- name: "Ensure discard services are not enabled | discard-stream"
+  command: chkconfig discard-stream off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - discard_stream_service is defined
+    - discard_stream_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure echo services are not enabled | echo-dgram"
+  command: chkconfig echo-dgram off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - echo_dgram_service is defined
+    - echo_dgram_service.stat.exists
+  tags:
+      - level1
+      
+- name: "Ensure echo services are not enabled | echo-stream"
+  stat:
+    path: /etc/xinetd.d/echo-stream
+  register: echo_stream_service
+  tags:
+    - level1
+    
+- name: "Ensure echo services are not enabled | echo-stream"
+  command: chkconfig echo-stream off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - echo_stream_service is defined
+    - echo_stream_service.stat.exists
+  tags:
+    - level1
+    
+- name: "Ensure time services are not enabled | time-dgram"
+  stat:
+    path: /etc/xinetd.d/time-dgram
+  register: time_dgram_service
+  tags:
+    - level1
+    
+- name: "Ensure time services are not enabled | time-dgram"
+  command: chkconfig time-dgram off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - time_dgram_service is defined
+    - time_dgram_service.stat.exists
+  tags:
+    - level1
+    
+- name: "Ensure time services are not enabled | time-stream"
+  stat:
+    path: /etc/xinetd.d/time-stream
+  register: time_stream_service
+  tags:
+    - level1
+    
+- name: "Ensure time services are not enabled | time-stream"
+  command: chkconfig time-stream off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - time_stream_service is defined
+    - time_stream_service.stat.exists
+  tags:
+    - level1
+    
+- name: "Ensure tftp server is not enabled"
+  stat:
+    path: /etc/xinetd.d/tftp
+  register: tftp_service
+  tags:
+    - level1
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+    
+
+- name: "Ensure tftp server is not enabled"
+  command: chkconfig tftp off
+  notify: restart xinetd
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+    - tftp_service.stat.exists and oelcis_tftp_server == false
+  tags:
+    - level1
+    
+- name: "Ensure Avahi Server is not enabled"
+  service:
+    name: avahi-daemon
+    state: stopped
+    enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_avahi_server is defined and (not oelcis_avahi_server and avahi_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+    - level1
+    - avahi
+    
+- name: "Ensure DHCP Server is not enabled"
+  service:
+      name: dhcpd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_dhcp_server is defined and (not oelcis_dhcp_server and dhcpd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      - dhcp
+      
+- name: "Ensure LDAP server is not enabled"
+  service:
+      name: slapd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_ldap_server is defined and (not oelcis_ldap_server and slapd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      - ldap
+      
+- name: "Ensure NFS and RPC are not enabled"
+  service:
+      name: nfs
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_nfs_rpc_server is defined and (not oelcis_nfs_rpc_server and nfs_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      - nfs
+      
+- name: "Ensure NFS and RPC are not enabled"
+  service:
+      name: rpcbind
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_nfs_rpc_server is defined and (not oelcis_nfs_rpc_server and rpcbind_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      - nfs
+      
+- name: "Ensure DNS Server is not enabled"
+  service:
+      name: named
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_named_server is defined and (not oelcis_named_server and named_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure FTP Server is not enabled"
+  service:
+      name: vsftpd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_vsftpd_server is defined and (not oelcis_vsftpd_server and vsftpd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure HTTP server is not enabled"
+  service:
+      name: httpd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_httpd_server is defined and (not oelcis_httpd_server and httpd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure SNMP Server is not enabled"
+  service:
+      name: snmpd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_snmp_server is defined and (not oelcis_snmp_server and snmpd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure NIS Server is not enabled"
+  service:
+      name: ypserv
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_nis_server is defined and (not oelcis_nis_server and ypserv_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure rsh server is not enabled | rsh"
+  service:
+      name: rsh.socket
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_rsh_server is defined and (not oelcis_rsh_server and rsh_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure rsh server is not enabled | rlogin"
+  service:
+      name: rlogin.socket
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_rsh_server is defined and (not oelcis_rsh_server and rlogin_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure rsh server is not enabled | rexec"
+  service:
+      name: rexec.socket
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_rsh_server is defined and (not oelcis_rsh_server and rexec_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure telnet server is not enabled"
+  service:
+      name: telnet
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_telnet_server is defined and (not oelcis_telnet_server and telnet_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure tftp server is not enabled"
+  service:
+      name: tftp
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_tftp_server is defined and (not oelcis_tftp_server and tftp_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      - tftp
+      
+
+- name: "Ensure rsync service is not enabled "
+  service:
+      name: rsyncd
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_rsyncd_server is defined and (not oelcis_rsyncd_server and rsyncd_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure talk server is not enabled"
+  service:
+      name: ntalk
+      state: stopped
+      enabled: no
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_ntalk_server is defined and (not oelcis_ntalk_server and ntalk_service_status.stdout == "loaded")
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+      - level1
+      
+- name: "Ensure telnet client is not installed"
+  yum:
+    name: telnet
+    state: absent
+  when:
+    - oelcis_level1 is defined and oelcis_level1
+    - oelcis_telnet_required is defined and (not oelcis_telnet_required)
+    - oelcis_disable_service_checks is defined and oelcis_disable_service_checks
+  tags:
+    - level1
+    

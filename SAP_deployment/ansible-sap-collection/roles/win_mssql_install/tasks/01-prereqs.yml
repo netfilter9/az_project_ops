@@ -1,0 +1,24 @@
+---
+
+- name: add SqlServerDsc module
+  win_psmodule:
+    name: SqlServerDsc
+    state: present
+
+- name: add dbatools module
+  win_psmodule:
+    name: dbatools
+    state: present
+
+- name: ensure .NET Framework 4.5 Core is present
+  win_feature:
+    name: NET-Framework-45-Core
+    state: present
+    include_sub_features: True
+
+- name: ensure .NET Framework 3.5 is present if SQL 2014 required
+  win_feature:
+    name: NET-Framework-Core
+    state: present
+    include_sub_features: True
+  when: instance_version == '2014'

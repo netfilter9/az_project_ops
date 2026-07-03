@@ -1,0 +1,6 @@
+{% if rhel7cis_level2 %}
+# Ensure use of privileged commands is collected
+{% for binary in priv_binaries.results[0].stdout_lines %}
+-a always,exit -F path={{ binary }} -F perm=x -F auid>={{ cis_rhel_min_uid }} -F auid!=4294967295 -k privileged
+{% endfor %}
+{% endif %}

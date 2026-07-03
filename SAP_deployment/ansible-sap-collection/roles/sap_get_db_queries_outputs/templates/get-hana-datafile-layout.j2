@@ -1,0 +1,14 @@
+[{% for data in output.results[index].stdout_lines %}
+    {% if loop.index > 1 and loop.index <= loop.length-1 %}
+        {
+            "host": {{ data.split(',')[0] }},
+            "file_name": {{ data.split(',')[1] }}
+        },
+    {% endif %}
+    {% if loop.index == loop.length %}
+        {
+            "host": {{ data.split(',')[0] }},
+            "file_name": {{ data.split(',')[1] }}
+        }
+    {% endif %}
+{% endfor %}]

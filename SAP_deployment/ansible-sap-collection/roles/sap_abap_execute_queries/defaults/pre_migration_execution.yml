@@ -1,0 +1,8 @@
+---
+abap_pre_migration_list:
+   abap:
+      - { name: "ZCM_R_BTCTRNS_REL_SUSPND_JOBS.txt", input_params: SUSPEND }
+      - { name: "ZCM_DB13_CHK_UPD_DB_STATS.txt", input_params: EXPORT }
+      - { name: "ZCM_SMQR_EXP_QUEUE.txt", input_params: DEREGISTER }
+      - { name: "ZCM_SMQS_EXP_DESTINATION.txt", input_params: DEREGISTER }
+           

@@ -1,0 +1,10 @@
+---
+
+- name: download binaries
+  win_shell : |
+   azcopy cp '{{ item.url }}{{ sas_tokens[item.token_ref] }}' {{ item.dest }} --recursive=true --overwrite=ifSourceNewer
+  args:
+    chdir: "{{ downloads.download_drive }}:\\"
+  with_items: "{{ downloads.urls }}"
+  tags:
+    - download

@@ -1,0 +1,11 @@
+---
+
+- name: update hosts file
+  win_hosts:
+    state: present
+    ip_address: "{{ item.ip_address }}"
+    canonical_name: "{{ item.cn }}"
+    action: add
+    aliases: 
+      - "{{ item.cn }}.{{ domain_fqdn }}"
+  with_items: "{{ hostfile_entries }}"

@@ -1,0 +1,54 @@
+---
+
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name: oracle-tns-names update for secondary db
+  block:
+    - name: Ensure backup directory exists.
+      become: yes
+      become_user: "{{ oracle_installation_user }}"
+      file:
+        path: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup"
+        state: directory
+        mode: 0644
+
+    - name: backing up tnsnames file
+      copy:
+        src: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora"
+        dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup/tnsnames.ora"
+        remote_src: yes
+
+    - name: creating new tnsnames.ora file
+      become: yes
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "tnsnames.j2"
+        dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora"
+  when: ansible_hostname == dbnode1
+
+- name: listener update for secondary db
+  block:
+
+      - name: creating new listener file
+        become: yes
+        become_user: "{{ oracle_installation_user }}"
+        template:
+          src: "tnsnames.j2"
+          dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora"
+
+      - name: start listener with oracle user
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        command: "lsnrctl start LISTENER_{{ sap.db.sid | upper }}"
+        args:
+          chdir: $ORACLE_HOME/bin
+        environment:
+          path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+          ORACLE_SID: "{{ sap.db.sid|upper }}"
+          ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+          ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}" 
+  when: ansible_hostname == dbnode2    
+
+  

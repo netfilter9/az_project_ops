@@ -1,0 +1,101 @@
+---
+
+- name: debug bastion_host_venv_absent_packages
+  debug:
+    var: bastion_host_venv_absent_packages
+    verbosity: "{{ verbosity_level }}"
+
+- name: remove any system packages not required
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  package:
+    name: "{{ bastion_host_venv_absent_packages }}"
+    state: absent
+  become: yes
+
+- name: debug bastion_host_venv_present_packages
+  debug:
+    var: bastion_host_venv_present_packages
+    verbosity: "{{ verbosity_level }}"
+
+- name: install any required system packages
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  package:
+    name: "{{ bastion_host_venv_present_packages }}"
+    state: present
+  become: yes
+
+- name: create python3 venv user group
+  group:
+    name: "{{ bastion_host_venv_ro_group }}"
+    state: present
+  become: yes
+
+- name: create top-level directory for virtual environments
+  file:
+    path: "{{ bastion_host_venvs_path }}"
+    state: directory
+    recurse: yes
+    owner: "{{ bastion_host_venvs_owner }}"
+    group: "{{ bastion_host_venv_ro_group }}"
+    mode: "{{ bastion_host_venvs_mode }}"
+  become: yes
+
+- name: block to handle python3 virtual environment creation
+  block:
+
+    - name: create temporary file for requirements.txt
+      tempfile:
+        state: file
+        suffix: txt
+      register: temp_requirements
+
+    - name: get the python3 path
+      command: command -v python3
+      changed_when: no
+      register: python3_path
+
+    - name: copy the repo requirements.txt to destination
+      copy:
+        src: "{{ repo_root }}/requirements.txt"
+        dest: "{{ temp_requirements.path }}"
+
+    - name: create python3 virtual environment
+      vars:
+        ansible_python_interpreter: "{{ python3_path.stdout_lines[0] }}"
+      pip:
+        requirements: "{{ temp_requirements.path }}"
+        umask: "{{ bastion_host_venvs_umask }}"
+        virtualenv: "{{ bastion_host_venvs_path }}/{{ bastion_host_venv_name }}"
+        virtualenv_command: "{{ ansible_python_interpreter }} -m venv"
+        virtualenv_site_packages: "{{ bastion_host_venv_site_packages }}"
+
+  always:
+
+    - name: remove temporary file
+      file:
+        path: "{{ temp_requirements.path }}"
+        state: absent
+
+- name: block to handle updating bastion_host_venvs_owner profile
+  block:
+
+    - name: get bastion_host_venvs_owner entity
+      getent:
+        database: passwd
+        key: "{{ bastion_host_venvs_owner }}"
+        split: ':'
+
+    - name: set fact for the venv owners home directory
+      set_fact:
+        venv_owner_home_directory: "{{ getent_passwd[bastion_host_venvs_owner][4] }}"
+
+    - name: add sourcing the venv to the user bash profile
+      lineinfile:
+        path: "{{ venv_owner_home_directory }}/{{ bastion_host_venvs_owner_profile_file }}"
+        regexp: '^source {{ bastion_host_venvs_path }}/{{ bastion_host_venv_name }}/bin/activate$'
+        line: "source {{ bastion_host_venvs_path }}/{{ bastion_host_venv_name }}/bin/activate"
+
+  when:
+    - bastion_host_venvs_owner_update_profile | bool

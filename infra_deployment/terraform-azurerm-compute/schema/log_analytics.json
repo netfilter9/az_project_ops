@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "log_analytics": {
+            "title": "Log Analytics",
+            "description": "A log_analytics block as defined below",
+            "type": "object",
+            "examples": [
+                {
+                    "resource_group_name": "",
+                    "workspace_name": ""
+                }
+            ],
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name",
+                    "examples": [
+                        "example-rg-sc02"
+                    ]
+                },
+                "workspace_name": {
+                    "title": "Workspace Name",
+                    "description": "(Required) the name of the log analytics workspace to be used for monitoring/diagnostics",
+                    "type": "string",
+                    "examples": [
+                        "example-la-sc02"
+                    ]
+                },
+                "subscription_id": {
+                    "title": "subscription ID",
+                    "description": "subscription for log analytics account",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "resource_group_name",
+                "workspace_name"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

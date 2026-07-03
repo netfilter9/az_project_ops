@@ -1,0 +1,114 @@
+### #property.CMSAUTHENTICATION.description#
+cmsauthentication=secEnterprise
+
+### CMS administrator password
+cmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### #property.CMSUSERNAME.description#
+cmsusername=Administrator
+
+### Installation Directory
+installdir= {{ sap.install_drive }}:\{{ IPS_dir | default('SAPBusinessObjects') }}\
+
+### #property.CMSAuthMode.description#
+iscmsauth=secEnterprise
+
+### #property.ISCMSConnectionSuccess.description#
+iscmsconnectionsuccess=1
+
+### CMS administrator password
+iscmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### #property.CMSServerPort.description#
+iscmsport={{ bods.is.ports.cmsport |default('6400') }}
+
+### #property.CMSSystem.description#
+iscmssystem={{ ansible_hostname }}
+
+### #property.CMSSystemStr.description#
+iscmssystemstr={{ ansible_hostname }}:{{ bods.is.ports.cmsport }}
+
+### #property.CMSUser.description#
+iscmsuser=Administrator
+
+### #property.EnableSSL.description#
+isenablessl=0
+
+### #property.ISInstallType.description#
+isinstalltype=First
+
+### #property.RepoConnStr.description#
+isrepoconnstr=
+
+### #property.RepoDBHost.description#
+isrepodbhost={{ sap.logical_hosts.db | default (ansible_hostname) }}
+
+### #property.RepoDBHostStr.description#
+isrepodbhoststr={{ sap.logical_hosts.db | default (ansible_hostname) }}
+
+### #property.RepoDBName.description#
+isrepodbname={{ bods.is.dbname }}
+
+### #property.RepoDBPasswd.description#
+isrepodbpasswd={{ passwords.dsrepodb | default(passwords.master) }}
+
+### #property.RepoDBPort.description#
+isrepodbport={{ bods.is.ports.repodbport |default('1433') }}
+
+### #property.RepoDBType.description#
+isrepodbtype=MS SQL Server 2019
+
+### #property.RepoDBUser.description#
+isrepodbuser={{ bods.is.dbuser }}
+
+### #property.RepoOdbcStr.description#
+isrepoodbcstr=
+
+### #property.ICCRepoOption.description#
+isrepooption=Create
+
+### #property.ISRepoWinAuth.description#
+isrepowinauth=0
+
+### #property.ISRepoWinAuthValue.description#
+isrepowinauthvalue=false
+
+### #property.MasterCmsName.description#
+mastercmsname={{ ansible_hostname }} 
+
+### #property.MasterCmsPort.description#
+mastercmsport={{ bods.is.ports.cmsport |default('6400') }}
+
+### Product Keycode
+productkey={{ passwords.isproductkey | default('CA31D-R53VX3G-00MVX4X-NH7U') }}
+
+### Language Packs Selected to Install
+selectedlanguagepacks=en
+
+### Available features
+### ------------------
+### root
+###   WebTier
+###   TaskServer
+###   DataReviewTaskJobServer
+###   ISServices
+###     SearchServer
+###     ApplicationService
+###     CPBServices
+###     CpData
+###     DataReviewService
+###   Integrators
+###     BOEIntegrator
+###     BWIntegrator
+###     DFIntegrators
+###     BODIIntegrators
+###     CWMIntegrators
+###     RDBMSIntegrators
+###     MITIIntegrators
+###     HANAIntegrators
+###     PDIntegrator
+###     ExcelIntegrator
+###     SAPEccIntegrator
+###     HDPIntegrator
+###     RedshiftIntegrator
+features=WebTier,TaskServer,DataReviewTaskJobServer,SearchServer,ApplicationService,CPBServices,CpData,DataReviewService,ISServices,BOEIntegrator,BWIntegrator,DFIntegrators,BODIIntegrators,CWMIntegrators,RDBMSIntegrators,MITIIntegrators,HANAIntegrators,PDIntegrator,ExcelIntegrator,SAPEccIntegrator,HDPIntegrator,RedshiftIntegrator,Integrators,root

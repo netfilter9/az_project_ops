@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "plan": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "name",
+                    "description": "(Required) Specifies the Name of the Marketplace Image this Virtual Machine should be created from. Changing this forces a new resource to be created.",
+                    "type": "string",
+                    "examples": [
+                        "//TODO"
+                    ]
+                },
+                "product": {
+                    "title": "product",
+                    "description": " (Required) Specifies the Product of the Marketplace Image this Virtual Machine should be created from. Changing this forces a new resource to be created.",
+                    "type": "string",
+                    "examples": [
+                        "//TODO"
+                    ]
+                },
+                "publisher": {
+                    "title": "publisher",
+                    "description": "(Required) Specifies the Publisher of the Marketplace Image this Virtual Machine should be created from. Changing this forces a new resource to be created.",
+                    "type": "string",
+                    "examples": [
+                        "//TODO"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "product",
+                "publisher"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

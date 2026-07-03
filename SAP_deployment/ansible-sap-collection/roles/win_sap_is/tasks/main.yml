@@ -1,0 +1,11 @@
+---
+- name: create is.params
+  template:
+    src: is.params.j2
+    dest: "{{ sap.install_drive }}:\\SilentInstall\\{{ansible_hostname}}_is.params"
+
+- name: install IS
+  win_shell : setup.exe -r "{{ sap.install_drive }}:\\SilentInstall\\{{ansible_hostname}}_is.params"
+  args:
+    executable: cmd
+    chdir: "{{ sap.install_drive }}:\\SilentInstall\\IS\\"

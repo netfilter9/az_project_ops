@@ -1,0 +1,80 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "key_vault": {
+            "title": "Key Vault",
+            "description": "key vault for this deployment",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "title": "Name",
+                    "description": "Name of keyvault",
+                    "type": "string",
+                    "examples": [
+                        "//TODO"
+                    ]
+                },
+                "sku_name": {
+                    "title": "SKU Name",
+                    "description": "Type of SKU",
+                    "type": "string",
+                    "default": "standard",
+                    "enum": [
+                        "standard"
+                    ]
+                },
+                "enabled_for_disk_encryption": {
+                    "title": "Enabled for disk encryption",
+                    "description": "n/a",
+                    "type": "boolean",
+                    "default": false
+                },
+                "secrets": {
+                    "title": "Secrets",
+                    "description": "List of secrets",
+                    "type": "array",
+                    "items": {
+                        "title": "Secret",
+                        "description": "secret key value pair",
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "title": "Name",
+                                "description": "key for the secret",
+                                "type": "string",
+                                "examples": [
+                                    "//TODO"
+                                ]
+                            },
+                            "random_password": {
+                                "title": "Use Random Password",
+                                "description": "set to true to use random password as value",
+                                "type": "boolean",
+                                "default": true
+                            },
+                            "value": {
+                                "title": "Value",
+                                "description": "value for secret",
+                                "type": "string",
+                                "examples": [
+                                    "mynotsosecretstring"
+                                ]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name"
+                        ]
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "name"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,164 @@
+- name: main | install sap-suse-cluster-connector
+  package:
+    name: sap-suse-cluster-connector
+  
+- name: adding the service
+  package:
+    name: google-guest-agent
+    
+- name: stopping the services in both nodes
+  command: sudo service google-guest-agent stop
+
+- name: checking the file existed or not
+  stat:
+    path: /etc/default/instance_configs.cfg
+  register: register_name
+
+- name: creating the file if not existed 
+  file:
+    path: /etc/default/instance_configs.cfg
+    state: touch
+  when: not register_name.stat.exists
+
+- name: main | adding the content
+  lineinfile:
+    path: /etc/default/instance_configs.cfg
+    line: "{{ item }}"
+  with_items:
+    - "[IpForwarding]"
+    - ethernet_proto_id = 66
+    - ip_aliases = true
+    - target_instance_ips = false
+    - ""
+    - "[NetworkInterfaces]"
+    - dhclient_script = /sbin/google-dhclient-script
+    - dhcp_command =
+    - ip_forwarding = false
+    - setup = true
+
+- name: starting the services in both nodes
+  command: sudo service google-guest-agent start
+
+- name: main | reboot servers
+  reboot: 
+
+- name: main | ascs
+  block: 
+
+    - name: main | set up cluster (if required)
+      include_role: 
+        name: cluster_crm_apply_config
+      vars:
+        cluster_type: ascs_nosap
+
+    - name: main | put ers node into standby 
+      command: crm node standby {{ node2 }}
+
+    - name: main | install ascs
+      include_role: 
+        name: sap_install
+      vars:
+        role: ascs
+
+    - name: main | bring ers back online 
+      command: crm node online {{ node2 }}
+
+  when: ansible_hostname == node1  
+
+- name: main | ers
+  block:
+  
+    - name: main | put ascs node into standby 
+      command: crm node standby {{ node1 }}
+
+    - name: main | install ers
+      include_role: 
+        name: sap_install
+      vars:
+        role: ers
+
+    - name: main | bring ascs back online 
+      command: crm node online {{ node1 }}
+
+    - name: main | set profile id facts
+      set_fact:
+        ascs_instance_profile_name: "{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}_{{ sap.logical_hosts.ascs.hostname }}"
+        ers_instance_profile_name: "{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}_{{ sap.logical_hosts.ers.hostname }}"
+
+    - name: main | (A)SCS profile additional lines
+      lineinfile:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ascs_instance_profile_name }}
+        line: "{{ item }}"
+      loop:
+        - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+        - service/halib_cluster_connector = /usr/bin/sap_suse_cluster_connector
+        - enque/encni/set_so_keepalive = true
+
+    - name: main | (A)SCS profile line modification
+      replace:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ascs_instance_profile_name }}
+        regexp: Restart_Program_01
+        replace: Start_Program_01
+      
+    - name: main | ERS profile additional lines
+      lineinfile:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ers_instance_profile_name }}
+        line: "{{ item }}"
+      loop:
+        - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+        - service/halib_cluster_connector = /usr/bin/sap_suse_cluster_connector
+    
+    - name: main | ERS profile line modification for starting
+      replace:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ers_instance_profile_name }}
+        regexp: Restart_Program_00
+        replace: Start_Program_00
+
+  when: ansible_hostname == node2 
+
+- name: main | adding sidadm in haclient group
+  user:
+    name: "{{ sap.sid|lower }}adm"
+    groups: haclient
+    append: yes
+
+- name: main | copy ascs service content
+  shell: cat /usr/sap/sapservices | grep "{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}"
+  register: ascs_content
+  when: ansible_hostname == node1
+
+- name: main | share ascs service content
+  delegate_to: "{{ node2 }}"
+  lineinfile:
+    line: "{{ ascs_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node1
+
+- name: main | copy ers service content
+  shell: cat /usr/sap/sapservices | grep "ERS{{ sap.instance_numbers.ers }}"
+  register: ers_content
+  when: ansible_hostname == node2
+
+- name: main | share ascs service content
+  delegate_to: "{{ node1 }}"
+  lineinfile:
+    line: "{{ ers_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node2
+
+- name: main | set up cluster (if required)
+  include_role: 
+    name: cluster_crm_apply_config
+  vars:
+    cluster_type: ascs_sap
+  when: ansible_hostname == node1 
+
+- name: main | tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: net.ipv4.tcp_keepalive_time, value: 120}

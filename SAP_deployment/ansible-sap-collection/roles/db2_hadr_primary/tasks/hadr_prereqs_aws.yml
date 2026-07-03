@@ -1,0 +1,7 @@
+- name: Update the HADR_LOCAL_SVC and HADR_REMOTE_SVC parameters in etc/services
+  blockinfile:
+    path: /etc/services
+    create: yes
+    block: |
+      {{ sap.db.sid | upper }}_HADR_1 5950/tcp # DB2 HADR log shipping
+      {{ sap.db.sid | upper }}_HADR_2 5951/tcp # DB2 HADR log shipping

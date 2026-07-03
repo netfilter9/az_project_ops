@@ -1,0 +1,4 @@
+pvcreate /dev/sdl /dev/sdm
+vgextend FILETRANSFER /dev/sdl /dev/sdm
+lvextend -l +100%FREE /dev/FILETRANSFER/lv_filetransfer
+xfs_growfs /db_dump

@@ -1,0 +1,11 @@
+---
+- name: main | env variable setup
+  lineinfile:
+    line: "{{ item }}"
+    path: /etc/environment
+  loop:
+    - SECUDIR=/usr/sap/saprouter
+    - SNC_LIB=/usr/sap/saprouter/lib/libsapcrypto.so
+    - LD_LIBRARY_PATH=/usr/sap/saprouter/lib
+    - LIBPATH=/usr/sap/saprouter/lib
+

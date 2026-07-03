@@ -1,0 +1,85 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    db_user: "{{ sap.db.db_user | default('sysdba') }}"
+
+- name: dg config for primary db  
+  block:
+    - name: template the sql file
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "dg_pre_primary.j2"
+        dest: /home/oracle/dg-pre-primary.sql
+
+    - command : "./sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/dg-pre-primary.sql"
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args:
+        chdir: $ORACLE_HOME/bin
+        creates: "{{ root_dir }}/{{ sap.db.sid }}/origlogA/standby_redo*.log"
+      environment:
+        path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+      register: output
+    
+    - debug:
+        var: output
+
+    - name: tidy up the dg_pre_primaryfile
+      file:
+        path: /home/oracle/dg-pre-primary.sql
+        state: absent
+
+  when: ansible_hostname == dbnode1
+
+- name: dg config for secondary db  
+  block:
+      - name: template the init file
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        template:
+          src: "init.j2"
+          dest: /tmp/init{{ sap.db.sid | upper }}.ora
+
+      - name: template the pfile file
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        template:
+          src: "pfile.j2"
+          dest: "/home/oracle/pfile.sql"
+
+      - name: startup with nomount
+        command:  "./sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/pfile.sql"
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        args:
+          chdir: $ORACLE_HOME/bin
+        environment:
+          path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+          ORACLE_SID: "{{ sap.db.sid|upper }}"
+          ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+          ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+
+      - name: create the sqlnet.ora file
+        become: yes
+        become_user: "{{ oracle_installation_user }}"
+        copy:
+          src: "sqlnet.ora"
+          dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/sqlnet.ora"
+     
+  when: ansible_hostname == dbnode2
+
+
+
+
+
+
+
+
+
+  
+
+

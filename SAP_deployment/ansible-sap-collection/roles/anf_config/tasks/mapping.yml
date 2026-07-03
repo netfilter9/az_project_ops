@@ -1,0 +1,27 @@
+
+- name: disable_idmapping | Update /etc/idmapd.conf
+  lineinfile:
+    regexp: '^Domain = localdomain'
+    line: Domain = defaultv4iddomain.com
+    insertafter: '^#Domain'
+    path: /etc/idmapd.conf
+
+- name: mapping | Update /etc/idmapd.conf
+  lineinfile:
+    regexp: '^Nobody-User'
+    line: Nobody-User = nobody
+    insertafter: '^#Nobody-User '
+    path: /etc/idmapd.conf
+
+- name: mapping | Update /etc/idmapd.conf
+  lineinfile:
+    regexp: '^Nobody-Group'
+    line: Nobody-Group = nobody
+    insertafter: '^#Nobody-Group '
+    path: /etc/idmapd.conf
+
+- name: mapping | Update /etc/modprobe.d/nfs.conf
+  lineinfile:
+    line: options nfs nfs4_disable_idmapping=Y
+    dest: /etc/modprobe.d/nfs.conf
+    create: yes

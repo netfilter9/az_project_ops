@@ -1,0 +1,12 @@
+---
+- name: grub-config | adding value to grub entry
+  replace:
+    path: /etc/default/grub
+    regexp: 'GRUB_CMDLINE_LINUX_DEFAULT="(elevator=none transparent_hugepage=never )?'
+    replace: 'GRUB_CMDLINE_LINUX_DEFAULT="elevator=none transparent_hugepage=never '
+  register: grub_config
+  notify: reboot server
+
+- name: grub-config | Update grub
+  command: "grub2-mkconfig -o /boot/grub2/grub.cfg"
+  when: grub_config.changed

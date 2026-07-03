@@ -1,0 +1,17 @@
+---
+- name: Main | set folder path
+  set_fact: 
+    search_path: "{{ root_dir | default('/usr/sap') }}/sapinst/TREX"
+
+- name: Main | check for trex folder
+  shell: find "{{ trex_file_path | default(search_path) }}" -name "install.sh" -printf "%h\n"
+  register: trex_install_path
+
+- name: Main | debug path
+  debug:
+    var: trex_install_path.stdout
+
+- name: Main | install Trex
+  shell: ./install.sh --action=install --sid={{ sap.sid }} --password={{ passwords.system }} --type=DEFAULT
+  args:
+    chdir: "{{ trex_install_path.stdout }}"

@@ -1,0 +1,47 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmResourceGroup": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource group of Compute VM containing the workload"
+            }
+        },
+        "vmName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Compute VM containing the workload"
+            }
+        },
+        "vaultName": {
+            "type": "string",
+            "defaultValue": "BackupDB",
+            "metadata": {
+                "description": "Name of the Vault"
+            }
+        }
+    },
+    "variables": {
+        "skuName": "RS0",
+        "skuTier": "Standard",
+        "backupFabric": "Azure",
+        "containerType": "VMAppContainer",
+        "backupManagementType": "AzureWorkload",
+        "workloadType": "SQLDataBase"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers",
+            "apiVersion": "2018-01-10",
+            "name": "[concat(parameters('vaultName'), '/', variables('backupFabric'), '/', variables('containerType'), ';compute;', parameters('vmResourceGroup'),';',parameters('vmName'))]",
+            "properties": {
+                "containerType": "[variables('containerType')]",
+                "backupManagementType": "[variables('backupManagementType')]",
+                "workloadType": "[variables('workloadType')]",
+                "friendlyName": "[parameters('vmName')]",
+                "sourceResourceId": "[resourceId(parameters('vmResourceGroup'),'Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+            }
+        }
+    ]
+}

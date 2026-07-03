@@ -1,0 +1,110 @@
+sapdevdb01:db2d01 56> lsblk
+NAME                       MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+fd0                          2:0    1     4K  0 disk
+sda                          8:0    0   105G  0 disk
+├─sda1                       8:1    0   297M  0 part /boot
+└─sda2                       8:2    0 104.7G  0 part
+  ├─VGSYS-lv_swap          254:0    0    64G  0 lvm  [SWAP]
+  ├─VGSYS-lv_root          254:1    0    14G  0 lvm  /
+  ├─VGSYS-lv_tmp           254:6    0    10G  0 lvm  /tmp
+  ├─VGSYS-lv_var           254:7    0    10G  0 lvm  /var
+  └─VGSYS-lv_usropenv      254:8    0     5G  0 lvm  /usr/openv
+sdb                          8:16   0   825G  0 disk
+└─VGDATA1-lv_db2D01data1   254:3    0   795G  0 lvm  /db2/D01/sapdata1
+sdc                          8:32   0   100G  0 disk
+├─VGLOG-lv_db2D01log       254:2    0    50G  0 lvm  /db2/D01/log_dir
+└─VGLOG-lv_db2D01tmp       254:5    0    50G  0 lvm  /db2/D01/saptmp1
+sdd                          8:48   0    30G  0 disk
+├─VGARCH-lv_db2D01archive  254:9    0    20G  0 lvm  /db2/D01/log_archive
+└─VGARCH-lv_db2D01retrieve 254:11   0    10G  0 lvm  /db2/D01/log_retrieve
+sde                          8:64   0    30G  0 disk
+└─VGTRANS-lv_usrsaptrans   254:10   0    20G  0 lvm
+sdf                          8:80   0    70G  0 disk
+├─VGSAP-lv_usrsap          254:15   0    40G  0 lvm  /usr/sap
+├─VGSAP-lv_sapmnt          254:18   0    20G  0 lvm  /sapmnt
+└─VGSAP-lv_libelle         254:20   0    10G  0 lvm  /usr/libelle
+sdg                          8:96   0    32G  0 disk
+├─VGDB2BIN-lv_db2D01       254:16   0     1G  0 lvm  /db2/D01
+├─VGDB2BIN-lv_db2D01dump   254:17   0     4G  0 lvm  /db2/D01/db2dump
+├─VGDB2BIN-lv_db2D01inst   254:19   0     5G  0 lvm  /db2/db2d01
+└─VGDB2BIN-lv_upgradeDB2   254:21   0    10G  0 lvm  /mnt/db2install
+sdh                          8:112  0    13G  0 disk
+├─VGMISC-lv_archlink       254:12   0     1G  0 lvm  /sapmnt/D01/archivelink
+├─VGMISC-lv_interface      254:13   0  10.5G  0 lvm  /interfaces
+└─VGMISC-lv_ilmt           254:14   0     1G  0 lvm  /ilmt
+sdi                          8:128  0    10G  0 disk
+└─VG_CORTEX-lv_cortex      254:4    0    10G  0 lvm  /opt/traps
+sr0                         11:0    1  1024M  0 rom
+
+
+
+sapdevdb01:db2d01 57> df -hT
+Filesystem                           Type      Size  Used Avail Use% Mounted on
+devtmpfs                             devtmpfs  4.0M   16K  4.0M   1% /dev
+tmpfs                                tmpfs      16G   80K   16G   1% /dev/shm
+tmpfs                                tmpfs     6.3G  658M  5.7G  11% /run
+tmpfs                                tmpfs     4.0M     0  4.0M   0% /sys/fs/cgroup
+/dev/mapper/VGSYS-lv_root            xfs        14G   12G  2.9G  80% /
+/dev/mapper/VGSYS-lv_tmp             xfs        10G  3.3G  6.8G  33% /tmp
+/dev/mapper/VGSYS-lv_usropenv        xfs       5.0G  1.3G  3.8G  25% /usr/openv
+/dev/mapper/VGDB2BIN-lv_db2D01       ext3      975M   80M  844M   9% /db2/D01
+/dev/mapper/VGDB2BIN-lv_db2D01inst   ext3      4.8G  2.6G  2.1G  56% /db2/db2d01
+/dev/mapper/VGDB2BIN-lv_db2D01dump   ext3      3.9G  1.9G  1.9G  51% /db2/D01/db2dump
+/dev/mapper/VGARCH-lv_db2D01archive  ext3       20G  737M   18G   4% /db2/D01/log_archive
+/dev/mapper/VGARCH-lv_db2D01retrieve ext3      9.7G  140K  9.2G   1% /db2/D01/log_retrieve
+/dev/mapper/VGDATA1-lv_db2D01data1   ext3      783G  740G   30G  97% /db2/D01/sapdata1
+/dev/mapper/VGLOG-lv_db2D01log       ext3       50G   33G   15G  70% /db2/D01/log_dir
+/dev/mapper/VGLOG-lv_db2D01tmp       ext3       50G  2.5G   45G   6% /db2/D01/saptmp1
+/dev/mapper/VGMISC-lv_ilmt           xfs      1014M  154M  861M  16% /ilmt
+/dev/mapper/VG_CORTEX-lv_cortex      xfs        10G  1.8G  8.3G  18% /opt/traps
+/dev/mapper/VGMISC-lv_interface      xfs        11G  3.3G  7.3G  31% /interfaces
+/dev/mapper/VGSYS-lv_var             xfs        10G  1.3G  8.7G  14% /var
+/dev/mapper/VGSAP-lv_sapmnt          xfs        20G  9.3G   11G  47% /sapmnt
+/dev/sda1                            xfs       294M  138M  157M  47% /boot
+/dev/mapper/VGMISC-lv_archlink       xfs      1014M   33M  982M   4% /sapmnt/D01/archivelink
+/dev/mapper/VGSAP-lv_libelle         xfs        10G  3.7G  6.4G  37% /usr/libelle
+/dev/mapper/VGSAP-lv_usrsap          xfs        40G   19G   22G  48% /usr/sap
+hipdevas01:/fis/SAP/KHEOPS/D01/hip   nfs4       50G   22G   29G  43% /hip
+sapdevdb03:/DSM                      nfs4       85G   41G   45G  48% /DSM
+sapdevdb03:/usr/sap/trans            nfs4      390G  328G   63G  84% /usr/sap/trans
+tmpfs                                tmpfs     3.2G   48K  3.2G   1% /run/user/481
+tmpfs                                tmpfs     3.2G   24K  3.2G   1% /run/user/210
+/dev/mapper/VGDB2BIN-lv_upgradeDB2   xfs        10G  2.3G  7.8G  23% /mnt/db2install
+tmpfs                                tmpfs     3.2G   28K  3.2G   1% /run/user/206
+eurvcsllx01l:/app/install            nfs       240G  186G   55G  78% /install
+eurvcsllx01l:/copy                   nfs       3.0T  2.0T  1.1T  67% /copy
+tmpfs                                tmpfs     3.2G   24K  3.2G   1% /run/user/209
+
+VGARCH
+VGDATA1
+VGDB2BIN
+VGLOG
+VGMISC
+VGSAP
+VGTRANS
+VG_CORTEX
+
+disk name:
+    disk-vcsi-dev-weu-sapecc-arch-001
+    disk-vcsi-dev-weu-sapecc-data1-001
+    disk-vcsi-dev-weu-sapecc-db2bin-001
+    disk-vcsi-dev-weu-sapecc-log-001
+    disk-vcsi-dev-weu-sapecc-misc-001
+    disk-vcsi-dev-weu-sapecc-sap-001
+    disk-vcsi-dev-weu-sapecc-trans-001
+    disk-vcsi-dev-weu-sapecc-cortex-001
+
+disk-vcsi-dev-weu-sapecc-sap-001
+disk-vcsi-dev-weu-sapecc-sapmnt-001
+disk-vcsi-dev-weu-sapecc-sapdata-001
+disk-vcsi-dev-weu-sapecc-saptmp-001
+disk-vcsi-dev-weu-sapecc-db2d01-001
+disk-vcsi-dev-weu-sapecc-log_retrieve-001
+disk-vcsi-dev-weu-sapecc-log_dir-001
+disk-vcsi-dev-weu-sapecc-log_archive-001
+disk-vcsi-dev-weu-sapecc-db2dump-001
+disk-vcsi-dev-weu-sapecc-traps-001
+disk-vcsi-dev-weu-sapecc-ilmt-001
+disk-vcsi-dev-weu-sapecc-libelle-001
+disk-vcsi-dev-weu-sapecc-interfaces-001
+

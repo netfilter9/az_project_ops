@@ -1,0 +1,17 @@
+{%- for i in range(0,vm_list|length) -%}
+{% set datafound = namespace(isdatapresent=0) %}
+{%- if status_vm[i] == '1' %}
+{% for resource in tfstate_inputdata.resources %}
+{% if resource.type == "aws_instance"%}
+{% for instance in resource.instances %}
+{% if instance.index_key== vm_list[i] %}
+{%- set datafound.isdatapresent = instance.attributes.id %}
+{{ datafound.isdatapresent}}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+{{ 0 }}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,15 @@
+---
+- name: resizing of tempdb files 
+  win_shell: Invoke-Sqlcmd -Query "ALTER DATABASE [tempdb] MODIFY FILE ( NAME = N'{{ item }}', SIZE = 61440KB )"
+  with_items:
+  - temp2
+  - temp3
+  - temp4
+  - temp5
+  - temp6
+  - temp7
+  - temp8
+  - tempdev
+  - templog  
+  register: result 
+  failed_when: not (result.stderr.find("does not exist"))  

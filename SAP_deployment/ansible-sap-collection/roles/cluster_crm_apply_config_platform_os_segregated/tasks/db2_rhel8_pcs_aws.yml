@@ -1,0 +1,33 @@
+- name: Replace bold strings with your instance name db2sid, database SID, and virtual IP address/Azure Load Balancer.
+  command: 
+    cmd: pcs resource create Db2_HADR_{{ sap.db.sid|upper }} db2 instance='db2{{ sap.db.sid | lower }}' dblist='{{ sap.db.sid|upper }}' promotable meta notify=true resource-stickiness=5000
+    creates: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileA*.log
+  register: logfileA
+
+- name:  write logfileA
+  copy:
+    dest: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileA_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ logfileA.stdout }}"
+
+- name: Configure resource stickiness and correct cluster notifications for master resource
+  command: 
+    cmd: pcs resource create db2-{{ sap.db.sid|lower }} aws-vpc-move-ip ip={{ db_overlay_ip }} interface=eth0 routing_table={{ route_table_id }}
+    creates: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileB*.log
+  register: logfileB
+
+- name:  write logfileB
+  copy:
+    dest: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileB_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ logfileB.stdout }}"
+
+- name: Create colocation constrain - keep Db2 HADR Master and Group on same node
+  command: 
+    cmd: pcs constraint colocation add db2-{{ sap.db.sid | lower }} with master Db2_HADR_{{ sap.db.sid|upper }}-clone
+    creates: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileF*.log
+  register: logfileF
+
+- name:  write logfileF
+  copy:
+    dest: /db2/{{ sap.db.sid|upper }}/logarch/{{ sap.db.sid|lower }}_logfileF_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ logfileF.stdout }}"
+

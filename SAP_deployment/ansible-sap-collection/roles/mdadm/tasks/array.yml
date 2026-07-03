@@ -1,0 +1,45 @@
+---
+# # Checking for any existing raid arrays
+- name: arrays | Checking Status Of Array(s)
+  shell: "cat /proc/mdstat | grep {{ item.name }}"
+  register: array_check
+  loop: '{{ mdadm_array }}'
+  # check_mode: no
+  ignore_errors: yes
+
+# Creating raid arrays
+# We pass yes in order to accept any questions prompted for yes|no
+- name: arrays | Creating Array(s)
+  shell: "yes | mdadm --create /dev/{{ item.name }} --chunk={{ item.stripe_size | default(64) }} --level={{ item.level }} --raid-devices={{ item.devices|count }} {{ item.devices| join (' ') }}"
+  loop: '{{ mdadm_array }}'
+  register: device_created
+  ignore_errors: yes
+
+# Capture the raid array details to append to mdadm.conf
+# in order to persist between reboots
+- name: arrays | Capturing Array Details
+  command: "mdadm --detail --scan"
+  register: array_details
+  # changed_when: false
+
+# Creating raid arrays filesystem
+- name: arrays | Ensure base filesystems for mdadm exist
+  filesystem:
+    fstype: "{{ item.filesystem | default('xfs') }}"
+    opts: "{{ item.filesystem_opts | default(omit) }}"
+    dev: "/dev/{{ item.name }}"
+  loop: "{{ mdadm_array }}"
+  when:
+  - item.filesystem is defined
+  ignore_errors: yes
+
+# Mounting raid arrays
+- name: arrays | Mounting Array(s)
+  mount:
+    name: "{{ item.mountpoint }}"
+    src: "/dev/{{ item.name }}"
+    fstype: "{{ item.filesystem | default('xfs') }}"
+    state: "mounted"
+    opts: "{{ item.opts | default(omit) }}"
+  loop: "{{ mdadm_array }}"
+  when: item.mountpoint is defined

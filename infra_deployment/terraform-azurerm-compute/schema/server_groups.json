@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "server_groups": {
+            "type": "object",
+            "title": "Servers",
+            "examples": [
+                {
+                    "ascs": {},
+                    "apps": {},
+                    "db": {}
+                },
+                {
+                    "group1": {}
+                }
+            ],
+            "additionalProperties": {
+                "$ref": "server_group.json#/definitions/server_group"
+            }
+        }
+    },
+    "additionalProperties": false
+}

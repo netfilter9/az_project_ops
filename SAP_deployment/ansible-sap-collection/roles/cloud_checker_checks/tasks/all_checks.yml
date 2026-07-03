@@ -1,0 +1,17 @@
+- name: db checks performing
+  include_tasks: "db_checks.yml"
+
+- name: os checks performing
+  include_tasks: "os_checks.yml"
+
+- name: infra checks performing
+  include_tasks: "infra_checks.yml"
+
+- name: hana mini checks performing
+  include_tasks: "hanamini_checks.yml"
+
+- name: abap checks performing
+  include_tasks: "abap_checks.yml"
+
+- name: platform checks performing
+  include_tasks: "platform_checks.yml"

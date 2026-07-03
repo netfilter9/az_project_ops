@@ -1,0 +1,26 @@
+- name: sybase | post config sql
+  template:
+    src: "post_sybase.config.j2"
+    dest: "{{ install_dir }}/post_sybase.sql"
+
+- name: sybase | post config
+  command:
+    cmd: ./isql -U sa -P {{passwords.systemdb}} -S {{sap.db.sid}} -i "{{ install_dir }}/post_sybase.sql"
+    creates: /var/tmp/post_sybase_output*.log
+  no_log: true
+  args:
+    chdir: /sybase/{{sap.db.sid | upper}}/{{ sap.db.sybase_ocs | default('OCS-16_0') }}/bin
+  environment:
+    LANG: "us_english.utf8"
+    SHELL: "/sybase/{{sap.db.sid | upper}}/SYBASE.sh"
+    SYBASE_OCS: '{{ sap.db.sybase_ocs | default("OCS-16_0") }}'
+    SYBASE: "/sybase/{{sap.db.sid | upper}}"
+    SYBASE_ASE: '{{ sap.db.sybase_ase | default("ASE-16_0") }}'
+  register: post_sybase_result
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: sybase | write log file
+  copy:
+    dest: /var/tmp/post_sybase_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ post_sybase_result.stdout }}"

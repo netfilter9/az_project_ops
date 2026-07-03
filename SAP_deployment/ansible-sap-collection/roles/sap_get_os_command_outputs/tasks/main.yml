@@ -1,0 +1,128 @@
+---
+# tasks file for sap-get-os-command-outputs
+
+- name: create folders   
+  file:     
+    path: '{{ os_export_path }}/{{ ansible_os_family}}'     
+    mode: '0755'     
+    recurse: yes     
+    state: directory
+  become: true
+  become_method: sudo
+  delegate_to: localhost
+  
+- name: Write OS version data
+  template: 
+      src: os-version.j2
+      dest: '{{ os_export_path }}{{ ansible_os_family}}/os_version_{{ ansible_hostname }}.json'      
+  delegate_to: localhost 
+
+- debug: var=ansible_memory_mb
+
+- name: Write OS memory
+  template: 
+      src: capture-memory.j2
+      dest: '{{ os_export_path }}{{ ansible_os_family}}/capture_memory_{{ ansible_hostname }}.json'
+  delegate_to: localhost
+
+- name: Execute command for validate cpu
+  command: "lscpu"
+  register: lscpu_output
+
+- name: Compose lscpu data
+  template:
+     src: validate-cpu.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/validate_cpu_{{ ansible_hostname }}.json'
+  delegate_to: localhost 
+
+- name: Execute command for disk layout
+  command: "df -h"
+  register: disk_layout_outputs
+
+- name: Compose disk layout data
+  template:
+     src: disk-layout.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/disk_layout_{{ ansible_hostname }}.json'
+  delegate_to: localhost 
+
+- name: Fetch java version
+  command: "java -version"
+  register: java_version_outputs
+  when: sap_type == 'java'
+
+- name: Execute command for web dispatcher kernel version
+  command: sudo su - {{ sid |lower }}adm -c 'sapwebdisp pf=/usr/sap/{{ sid |upper }}/W{{ instance_number }}/{{ sid |upper }}_W{{ instance_number }}_{{ ansible_hostname }} -version'
+  register: wd_kernel_version_outputs
+
+- debug: var=wd_kernel_version_outputs
+
+- name: Compose web dispatcher kernel version data
+  template:
+     src: web-dispatcher-kernel-version.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/wd_kernel_version_{{ ansible_hostname }}.json'
+  delegate_to: localhost
+
+- name: Execute command for Check Webdispatcher Backend Connectivity
+  command: sudo su - {{ sid |lower }}adm -c 'sapwebdisp pf=/sapmnt/{{ sid | upper }}/profile/{{ sid | upper }}_W{{ instance_number }}_{{ ansible_hostname }} -checkconfig'
+  register: wd_backend_connectivity_outputs
+  ignore_errors: True
+
+- debug: var=wd_backend_connectivity_outputs
+
+- name: Compose java version data
+  template:
+     src: java-version.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/java_version_{{ ansible_hostname }}.json'
+  delegate_to: localhost 
+  when: sap_type == 'java'
+  
+- name: Execute command for r3load version
+  command: sudo su - {{ sid |lower }}adm -c 'R3load -version'
+  register: r3load_outputs
+
+- debug: var=r3load_outputs
+
+- name: Compose r3load version data
+  template:
+     src: r3load-version.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/r3load_version_{{ ansible_hostname }}.json'
+  delegate_to: localhost 
+
+- name: Execute command for ulimit
+  command: sudo su - {{ sid|lower }}adm -c 'ulimit -a'
+  register: ulimit_outputs
+  failed_when: 
+      - ulimit_outputs.failed
+      - not (ulimit_outputs.stderr.find("Command not found."))
+
+- debug: var=ulimit_outputs
+
+- name: Compose ulimit data
+  template:
+     src: ulimit.j2
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/ulimit_{{ ansible_hostname }}.json'
+  delegate_to: localhost 
+
+- name: capture etc hosts and services files
+  fetch:
+     src: "{{ item }}"
+     dest: '{{ os_export_path }}{{ ansible_os_family}}/'
+     flat: yes
+  with_items:
+     - /etc/hosts
+     - /etc/services
+    #  - /usr/sap/tmp/DDIM.SQL
+    #  - /usr/sap/tmp/DFACT.SQL
+    #  - /usr/sap/tmp/DODS.SQL
+    #  - /usr/sap/tmp/SQLFiles.LST
+
+- name: Outputing the profile files
+  shell: sudo su - {{ sid|lower }}adm -c 'grep /{{ sid }}/ /usr/sap/sapservices' | awk '{print $5}' | cut -d'=' -f2
+  register: profile_outputs
+
+- fetch:
+    src: "{{ item }}"
+    dest: '{{ os_export_path }}{{ ansible_os_family }}/'
+    flat: yes
+  with_items: "{{ profile_outputs.stdout_lines }}"
+  

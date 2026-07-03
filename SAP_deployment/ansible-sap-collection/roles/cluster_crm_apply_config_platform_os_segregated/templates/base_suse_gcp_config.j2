@@ -1,0 +1,14 @@
+{#
+  Select STONITH strategy
+#}
+{% for node in [node1,node2]  %}
+{# GCP STONITH #}
+primitive stonith-{{ node }} stonith:external/gcpstonith \
+  op monitor interval=300s timeout=60s on-fail=restart \
+  op start interval=0 timeout=60s onfail=restart \
+  params instance_name={{ node }} \
+  gcloud_path="/usr/bin/gcloud" \
+  logging=yes
+
+location loc_stonith_{{ node }} stonith-{{ node }} -inf: {{ node }}
+{% endfor %}

@@ -1,0 +1,7 @@
+- debug :
+    msg : "/usr/sap/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe/hdbsql -d SYSTEMDB -i {{ sap.instance_numbers.db }} -u SYSTEM -p '{{ passwords.system}}' CREATE DATABASE {{ item |upper }} SYSTEM USER PASSWORD '{{ passwords.system }}'" 
+  loop: "{{ sap.db.tenants }}"
+        
+- name: create tenant db
+  command : "/usr/sap/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe/hdbsql -d SYSTEMDB -i {{ sap.instance_numbers.db }} -u SYSTEM -p '{{ passwords.system}}' CREATE DATABASE {{ item |upper }} SYSTEM USER PASSWORD '{{ passwords.system }}'" 
+  loop: "{{ sap.db.tenants }}"

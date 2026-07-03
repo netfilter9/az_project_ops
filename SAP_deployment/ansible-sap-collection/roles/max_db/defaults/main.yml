@@ -1,0 +1,3 @@
+# # default backup location for hana-db
+default_backup_location: "{{ install_dir }}/sapinst/EXPORTS/"
+

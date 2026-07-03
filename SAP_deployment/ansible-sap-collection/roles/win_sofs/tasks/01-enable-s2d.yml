@@ -1,0 +1,13 @@
+---
+
+- name: get s2d details
+  win_shell: |
+    (Get-ClusterStorageSpacesDirect).State
+  register: get_s2d
+
+- name: enable s2d
+  win_shell: |
+    Enable-ClusterStorageSpacesDirect -Confirm:$false
+  register: enable_s2d
+  when: 
+    - get_s2d.stdout is search("Disabled")

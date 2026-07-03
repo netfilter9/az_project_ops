@@ -1,0 +1,31 @@
+---
+- name: main | apply configure cluster
+  block: 
+    - name: main | copy in cluster config template
+      template:
+        src: "{{ cluster_type }}_config.j2"
+        dest: ~/cluster_config
+
+    - name: main | set cluster maintenace mode
+      command: crm -F configure property maintenance-mode="true"
+
+    - name: main | load crm config
+      shell: 
+        cmd: crm -F config load update cluster_config
+        chdir: ~/
+      
+    - name: main | unset cluster maintenace mode
+      command: crm -F configure property maintenance-mode="false"
+  when: 
+    - ansible_hostname == node1
+    - ansible_os_family == 'Suse'
+
+- name: main | apply configure cluster
+  block: 
+    - name: redhat cluster primitives
+      include_tasks: "{{ cluster_type }}.yml"
+   
+    - name: main | hana-srhook
+      include_tasks: hana-srhook.yml
+  when: 
+    - ansible_os_family | lower  == 'redhat'

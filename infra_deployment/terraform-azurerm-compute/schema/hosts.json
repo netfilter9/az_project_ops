@@ -1,0 +1,126 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "Hosts",
+    "description": "definition of the hosts block",
+    "definitions": {
+        "hosts": {
+            "title": "Hosts",
+            "description": "List of Hosts",
+            "type": "object",
+            "examples": [
+                {
+                    "scNNapp01": {}
+                }
+            ],
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "nsg": {
+                        "type": "string",
+                        "examples": [
+                            "nsg1"
+                        ]
+                    },
+                    "asgs": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "examples": [
+                                "asg1",
+                                "asg2"
+                            ]
+                        },
+                        "examples": [
+                            ["asg1"]
+                        ]
+                    },
+                    "zone": {
+                        "$ref": "fields.json#/definitions/zone"
+                    },
+                    "tags": {
+                        "$ref": "tags.json#/definitions/tags"
+                    },
+                    "nsg_name": {
+                        "title": "NSG Name",
+                        "description": "Name of NSG to create for host",
+                        "type": "string"
+                    },
+                    "os_account": {
+                        "$ref": "os_account.json#/definitions/os_account"
+                    },
+                    "nics": {
+                        "title": "Network Interface Cards",
+                        "description": "network interface card details",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "nsg": {
+                                    "type": "string",
+                                    "examples": [
+                                        "nsg1"
+                                    ]
+                                },
+                                "asgs": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "examples": [
+                                            "asg1",
+                                            "asg2"
+                                        ]
+                                    },
+                                    "examples": [
+                                        ["asg1"]
+                                    ]
+                                },
+                                "name": {
+                                    "title": "NIC Name Override",
+                                    "description": "populate to override default nic naming standards",
+                                    "type": "string",
+                                    "examples": [
+                                        "DO NOT DO THIS!"
+                                    ]
+                                },
+                                "subnet": {
+                                    "title": "Subnet",
+                                    "description": "Subnet for NIC",
+                                    "type": "string",
+                                    "examples": [
+                                        "app",
+                                        "db"
+                                    ]
+                                },
+                                "lb_refs": {
+                                    "$ref": "fields.json#/definitions/lb_refs"
+                                },
+                                "ips": {
+                                    "title": "IP Addresses",
+                                    "description": "Array of ip addresses to assocaited with nic card. Leave blank for dynamic IP allocation",
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string",
+                                                "examples": [
+                                                    "10.XX.NN.0"
+                                                ]
+                                            },
+                                            {
+                                                "type": "null"
+                                            }
+                                        ]
+                                    }
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": []
+            }
+        }
+    },
+    "additionalProperties": false
+}

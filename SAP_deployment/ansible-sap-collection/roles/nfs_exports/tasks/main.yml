@@ -1,0 +1,6 @@
+---
+
+- name: nfs exports 
+  include_tasks: "{{ ansible_os_family }}.yml"
+  tags:
+    - nfs-exports

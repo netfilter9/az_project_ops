@@ -1,0 +1,7 @@
+---
+- name: set output format
+  set_fact:
+    output: "{{ output | default('md') }}"
+    
+- name: main | tasks for azure
+  include_tasks: "{{ platform  | default('azure') }}.yml"

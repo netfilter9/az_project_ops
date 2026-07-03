@@ -1,0 +1,37 @@
+---
+- name: gcp_stonith | create fencing in node 1
+  command: pcs stonith create STONITH-{{ node1 }} fence_gce port={{ node1 }} zone={{ dbzone1 }} project={{ project_id }}
+  when: ansible_hostname == node1
+  register: result
+  failed_when:
+    - result.failed
+    - not (result.stderr.find("STONITH-{{ node1 }} already exists"))
+
+- name: gcp_stonith | create fencing in node 2
+  command: pcs stonith create STONITH-{{ node2 }} fence_gce port={{ node2 }} zone={{ dbzone2 }} project={{ project_id }}
+  when: ansible_hostname == node1
+  register: result
+  failed_when:
+    - result.failed
+    - not (result.stderr.find("STONITH-{{ node2 }} already exists"))
+
+- name: gcp_stonith | set constraint location for stonith
+  command: pcs constraint location STONITH-{{ item }} avoids {{ item }}
+  with_items:
+    - "{{ node1 }}"
+    - "{{ node2 }}"
+  when: ansible_hostname == node1
+  register: result
+  failed_when:
+    - result.failed
+    - not (result.stderr.find("duplicate constraint already exists"))
+
+- name: gcp_stonith | stonith resource property set
+  command: "{{ item }}"
+  with_items:
+    - pcs cluster start --all
+    - pcs resource defaults resource-stickiness=1000
+    - pcs resource defaults migration-threshold=5000
+    - pcs property set startup-fencing="true"
+    - pcs property set stonith-enabled="true"
+

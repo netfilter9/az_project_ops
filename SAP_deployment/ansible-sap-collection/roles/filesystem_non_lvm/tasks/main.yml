@@ -1,0 +1,24 @@
+- name: main | Ensure base filesystems for logical volumes exist
+  filesystem:
+    fstype: "{{ item.fstype | default('xfs') }}"
+    dev: "{{ item.dev }}"
+    force: no
+  when: item.mount is defined
+  loop: "{{ volume_groups }}"
+
+- name: main | Ensure directories for mounted file systems exist
+  file:
+    path: "{{ item.mount }}"
+    state: directory
+    mode: "{{ item.mode | default('0755') }}"
+  when: item.mount is defined
+  loop: "{{ volume_groups }}"
+
+- name: main | Ensure filesystems are mounted to the required directories
+  mount:
+    path: "{{ item.mount }}"
+    src: "{{ item.dev }}"
+    fstype: "{{ item.fstype | default('xfs') }}"
+    state: mounted
+  when: item.mount is defined
+  loop: "{{ volume_groups }}"

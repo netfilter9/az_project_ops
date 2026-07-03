@@ -1,0 +1,148 @@
+{#
+    Add "loadbalancer primitives"
+#}
+{% if sap.lb_type == "gcp_alias" %}
+{# GCP aliase LB #}
+primitive nc_{{ ascs_instance }} ocf:gcp:alias \
+  op monitor interval=60s timeout=15s \
+  op start interval=0 timeout=300s \
+  op stop interval=0 timeout=15s \
+  params alias_ip="{{ sap.logical_hosts.ascs.ip }}/{{ sap.logical_hosts.ascs.cidr }}" \
+  hostlist="{{ node1 }} {{ node2 }}" \
+  gcloud_path="/usr/bin/gcloud" logging=yes \
+  meta priority=10
+
+primitive nc_{{ ers_instance }} ocf:gcp:alias \
+  op start interval=0 timeout=300s \
+  op stop interval=0 timeout=15s \
+  op monitor interval=60s timeout=20s \
+  params alias_ip="{{ sap.logical_hosts.ers.ip }}/{{ sap.logical_hosts.ers.cidr }}" \
+  hostlist="{{ node2 }} {{ node1 }}" \
+  gcloud_path="/usr/bin/gcloud" \
+  meta priority=1000
+
+{% elif sap.lb_type == "gcp" %}
+{# GCP Internal TCP LB #}
+primitive nc_{{ ascs_instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:{{ ascs_healthcheck_port }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+primitive nc_{{ ers_instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:{{ ers_healthcheck_port }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+
+{% elif sap.lb_type == "azure" %}
+{# Azure LB #}
+primitive nc_{{ ascs_instance }} azure-lb \
+  port=620{{ sap.instance_numbers.ascs }}
+
+primitive nc_{{ ers_instance }} azure-lb \
+  port=621{{ sap.instance_numbers.ers }}
+{% endif %}
+
+{#
+    Add vip resource
+#}
+{% if sap.lb_type == "gcp_alias" or sap.lb_type == "gcp" %}
+{# GCP aliase LB and TCP Internal LB#}
+primitive vip_{{ ascs_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ascs.ip }} cidr_netmask={{ sap.logical_hosts.ascs.cidr }} nic="eth0" \
+  op monitor interval=10s
+
+primitive vip_{{ ers_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ers.ip }} cidr_netmask={{ sap.logical_hosts.ers.cidr }} nic="eth0" \
+  op monitor interval=10s
+
+{% elif sap.lb_type == "azure" %}
+{# Azure LB #}
+primitive vip_{{ ascs_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ascs.ip }} cidr_netmask={{ sap.logical_hosts.ascs.cidr }} nic=eth0 \
+  op monitor interval=10 timeout=20
+
+primitive vip_{{ ers_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ers.ip }} cidr_netmask={{ sap.logical_hosts.ers.cidr }} nic=eth0 \
+  op monitor interval=10 timeout=20
+
+{% endif %}
+
+{% if platform == "aws" %}
+primitive rsc_ip_{{ ascs_instance }} ocf:heartbeat:aws-vpc-move-ip \
+  params ip={{ ascs_overlay_ip }} routing_table={{ route_table_id }} \
+  interface=eth0 profile=cluster \
+  {% if vpc_type is defined and vpc_type == "shared" %}
+  routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" \
+  lookup_type=NetworkInterfaceId \
+  {% endif %}
+  op start interval=0 timeout=180 \
+  op stop interval=0 timeout=180 \
+  op monitor interval=20 timeout=40
+
+primitive rsc_ip_{{ ers_instance }} ocf:heartbeat:aws-vpc-move-ip \
+  params ip={{ ers_overlay_ip }} routing_table={{ route_table_id }} \
+  interface=eth0 profile=cluster \
+  {% if vpc_type is defined and vpc_type == "shared" %}
+  routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" \
+  lookup_type=NetworkInterfaceId \
+  {% endif %}
+  op start interval=0 timeout=180 \
+  op stop interval=0 timeout=180 \
+  op monitor interval=20 timeout=40
+{% endif %}
+
+{#
+    set up file system failover if using traditional NFS or ANF
+#}
+
+{% set ascs_device = sap.nfs.ascs_device %}
+{% set ers_device = sap.nfs.ers_device %}
+
+{% if platform == "azure" or platform == "gcp" %}
+primitive fs_{{ ascs_instance }} Filesystem \  
+  device={{ ascs_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' \
+  {% if platform == "gcp" and use_autofs == false %}
+  options='{{ sap.nfs.options | default() }}' \  
+  {% endif %}
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+
+primitive fs_{{ ers_instance }} Filesystem \  
+  device={{ ers_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' \
+  {% if platform == "gcp" and use_autofs == false %}
+  options='{{ sap.nfs.options | default() }}' \
+  {% endif %}
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+{% endif %}
+
+{#
+    set up file system failover using EFS
+#}
+{% if platform == "aws" %}
+primitive rsc_fs_{{ ascs_instance }} ocf:heartbeat:Filesystem \
+params device="{{ ascs_device }}" \
+directory="/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}" \
+fstype="nfs4" \
+options="rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2" \
+op start timeout=60s interval=0 \
+op stop timeout=60s interval=0 \
+op monitor interval=20s timeout=40s
+
+
+primitive rsc_fs_{{ ers_instance }} ocf:heartbeat:Filesystem \
+params device="{{ ers_device }}" \
+directory="/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }}" \
+fstype=nfs4 \
+options="rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2" \
+op start timeout=60s interval=0 \
+op stop timeout=60s interval=0 \
+op monitor interval=20s timeout=40s
+{% endif %}

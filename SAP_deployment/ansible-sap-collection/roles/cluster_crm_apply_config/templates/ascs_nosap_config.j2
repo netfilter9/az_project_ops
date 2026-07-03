@@ -1,0 +1,55 @@
+{# 
+  create a local variables for the SAP instance references 
+  e.g. A4H_ASCS00, A4H_ERS01
+#}
+{% set ascs_instance = sap.sid + "_" + sap.ascs_type + sap.instance_numbers.ascs %}
+{% set ers_instance = sap.sid + "_ERS" + sap.instance_numbers.ers %}
+
+{#
+  include common header to define nodes and STONITH approach
+#}
+{% include 'base_config.j2' %}
+
+{#
+  Setup common ASCS/ERS cluster primitives
+#}
+{% include 'common_ascs.j2' %}
+
+{# 
+    set up groups
+#}
+group SAP-{{ ascs_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ascs_instance }} \
+{% endif %}
+  nc_{{ ascs_instance }} \
+  vip_{{ ascs_instance }} \
+  meta resource-stickiness=3000
+
+group SAP-{{ ers_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ers_instance }} \
+{% endif %}
+  nc_{{ ers_instance }} \
+  vip_{{ ers_instance }} 
+
+{#
+    set rules for coloaction
+#}
+colocation col_sap_{{ sap.sid }}_no_both -5000: SAP-{{ ers_instance }} SAP-{{ ascs_instance }}
+
+{#
+    Set general properties
+#}
+property cib-bootstrap-options: {% if stonith_type == "sbd" %} \
+  have-watchdog=true {% else %} \
+  have-watchdog=false {% endif %} \
+  cluster-infrastructure=corosync \
+  cluster-name=hacluster \
+  stonith-enabled=true \
+  stonith-action=off \
+  no-quorum-policy=stop \
+  stonith-timeout=600s \
+  maintenance-mode=false \
+  startup-fencing=true \ 
+  last-lrm-refresh=1632815429

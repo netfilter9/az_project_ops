@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "application_security_group": {
+            "title": "Application Security Group",
+            "type": "object",
+            "properties": {
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name"
+                }
+            },
+            "additionalProperties": false,
+            "required": [],
+            "examples": [
+                {}
+            ]
+        }
+    },
+    "additionalProperties": false
+}

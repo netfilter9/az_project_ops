@@ -1,0 +1,13 @@
+---
+- name: Reboot
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become_method: enable
+  vars:
+    ansible_connection: ssh
+    ansible_remote_tmp: 'C:Windows\Temp\.ansible'
+    ansible_shell_type: cmd
+
+  tasks:
+    - name: Reboot the machine with all defaults
+      ansible.windows.win_reboot:

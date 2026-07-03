@@ -1,0 +1,29 @@
+---
+- name: resource create fs_{{ sap.sid|upper }}_{{ sap.ascs_type }} 
+  command: pcs resource create fs_{{ sap.sid|upper }}_{{ sap.ascs_type }} Filesystem device='{{ ascs_device }}' directory='/usr/sap/{{sap.sid|upper}}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}' fstype={{ primitives.sap.fstype }} {% if primitives.sap.fstype is defined and  primitives.sap.fstype == "nfs4" %}options="nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport"{% endif %} force_unmount=safe --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create fs_{{ sap.sid|upper }}_ERS 
+  command: pcs resource create fs_{{ sap.sid|upper }}_ERS Filesystem device='{{ ers_device }}' directory='/usr/sap/{{sap.sid|upper}}/ERS{{ sap.instance_numbers.ers }}' fstype={{ primitives.sap.fstype }} {% if primitives.sap.fstype is defined and  primitives.sap.fstype == "nfs4" %}options="nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport"{% endif %} force_unmount=safe --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+#Shared VPC 
+- name: resource create vip_{{ sap.sid|upper }}_{{ sap.ascs_type }} 
+  command: pcs resource create vip_{{ sap.sid|upper }}_{{ sap.ascs_type }} aws-vpc-move-ip ip={{ ascs_overlay_ip }} interface=eth0 routing_table="{{ route_table_id }}" {% if vpc_type is defined and vpc_type == "shared" %}routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" lookup_type=NetworkInterfaceId {% endif %} monapi=true --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }} 
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create vip_{{ sap.sid|upper }}_ERS 
+  command: pcs resource create vip_{{ sap.sid|upper }}_ERS aws-vpc-move-ip ip={{ ers_overlay_ip }} interface=eth0 routing_table="{{ route_table_id }}" {% if vpc_type is defined and vpc_type == "shared" %}routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" lookup_type=NetworkInterfaceId{% endif %} monapi=true --group g-{{ sap.sid|upper }}_ERS   
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 

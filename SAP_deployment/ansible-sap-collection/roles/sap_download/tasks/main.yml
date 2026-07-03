@@ -1,0 +1,9 @@
+---
+- name: main |sap download 
+  include_tasks: sap_download.{{ platform }}.yml
+
+- name: sap_download | set sapinst permissions
+  file:
+    path: /{{ root_dir }}/sapinst
+    mode: '777'
+    recurse: true

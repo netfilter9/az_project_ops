@@ -1,0 +1,42 @@
+# We should probably put in a crm_mon check here instead.
+
+- name: ha_cluster | create ha cluster on first node
+  command: "{{ item }}"
+  with_items: 
+    - "{{ create_cluster[platform] }}"
+  when: ansible_hostname == node1
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("Cluster is currently active")) 
+
+- name: starting pacemaker "{{ node1 }}"
+  command: "{{ item }}"    
+  with_items:
+     - systemctl enable pacemaker
+     - systemctl start pacemaker
+  when: 
+     - ansible_hostname == node1 
+
+- name: ha_cluster | join second node to the ha cluster
+  command: "{{ item }}"
+  with_items: 
+    - "{{ join_second_node[platform] }}"
+  when: ansible_hostname == node2
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("Cluster is currently active")) 
+
+- name: starting pacemaker on "{{ node2 }}"
+  command: "{{ item }}"    
+  with_items:
+     - systemctl enable pacemaker
+     - systemctl start pacemaker
+  when: 
+     - ansible_hostname == node2
+
+- name: ha_cluster | set hacluster password
+  user:
+    name: hacluster
+    password: "{{ passwords.admin | password_hash('sha512') }}"

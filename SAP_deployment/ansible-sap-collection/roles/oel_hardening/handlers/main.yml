@@ -1,0 +1,34 @@
+---
+- name: restart tmp.mount
+  become: true
+  systemd:
+    name: tmp.mount
+    daemon_reload: true
+    enabled: true
+    state: restarted
+
+- name: systemctl daemon-reload
+  systemd:
+    daemon_reload: true
+
+- name: restart chronyd
+  service:
+    name: chronyd
+    state: restarted
+
+- name: restart postfix
+  service:
+    name: postfix
+    state: restarted
+
+- name: restart auditd
+  service:
+    name: auditd
+    state: restarted
+    use: service
+    
+- name: restart journald
+  service:
+    name: systemd-journald
+    state: restarted
+

@@ -1,0 +1,162 @@
+node1: "{{ groups['std'][0] }}"
+swapfile_size: 640000000 #65536
+tune: "{{ sap.tune }}"
+product_id: "{{ sap.product_ids.std }}"
+
+
+users:
+  bin:
+    uid: 1010
+  bingroup:
+    gid: 82
+  sidadm:
+    uid: 1003
+  dbsidadm:
+    uid: 1012
+  sapinst:
+    gid: 1101
+  sapsys:
+    gid: 1100
+  db2sid:
+    uid: 1014
+  sapsid:
+    uid: 1016
+  dbsidadmgroup:
+    gid: 1120
+  dbsidctl:
+    gid: 1121
+  dbsidmon:
+    gid: 1122
+  dbsidmnt:
+    gid: 1123
+
+groupsetup:
+  - name: sapsys
+    gid: "{{ users.sapsys.gid }}"
+  - name: sapinst
+    gid: "{{ users.sapinst.gid }}"
+  - name: bin
+    gid: "{{ users.bingroup.gid }}"  
+  - name: "db{{ sap.db.sid|lower }}adm"
+    gid: "{{ users.dbsidadmgroup.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}ctl"
+    gid: "{{ users.dbsidctl.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mon"
+    gid: "{{ users.dbsidmon.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mnt"
+    gid: "{{ users.dbsidmnt.gid }}" 
+  
+usersetup:
+  - name: bin
+    uid: "{{ users.bin.uid }}"
+    group: bin
+    shell: /bin/sh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "{{ sap.sid|lower }}adm"
+    uid: "{{ users.sidadm.uid }}"
+    group: sapsys
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "db2{{ sap.db.sid|lower }}"
+    uid: "{{ users.db2sid.uid }}"
+    group: "db{{ sap.db.sid|lower }}adm"
+    groups: sapinst
+    home: /db2/db2{{ sap.db.sid|lower }}
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "sap{{ sap.sid|lower }}"    
+    uid: "{{ users.sapsid.uid }}"
+    group: "db{{ sap.db.sid|lower }}mon"
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+
+volume_groups:  
+
+  - ref: db2_I03_sapdata1
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGDATA1
+    lv: lv_db2I03data1
+    size: 4095g
+    mount: /db2/I03/sapdata1
+  - ref: db2_I03_sapdata2
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VGDATA2
+    lv: lv_db2I03data2
+    size: 4095g
+    mount: /db2/I03/sapdata2
+  - ref: db2_I03_sapdata3
+    pvs: /dev/disk/azure/data/by-lun/2
+    vg: VGDATA3
+    lv: lv_db2I03data3
+    size: 4095g
+    mount: /db2/I03/sapdata3
+  - ref: db2_I03_sapdata4
+    pvs: /dev/disk/azure/data/by-lun/3
+    vg: VGDATA4
+    lv: lv_db2I03data4
+    size: 4095g
+    mount: /db2/I03/db2_I03_sapdata4
+  - ref: db2_I03_log_dir
+    pvs: /dev/disk/azure/data/by-lun/4
+    vg: VGLOG1
+    lv: lv_db2I03log
+    size: 510g
+    mount: /db2/I03/log_dir
+  - ref: db2_I03_saptmp1
+    pvs: /dev/disk/azure/data/by-lun/5
+    vg: VGLOG2
+    lv: lv_db2I03tmp
+    size: 700g
+    mount: /db2/I03/saptmp1
+  - ref: db2_I03_log_archive
+    pvs: /dev/disk/azure/data/by-lun/6
+    vg: VGARCH
+    lv: lv_db2I03archive
+    size: 20g
+    mount: /db2/I03/log_archive
+  - ref: db2_I03_log_retrieve
+    pvs: /dev/disk/azure/data/by-lun/6
+    vg: VGARCH
+    lv: lv_db2I03retrieve
+    size: 5g
+    mount: /db2/I03/log_retrieve
+  - ref: db2_I03_db2dump
+    pvs: /dev/disk/azure/data/by-lun/7
+    vg: VGDB2BIN
+    lv: lv_db2I03dump
+    size: 10g
+    mount: /db2/I03/db2dump
+  - ref: db2_db2i03
+    pvs: /dev/disk/azure/data/by-lun/7
+    vg: VGDB2BIN
+    lv: lv_db2I03inst
+    size: 10g
+    mount: /db2/db2i03
+  - ref: db2_I03
+    pvs: /dev/disk/azure/data/by-lun/7
+    vg: VGDB2BIN
+    lv: lv_db2I03
+    size: 20g
+    mount: /db2/I03
+  - ref: ilmt
+    pvs: /dev/disk/azure/data/by-lun/7
+    vg: VGDB2BIN
+    lv: lv_ilmt
+    size: 1g
+    mount: /ilmt
+  - ref: opt_traps
+    pvs: /dev/disk/azure/data/by-lun/8
+    vg: VG_CORTEX
+    lv: lv_cortex
+    size: 10g
+    mount: /opt/traps
+  - ref: db2backup
+    pvs: /dev/disk/azure/data/by-lun/9,/dev/disk/azure/data/by-lun/10
+    vg: VGDB2BACKUP
+    lv: lv_db2backup
+    size: 32767g
+    mount: /db2backup

@@ -1,0 +1,29 @@
+---
+- name: package-management | install python packages
+  package:
+    name:
+      - python-xml
+      - python
+      - python2-six
+      - python-pip
+      # - bash-completion-2.7-4.3.1
+      # - grub2-systemd-sleep-plugin-2.02-26.15.1
+      # - libfreebl3-hmac-3.53-3.40.1
+      # - libsoftokn3-hmac-3.53-3.40.1
+      # - mkfontdir-1.0.7-1.20
+      # - mkfontscale-1.1.2-1.23
+      # - shared-python-startup-0.1-1.5.1
+      # - systemd-bash-completion-234-24.52.3
+      # - yast2-migration-4.1.2-7.3.2
+    state: present          
+
+- name: package-management | refresh zypper repository
+  zypper_repository:
+    repo: "*"
+    runrefresh: yes
+
+- name: package-management | Update all packages
+  zypper:
+    name: "*"
+    state: latest
+  notify: reboot server

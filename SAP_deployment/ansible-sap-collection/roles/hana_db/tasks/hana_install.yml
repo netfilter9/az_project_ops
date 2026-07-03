@@ -1,0 +1,61 @@
+- name: hana_install | set template file name
+  set_fact:
+    template_file: "{% if sap.db.cockpit is not defined %}hana_install.config.j2 {% elif sap.db.cockpit is defined %} hana_install_cockpit.config.j2 {% endif %}"
+
+- name: debug 
+  debug:
+    var: template_file  | trim 
+
+- name: create_default_tenant 
+  debug:
+    msg: "{% if sap.db.create_initial_tenant is defined and not sap.db.create_initial_tenant  %} --create_initial_tenant=off  {% endif %}"
+
+
+- name: hana_install | copy  template file
+  template:
+    src: "{{ template_file | trim  }}"
+    dest: "{{ install_dir }}/sapinst/hana_install.{{ ansible_hostname }}.config"
+
+- name: hana_install | permission on hana instaler
+  file:
+    path: "{{ install_dir }}/sapinst/HANA"
+    mode: "+x"
+    recurse: yes
+    state: directory
+
+- debug:
+    msg: "{% if hana_scale_out is defined %}--internal_network={{ hana_scale_out.host_subnet }}{% endif %}"
+
+- name: hana_install | install HANA 
+  vars:
+    #hostname: "{{ ansible_hostname }}"
+    hostname: "{{ virtual_hostname | default (ansible_hostname) }}"
+    executable_name: "{% if sap.db.cockpit is not defined %} ./hdblcm {% elif sap.db.cockpit is defined %} ./hdblcm.sh {% endif %}"
+    internal_network: "{% if hana_scale_out is defined %}--internal_network={{ hana_scale_out.host_subnet }}{% endif %}"
+    create_initial_tenant:  "{% if sap.db.create_initial_tenant is defined and not sap.db.create_initial_tenant  %} --create_initial_tenant=off  {% endif %}"
+
+  command:  
+    cmd: "{{ executable_name }} --ignore=check_signature_file --batch --configfile={{ install_dir }}/sapinst/hana_install.{{ ansible_hostname }}.config --hostname={{ hostname }} {{ internal_network}} {{ create_initial_tenant }}"
+    creates: /hana/log/{{ sap.db.sid|lower }}_hdblcm_output*.log
+  args:
+    chdir: "{{ install_dir }}/sapinst/HANA/"
+  register: hdblcmresult
+
+- name: hana_install | write log file
+  copy:
+    dest: /hana/log/{{ sap.db.sid|lower }}_hdblcm_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ hdblcmresult.stdout }}"
+
+- name: hana_install | tidy up install config template
+  file:
+    path: "{{ install_dir }}/sapinst/hana_install.{{ ansible_hostname }}.config"
+    state: absent
+
+- name: main | tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: net.ipv4.tcp_timestamps, value: 0}
+  when: node2 is defined

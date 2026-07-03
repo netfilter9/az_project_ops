@@ -1,0 +1,4 @@
+{% if oelcis_level2 %}
+# Ensure system administrator actions (sudolog) are collected
+-w {{ cis_oel_sudo_logfile }} -p wa -k actions
+{% endif %}

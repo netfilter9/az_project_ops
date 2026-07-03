@@ -1,0 +1,10 @@
+---
+- name: limits | Create /etc/security/limits.d/99-sap.conf
+  blockinfile:
+    path: /etc/security/limits.d/99-sap.conf
+    marker: "# {mark} RHEL Configuration"
+    create: yes
+    block: |
+      @sapsys hard nproc unlimited
+      @sapsys soft nproc unlimited
+  when: ansible_distribution_major_version >= '8' and platform == 'azure'

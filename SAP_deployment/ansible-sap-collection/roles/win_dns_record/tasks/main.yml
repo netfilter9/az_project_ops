@@ -1,0 +1,12 @@
+---
+
+- name: add DNS record
+  win_dns_record:
+    computer_name: "{{ groups['domain_controllers'][0] }}"
+    name: "{{ item.name }}"
+    value: "{{ item.ip }}"
+    type: "A"
+    zone: "{{ domain.fqdn }}"
+  tags:
+    - DNS Record
+  with_items: "{{ sap.lb_config }}"

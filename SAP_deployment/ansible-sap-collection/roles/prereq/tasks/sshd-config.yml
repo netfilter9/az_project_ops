@@ -1,0 +1,24 @@
+- name: sshd-config | disable insecure cipher from ssh config
+  blockinfile:
+    block: "{{ lookup('file', 'cipher') }}"
+    dest: /etc/ssh/sshd_config
+
+# section commented out as it causes issues with cluster configuration
+# this should be done as a post build step when required
+#
+# - name: sshd-config | set ChallengeResponseAuthentication to yes
+#   replace:
+#     path: /etc/ssh/sshd_config
+#     regexp: ChallengeResponseAuthentication no
+#     replace: ChallengeResponseAuthentication yes
+
+# - name: sshd-config | disable root login from ssh config
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     regexp: "PermitRootLogin yes"
+#     line: "PermitRootLogin no"
+
+- name: sshd-config | restart service sshd
+  service:
+    name: sshd
+    state: restarted

@@ -1,0 +1,58 @@
+######################################################################
+#                       INFRA CHECKS                                 #
+######################################################################
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Th | grep /sapmnt | awk '{print $2}'
+  become: yes
+  register: output_fs
+  tags: infra_checks
+
+- debug: var=output_fs
+
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Th | grep /trans | awk '{print $2}'
+  become: yes
+  register: output_fs_trans
+  tags: infra_checks
+
+- debug: var=output_fs_trans
+
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Ph |awk '+$5>=80 || $1==Filesystem' | awk '{print $1}'
+  become: yes
+  register: output_diskutil
+  tags: infra_checks
+
+- debug: var=output_diskutil
+
+- name: command to check the size of /usr/sap/sid
+  shell: df -h | grep  /usr/sap | awk '{print $2}' | head -n 1 | cut -d 'G' -f1
+  become: yes
+  register: output_disksize
+  tags: infra_checks
+
+- debug: var=output_disksize
+
+- name: command to check the size of /hana/shared
+  shell: df -h | grep /hana/shared | awk '{print $2}' | cut -d 'G' -f1
+  become: yes
+  register: output_hana
+  tags: infra_checks
+
+- debug: var=output_hana
+
+- name: checking the length of hostname
+  shell: hostname | awk '{printf $0}' | wc -m
+  become: yes
+  register: output_hostname
+  tags: infra_checks
+
+- debug: var=output_hostname
+
+- name: Infra checks
+  template:
+    src: "infra-checks-md.j2"
+    dest: ../md-collection/{{ ansible_date_time.iso8601_micro }}_infra-checks-md.md
+  delegate_to: localhost  
+  when: output == "md"  
+  tags: infra_checks

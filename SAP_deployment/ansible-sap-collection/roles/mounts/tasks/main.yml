@@ -1,0 +1,15 @@
+---
+# tasks file for mount
+- name: main | Ensure mount directory exists.
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode | default (755) }}"
+  loop: "{{ mounts }}"
+
+- name: main | nfs mount
+  import_tasks: nfs.yml  
+
+- name: main | autofs mount
+  import_tasks: autofs.yml
+  when: (mounts | selectattr('use_autofs', 'defined') | list | selectattr('use_autofs') |  list ) | length > 0 

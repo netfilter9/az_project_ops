@@ -1,0 +1,31 @@
+---
+- name: sybaseiq | install packages
+  import_tasks: packages.yml
+
+- name: sybaseiq | edit the sysctl.conf file
+  lineinfile:
+    line: kernel.sem = 250 32000 32 4096
+    dest: /etc/sysctl.conf
+    create: yes
+  
+- name: sybaseiq | unzip the file
+  command: tar -zxvf {{ root_dir }}/sapinst/sybaseIQ/IQSERV161005_0-80002767.TGZ 
+  args:
+    chdir: "{{ root_dir }}/sapinst/sybaseIQ/"
+
+- name: permission | owner group change
+  file:
+    path: "{{ root_dir }}/sybase_iq/"
+    owner: "{{ sybase_iq_user | default('sybase_inst') }}"
+    group: "{{ sybase_iq_group | default('sybase_inst') }}"
+    mode: "775" 
+    recurse: yes
+
+- name: sybaseiq | change permission
+  file:
+    path: "{{ root_dir }}/sapinst/sybaseIQ/*"
+    mode: "777"
+    recurse: yes
+
+- name: sybaseiq | install sybase IQ
+  import_tasks: sybase_iq_install.yml

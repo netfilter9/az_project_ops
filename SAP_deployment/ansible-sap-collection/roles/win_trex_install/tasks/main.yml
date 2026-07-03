@@ -1,0 +1,12 @@
+--- 
+
+- name: trex install
+  win_command: "{{ item }}"
+  loop: 
+    - install.cmd --action=install --sid="{{ sap.sid }}" --instance="{{ sap.instance_numbers.app }}" --password={{ trex_password }}
+  args: 
+    chdir: "{{ downloads.download_drive }}:\\usr\\sap\\tx_trex_content\\TX_WINDOWS_X86_64"
+  
+
+  
+    

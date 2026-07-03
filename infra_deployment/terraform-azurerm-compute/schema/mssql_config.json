@@ -1,0 +1,152 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "mssql_config": {
+            "type": "object",
+            "properties": {
+                "license_type": {
+                    "examples": [
+                        "PAYG"
+                    ]
+                },
+                "r_services_enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "connectivity_port": {
+                    "type": "string",
+                    "examples": [
+                        "1433"
+                    ]
+                },
+                "connectivity_type": {
+                    "examples": [
+                        "PRIVATE"
+                    ],
+                    "type": "string"
+                },
+                "connectivity_username": {
+                    "examples": [
+                        "admin"
+                    ],
+                    "type": "string"
+                },
+                "connectivity_password": {
+                    "examples": [
+                        "mysupersecretpassword123$"
+                    ],
+                    "type": "string"
+                },
+                "enable_auto_patching": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "auto_patching_dayofweek": {
+                    "type": "string",
+                    "default": "Sunday",
+                    "enum": [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday"
+                    ]
+                },
+                "auto_patching_win_duration_in_min": {
+                    "type": "integer",
+                    "examples": [
+                        60
+                    ]
+                },
+                "auto_patching_window_starting_hour": {
+                    "type": "integer",
+                    "examples": [
+                        2
+                    ]
+                },
+                "storage_configuration": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "disk_type": {
+                            "enum": [
+                                "NEW",
+                                "EXTEND",
+                                "ADD"
+                            ]
+                        },
+                        "storage_workload_type": {
+                            "enum": [
+                                "GENERAL",
+                                "OLTP",
+                                "DW"
+                            ]
+                        },
+                        "data_settings": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "default_file_path": {
+                                    "type": "string",
+                                    "examples": [
+                                        "F:\\SQLData"
+                                    ]
+                                },
+                                "luns": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        },
+                        "log_settings": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "default_file_path": {
+                                    "type": "string",
+                                    "examples": [
+                                        "L:\\SQLLog"
+                                    ]
+                                },
+                                "luns": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        },
+                        "temp_db_settings": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "default_file_path": {
+                                    "type": "string",
+                                    "examples": [
+                                        "T:\\SQLTemp"
+                                    ]
+                                },
+                                "luns": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+            },
+            "additionalProperties": false,
+            "required": []
+        }
+    },
+    "additionalProperties": false
+}

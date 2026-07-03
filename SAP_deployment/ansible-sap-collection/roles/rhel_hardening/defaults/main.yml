@@ -1,0 +1,111 @@
+---
+# defaults file for rhel
+
+# Define what sections to run
+rhel7cis_01_initial: true
+rhel7cis_02_services: true
+rhel7cis_03_network: true
+rhel7cis_04_logging: true
+rhel7cis_05_access: true
+rhel7cis_06_system: true
+
+# Set to true to run either level1, level2, or set both to true to run level1 and level2 checks.
+rhel7cis_level1: true
+rhel7cis_level2: false
+
+############################
+### 01_initial Parameters ###
+############################
+
+# Section Partition #
+
+# Section AIDE #
+
+# Ensure AIDE is installed and configured
+rhel7cis_config_aide: true
+
+# SELinux Section #
+
+# Ensure SELinux state is enforcing and configured
+# true = SELinux is disabled | false = SELinux is enabled
+rhel7cis_selinux_disable: false
+
+# SELinux policy
+rhel7cis_selinux_pol: targeted
+
+cis_rhel_min_uid: 1000
+cis_rhel_sudo_logfile: /var/log/sudo.log
+cis_rhel_priv_partitions:
+  - /
+
+# System package updates #
+
+# Ensure updates of software repos and system packages are up-to-date | Run yum update
+rhel7cis_update: false
+
+# # Warning Banner Content (issue, issue.net, motd)
+# rhel7cis_warning_banner: |
+#     Authorized uses only. All activity may be monitored and reported.
+
+# End Banner
+
+############################
+### 02_services Parameters ###
+############################
+# Set this to false to prevent disabling of services.
+# Value of true will disable all services not excluded or skipped using the var booleans below.
+# The disable_service_checks can also be enabled via the skip tag function by skipping "disable_service_checks" tag to the running playbook
+rhel7cis_disable_service_checks: true
+
+# Set this value to true if the machine is joined to AD/LDAP server.
+# Set this value to false if the machine is not joined to AD/LDAP server.
+rhel7cis_ad_ldap_joined_machine: true
+
+# Service configuration booleans set true to keep service
+rhel7cis_dhcp_server: false
+rhel7cis_ldap_server: false
+rhel7cis_telnet_server: false
+rhel7cis_tftp_server: false
+rhel7cis_rsh_server: false
+rhel7cis_nis_server: false
+rhel7cis_snmp_server: false
+rhel7cis_httpd_server: false
+rhel7cis_vsftpd_server: false
+rhel7cis_named_server: false
+rhel7cis_nfs_rpc_server: false
+rhel7cis_vsftpd: false
+rhel7cis_httpd: false
+
+rhel7cis_telnet_required: false
+
+# Ensure avahi server is not enabled
+rhel7cis_avahi_server: false
+
+
+############################
+### 04_logging Parameters ###
+############################
+
+# Enable auditd
+rhel7cis_enable_auditd: false
+
+############################
+### 05_access Parameters ###
+############################
+
+# Ensure at/cron is restricted to authorized users
+rhel7cis_cron_allow_apply_template: false
+
+# Section 5.3.1 | Ensure password creation requirements are configured
+rhel7cis_password_creation_requirements: true
+
+# Section 5.4.4 | Ensure default user umask is 027 or more restrictive
+rhel7cis_modify_default_user_umask: true
+rhel7cis_default_user_umask: 027
+
+############################
+### 06_system Parameters ###
+############################
+
+# Section 6.2.14 | Ensure no users have .rhosts files
+rhel7cis_modify_dot_rhosts_files: false

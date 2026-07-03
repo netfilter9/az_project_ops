@@ -1,0 +1,12 @@
+---
+
+- name: wget install
+  package:
+    name: wget
+    state: present
+
+- name: install dataprovider
+  include_tasks: "{{ ansible_os_family | lower }}.yml"
+  tags:
+    - install-dataprovider
+

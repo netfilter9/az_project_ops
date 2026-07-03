@@ -1,0 +1,21 @@
+---
+- name: Make swap
+  command: mkswap "{{ swapVolume }}"
+  register: result1
+- debug: var=result1.stdout
+
+- name: Dispaly uuid & store in variable
+  command: blkid -s UUID -o value "{{ swapVolume }}"
+  register: uuid_swap
+- debug: var=uuid_swap.stdout
+
+- name: Add the below lines
+  blockinfile:
+    path: /etc/fstab
+    state: present
+    block: |
+      UUID={{ uuid_swap.stdout }}   swap      swap defaults                         0   0
+
+
+- name: Turn swap on
+  command: swapon -va

@@ -1,0 +1,5 @@
+---
+- name: package | Installing mdadm
+  package:
+    name: mdadm
+    state: present

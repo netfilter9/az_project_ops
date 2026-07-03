@@ -1,0 +1,20 @@
+---
+os:
+ - /usr/sbin/saptune solution list
+ - cat /etc/systemd/logind.conf.d/sap.conf |grep UserTasksMax | cut -d "=" -f2
+ - cat /etc/default/grub | grep -oP '(?<=numa_balancing=)\w+'
+ - cat /sys/kernel/mm/transparent_hugepage/enabled
+ - cat /sys/kernel/mm/ksm/run
+ - cat /proc/sys/vm/pagecache_limit_mb
+ - free -g | grep Swap | awk '{print $2}'
+ - id -u {{ sid | lower }}adm
+ - id -u sapadm
+ - groups {{sid|lower}}adm | cut -d ':' -f2
+ - groups sapadm | cut -d ':' -f2
+ - getent group sapsys | cut -d 'x' -f2 | cut -d ':' -f2 | cut -d ':' -f1
+
+folders:
+  - path: '{{ outputs_path }}/Migrate_{{ sid }}' 
+    owner: 'root'
+    group: 'root'
+    mode: '0755'

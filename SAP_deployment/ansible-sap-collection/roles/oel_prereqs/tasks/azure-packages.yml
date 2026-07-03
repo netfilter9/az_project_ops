@@ -1,0 +1,11 @@
+---
+
+- name: packages | install common packages
+  package:
+    name:
+     - 'lvm*'
+     - tcsh
+     - autofs
+     - uuidd
+     - unzip
+    state: present

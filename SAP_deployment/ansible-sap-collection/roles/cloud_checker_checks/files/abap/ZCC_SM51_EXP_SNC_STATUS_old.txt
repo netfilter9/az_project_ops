@@ -1,0 +1,218 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCC_SM51_EXP_SNC_STATUS                     *
+* Title               :   Export SNC Status of Application Server     *
+* Purpose             :   This report is for exporting SNC Status of  *
+*                     :   Application Server                          *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SM51                                                                *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* XXXXX               :     X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-06-2021  Initial  Ashwini B G    Local     To Export SNC status   *
+*                                              of application server  *
+*---------------------------------------------------------------------*
+
+" This code is referred from Standard Report RSSNCSRV
+" Refer type group ICON for icons
+" Icons used in this report are
+" icon_alert & icon_led_green
+
+REPORT zcc_sm51_exp_snc_status.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c VALUE '|'                LENGTH 1,
+             lc_alert      TYPE c VALUE '@AG@'             LENGTH 4,
+             lc_led_green  TYPE c VALUE '@5B@'             LENGTH 4,
+             lc_null       TYPE c VALUE 'NULL'             LENGTH 4,
+             lc_export     TYPE c VALUE 'EXPORT'           LENGTH 6,
+             lc_active     TYPE c VALUE 'Active'           LENGTH 8,
+             lc_app_server TYPE c VALUE
+             'ApplicationServer Instance'                  LENGTH 35,
+             lc_title      TYPE c VALUE
+             'SNC Status of Application Server'            LENGTH 50,
+             lc_err_msg    TYPE c VALUE
+             'No Instances found in the system'            LENGTH 40,
+             lc_inc_input  TYPE c VALUE 'Incorrect input'  LENGTH 20,
+             lc_noinput    TYPE c VALUE 'No input given'   LENGTH 20,
+             lc_enable     TYPE c VALUE 'snc/enable'       LENGTH 10.
+
+  TYPES: BEGIN OF lty_outtab,
+           name          TYPE msxxlist-name,
+           snc_enable(4) TYPE c,
+         END OF lty_outtab.
+
+  DATA: ls_input     TYPE tab512,
+        ls_output    TYPE tab512,
+        lv_action    TYPE char20,
+        lv_subrc     TYPE sy-subrc,
+        lt_imsxxlist TYPE STANDARD TABLE OF msxxlist,
+        ls_imsxxlist TYPE msxxlist,
+        lt_outtab    TYPE STANDARD TABLE OF lty_outtab,
+        ls_outtab    TYPE lty_outtab,
+        lt_par_sub   TYPE STANDARD TABLE OF spfparlist,
+        ls_par_sub   TYPE spfparlist.
+
+  FIELD-SYMBOLS: <fs_outtab> TYPE lty_outtab.
+
+  FREE: lt_output[].
+
+  " Adding title to the output
+  CLEAR: ls_output.
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+
+  CLEAR: ls_input,lv_action,ls_output.
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  IF sy-subrc EQ 0.
+    lv_action = ls_input.       " Action
+  ELSE.
+    " No input given
+    ls_output = lc_noinput.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  CASE lv_action.
+
+    WHEN lc_export.          " If action is EXPORT
+
+      FREE: lt_imsxxlist.
+
+      CALL FUNCTION 'TH_SERVER_LIST'
+        TABLES
+          list           = lt_imsxxlist
+        EXCEPTIONS
+          no_server_list = 1
+          OTHERS         = 2.
+      IF sy-subrc EQ 0.
+        CLEAR: ls_outtab, ls_imsxxlist.
+        LOOP AT lt_imsxxlist INTO ls_imsxxlist.
+* Servername
+          ls_outtab-name = ls_imsxxlist-name.
+
+* SNC-Status
+          CLEAR: lv_subrc.
+          CALL FUNCTION 'SNC_GET_MY_INFO'
+            DESTINATION ls_imsxxlist-name
+            IMPORTING
+              rc                    = lv_subrc
+            EXCEPTIONS
+              internal_error        = 1
+              snc_not_active        = 2
+              communication_failure = 3
+              system_failure        = 4
+              OTHERS                = 5.
+          CASE sy-subrc.
+            WHEN 2.
+              ls_outtab-snc_enable = lc_null.
+            WHEN 3 OR 4.
+              ls_outtab-snc_enable = icon_alert.  "ICON_FAILURE.
+              APPEND ls_outtab TO lt_outtab.
+              CONTINUE.
+            WHEN 1 OR 5.
+              ls_outtab-snc_enable = lc_null.
+          ENDCASE.
+
+          IF lv_subrc NE 0.
+            ls_outtab-snc_enable = lc_null.
+          ENDIF.
+
+          FREE: lt_par_sub.
+          CLEAR: lv_subrc.
+          CALL FUNCTION 'RZL_GET_PROFILE_PAR'
+            DESTINATION ls_imsxxlist-name
+            IMPORTING
+              subrc                 = lv_subrc
+            TABLES
+              par_sub               = lt_par_sub
+            EXCEPTIONS
+              communication_failure = 3
+              system_failure        = 4
+              OTHERS                = 1.
+          CASE sy-subrc.
+            WHEN 3 OR 4.
+              ls_outtab-snc_enable = lc_alert.  "ICON_FAILURE.
+              APPEND ls_outtab TO lt_outtab.
+              CONTINUE.
+            WHEN 1.
+              ls_outtab-snc_enable = lc_null.
+          ENDCASE.
+          IF lv_subrc NE 0.
+            ls_outtab-snc_enable = lc_null.
+          ENDIF.
+
+          "snc/enable
+          CLEAR: ls_par_sub.
+          READ TABLE lt_par_sub INTO ls_par_sub
+            WITH KEY parname = lc_enable.
+          IF sy-subrc = 0.
+            IF ls_par_sub-parvalu IS INITIAL.
+              ls_par_sub-parvalu = ls_par_sub-parvald.
+            ENDIF.
+            IF ls_par_sub-parvalu = '1'.
+              ls_outtab-snc_enable = lc_led_green. "icon_activate.
+            ENDIF.
+          ENDIF.
+          APPEND ls_outtab TO lt_outtab.
+        ENDLOOP.
+      ELSE.
+        "No Instances found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        RETURN.
+      ENDIF.
+
+      DELETE ADJACENT DUPLICATES FROM lt_outtab.
+
+      IF lt_outtab IS NOT INITIAL.
+
+        " Adding heading to the output
+        CONCATENATE lc_app_server lc_sep
+                    lc_active
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR: ls_output.
+
+        LOOP AT lt_outtab ASSIGNING <fs_outtab>.
+          IF <fs_outtab>-snc_enable IS INITIAL.
+            <fs_outtab>-snc_enable = lc_null.
+          ENDIF.
+
+          CONCATENATE <fs_outtab>-name lc_sep
+                      <fs_outtab>-snc_enable
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+        ENDLOOP.
+      ELSE.
+        "No Instances found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        RETURN.
+      ENDIF.
+
+    WHEN OTHERS.
+
+      " Incorrect input
+      ls_output = lc_inc_input.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      RETURN.
+
+  ENDCASE.
+
+ENDFORM.

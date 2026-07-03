@@ -1,0 +1,21 @@
+- name: adding firewall rule for probe port
+  command: "{{ item }}"
+  with_items: 
+    - sudo firewall-cmd --add-port=62500/tcp --permanent
+    - sudo firewall-cmd --reload
+
+- name: configuration prereqs
+  command: su - db2{{ sap.db.sid|lower }} -c "db2start"
+  register: db2start
+  failed_when:
+    - db2start.failed
+    - not (db2start.stderr.find("The database manager is already active.")) 
+
+- name: configuration prereqs
+  command: su - db2{{ sap.db.sid|lower }} -c "db2stop force"
+  
+- name: configuration prereqs
+  command: "{{ item }}"
+  with_items: 
+    - sudo yum install ksh -y
+    - sudo usermod -s /bin/ksh "db2{{ sap.db.sid|lower }}"

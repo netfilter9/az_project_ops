@@ -1,0 +1,9 @@
+- name: Ensure volume is mounted.
+  mount:
+    path: "{{ item.path }}"
+    src: "{{ item.source }}"
+    fstype: "{{ item.fstype | default('nfs') }}"
+    opts: "{{ item.opts | default('nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev') }}"
+    state: "{{ item.state | default(default_mount_state) | default('mounted')}}"
+  when: not (item.use_autofs | default(false))
+  loop: "{{ mounts }}"

@@ -1,0 +1,37 @@
+---
+- name: main | dns config
+  include_tasks: dns-config.yml
+
+- name: main | configure sshd
+  include_tasks: sshd-config.yml
+
+- name: main | ntp configuration
+  include_tasks: ntp-config.yml
+
+- name: main | register servers to suse manager
+  include_tasks: suse-mgr-config.yml
+  tags: register
+
+- name: main | enable and start autofs service
+  include_tasks: autofs-config.yml
+
+- name: main | disable firewall
+  include_tasks: firewall-config.yml
+
+- name: main | correctly configure sudoers file 
+  include_tasks: sudoers-config.yml
+
+- name: main | grub entries
+  include_tasks: grub-config.yml
+
+- name: main | disable rpc binding
+  include_tasks: rpcbind-config.yml
+
+- name: main | configure python and update all packages
+  include_tasks: package-management.yml
+
+- name: main | temp filesystem mounting
+  include_tasks: fstab-config.yml
+
+- name: main | tweak sysctl config
+  include_tasks: sysctl-tweaks.yml

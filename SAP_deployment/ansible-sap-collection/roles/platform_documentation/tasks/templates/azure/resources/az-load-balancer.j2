@@ -1,0 +1,41 @@
+{#
+    generate loadbalancer summaries
+#}
+{% for lb in lb_list %}
+# Load Balancer Summary ({{ lb }})
+---
+|Name|Frontend Ip|Probe Ports|Backend pools|Nics|
+|-|-|-|-|-|
+{% set datafound = namespace(isdatapresent=false) %}
+{% set portlist = [] %}
+{% set frontendlist = [] %}
+{% set backendlist = [] %}
+{% set niclist = [] %}
+{% for resource in resource_json if resource.type=="microsoft.network/loadbalancers" and resource.name==lb %}
+{%- set datafound.isdatapresent = true %}
+{% for probe in resource.properties.probes %}{{ portlist.append( probe.properties.port ) }}{% endfor %}
+{% for frontend in resource.properties.frontendIPConfigurations %}{{ frontendlist.append( frontend.properties.privateIPAddress ) }}{% endfor %}
+{% for backend in resource.properties.backendAddressPools %}{{ backendlist.append( backend.name ) }}{% endfor %}
+{% for backendpool in resource.properties.backendAddressPools %}{% for lbaddress in backendpool.properties.loadBalancerBackendAddresses %}{{ niclist.append( lbaddress.properties.networkInterfaceIPConfiguration.id.split('/')[-3] ) }}{% endfor %}{% endfor %}
+    {%- set row = [
+        lb,
+        frontendlist,
+        portlist,
+        backendlist,
+        niclist
+        ]
+    -%}
+    |{{ row | join('|') }}|
+{% endfor %}
+{%- if datafound.isdatapresent == false %}
+    {%- set row = [
+            lb,
+            "Not Found",
+            "Not Found",
+            "Not Found",
+            "Not Found"
+            ]
+        -%}
+    |{{ row | join('|') }}|
+{% endif %}
+{% endfor %}

@@ -1,0 +1,10 @@
+USE [master]
+RESTORE DATABASE {{ sap.sid }} FROM  DISK = N'{{ downloads.download_drive }}:\SilentInstall\BACKUP\{{ sap.source_sid }}.bak' WITH  FILE = 1,  
+{% for count in range(sap.source_datacount) %}
+MOVE N'{{ sap.source_sid }}DATA{{ count +1 }}' TO N'{{ sap.data_drive }}:\SQLUserData\{{ sap.sid }}DATA{{ count+1 }}.mdf',
+{% endfor %}
+MOVE N'{{ sap.source_sid }}LOG1' TO N'{{ sap.log_drive }}:\SQLLog\{{ sap.sid }}LOG1.ldf',  NOUNLOAD,  STATS = 5
+GO
+
+
+

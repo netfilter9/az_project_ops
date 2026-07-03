@@ -1,0 +1,8 @@
+- name: Remove all pagefiles disable AutomaticManagedPagefile and set pagefile
+  win_pagefile:
+    drive: "{{ page_file.location }}"
+    initial_size: 1024
+    maximum_size: "{{ page_file.size_gb|int *1024 }}"
+    remove_all: yes
+    automatic: no
+    state: present

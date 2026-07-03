@@ -1,0 +1,149 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "title": "Azure application deployment JSON",
+    "description": "This JSON defines the requirements for deploying a application environment on Azure",
+    "type": "object",
+    "examples": [
+        {
+            "foundation": {
+                "network": {
+                    "resource_group_name": "",
+                    "name": ""
+                }
+            },
+            "deployment": {
+                "resource_group": {
+                    "name": "",
+                    "location": ""
+                }
+            }
+        }
+    ],
+    "properties": {
+        "foundation": {
+            "title": "Foundation",
+            "description": "Foundation environment configuration values",
+            "type": "object",
+            "examples": [
+                {
+                    "network": {
+                        "resource_group_name": "",
+                        "name": ""
+                    }
+                }
+            ],
+            "properties": {
+                "network": {
+                    "$ref": "network.json#/definitions/network"
+                },
+                "diagnostics": {
+                    "$ref": "diagnostics.json#/definitions/diagnostics"
+                },
+                "log_analytics": {
+                    "$ref": "log_analytics.json#/definitions/log_analytics"
+                },
+                "recovery_vault": {
+                    "$ref": "recovery_vault.json#/definitions/recovery_vault"
+                },
+                "windows_domain": {
+                    "$ref": "windows_domain.json#/definitions/windows_domain"
+                }
+            },
+            "additionalProperties": false
+        },
+        "admin_password": {
+            "title": "OS admin user password",
+            "description": "WARNING: please set using TF_VARS_admin_password environment variable",
+            "type": "string"
+        },
+        "deployment": {
+            "title": "Deployment",
+            "description": "These fields define the reources to be deployed",
+            "type": "object",
+            "examples": [
+                {
+                    "resource_group": {
+                        "name": "",
+                        "location": ""
+                    }
+                }
+            ],
+            "properties": {
+                "application_security_groups": {
+                    "title": "Application Security Groups",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "application_security_groups.json#/definitions/application_security_group"
+                    },
+                    "examples": [
+                        {
+                            "asg-scNN": {}
+                        }
+                    ]
+                },
+                "network_security_groups": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "network_security_group.json#/definitions/network_security_group"
+                    },
+                    "examples": [
+                        {
+                            "my-nsg": {}
+                        }
+                    ]
+                },
+                "resource_group": {
+                    "$ref": "resource_group.json#/definitions/resource_group",
+                    "examples": [
+                        {
+                            "name": "",
+                            "location": ""
+                        }
+                    ]
+                },
+                "key_vault": {
+                    "$ref": "key_vault.json#/definitions/key_vault"
+                },
+                "tags": {
+                    "$ref": "tags.json#/definitions/tags"
+                },
+                "os_account": {
+                    "$ref": "os_account.json#/definitions/os_account"
+                },
+                "proximity_placement_groups": {
+                    "$ref": "proximity_placement_groups.json#/definitions/proximity_placement_groups"
+                },
+                "availability_sets": {
+                    "$ref": "availability_sets.json#/definitions/availability_sets"
+                },
+                "load_balancers": {
+                    "$ref": "load_balancers.json#/definitions/load_balancers"
+                },
+                "storage_accounts": {
+                    "$ref": "storage_accounts.json#/definitions/storage_accounts"
+                },
+                "server_groups": {
+                    "$ref": "server_groups.json#/definitions/server_groups"
+                },
+                "data_factories": {
+                    "$ref": "data_factory.json#/definitions/data_factories"
+                },
+                "mssql_config": {
+                    "$ref": "mssql_config.json#/definitions/mssql_config"
+                },
+                "load_balancers_v2": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "$ref": "load_balancer_v2.json#/definitions/load_balancer_v2"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "resource_group"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

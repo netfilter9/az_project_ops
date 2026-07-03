@@ -1,0 +1,66 @@
+- name: main | enable iscsi and sbd services 
+  service:
+    name: "{{ item }}"
+    enabled: yes    
+  loop:
+    - iscsid
+    - iscsi
+    - sbd
+
+- name: main | set initiatorname
+  lineinfile:
+    path: /etc/iscsi/initiatorname.iscsi
+    regexp: '^InitiatorName='
+    line: InitiatorName=iqn.2006-04.{{ ansible_hostname }}.local:{{ ansible_hostname }}
+
+- name: main | restart iscsi services
+  service:
+    name: "{{ item }}"
+    state: restarted  
+  loop:
+    - iscsid
+    - iscsi
+  ignore_errors: yes
+
+- name: main | perform iscsiadm activities
+  include_tasks: iscsiadm.yml
+  loop: "{{ sbd_servers }}"
+
+- name: main | regather facts
+  setup:
+
+- name: main | create SBD devices by finding ids in gathered facts
+  shell: sbd -d /dev/disk/by-id/"{{ item.value.links.ids[1] }}" -1 60 -4 120 create
+  loop: "{{ ansible_devices|dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: item.value.model == cluster_ref
+
+- name: main | get scsi device ids into a string 
+  set_fact: 
+    ids: "/dev/disk/by-id/{{ item.value.links.ids[1] }};{{ ids | default() }}"
+  loop: "{{ ansible_devices|dict2items  }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: item.value.model == cluster_ref
+  
+- name: main | set SBD_DEVICE data
+  lineinfile:
+    path: /etc/sysconfig/sbd
+    regexp: 'SBD_DEVICE='
+    line: SBD_DEVICE="{{ ids }}"
+
+- name: main | adding values to file /etc/sysconfig/sbd
+  lineinfile:
+    line: SBD_WATCHDOG='yes'
+    dest: /etc/sysconfig/sbd
+
+- name: main | set content of softdog.conf
+  copy:
+    content: "softdog"
+    dest: /etc/modules-load.d/softdog.conf
+
+- name: main | add the softdog module
+  modprobe:
+    name: softdog
+    state: present

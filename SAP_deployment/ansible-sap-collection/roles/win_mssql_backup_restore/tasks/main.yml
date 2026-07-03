@@ -1,0 +1,22 @@
+--- 
+
+- name: create folders
+  win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{sap.data_drive}}:\\SQLUserData"
+    - "{{sap.log_drive}}:\\SQLLog"
+
+- name: copy sql code
+  template:
+    src: restore.j2
+    dest: C:\restore.sql
+
+- name: Run select sql command
+  win_shell: sqlcmd -S {{ node1 }} -i C:\\restore.sql
+  register: win_backup_restore
+  
+
+  
+    

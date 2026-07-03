@@ -1,0 +1,114 @@
+---
+- name: main | install sap-suse-cluster-connector
+  package:
+    name: 
+     - nfs-utils
+     - resource-agents
+     - resource-agents-sap
+  when: platform == 'azure'
+
+- name: main | install sap-suse-cluster-connector
+  package:
+    name: 
+     - resource-agents-sap
+     - sap-cluster-connector
+  when: platform == 'aws'
+
+- name: main | ascs
+  block: 
+
+    - name: main | set up pcs cluster resource(if required)
+      include_tasks: pcs_resource_nosap.yml
+    
+    - name: main | put ers node into standby 
+      command: pcs node standby {{ node2 }}
+
+    - name: main | install ascs
+      include_role: 
+        name: sap_install
+      vars:
+        role: ascs
+    
+    - name: main | bring ers back online
+      command: pcs node unstandby {{ node2 }}
+
+  when: ansible_hostname == node1 and platform == 'azure'
+
+
+- name: main | ers
+  block:
+  
+    - name: main | put ascs node into standby 
+      command: pcs node standby {{ node1 }}
+
+    - name: main | install ers
+      include_role: 
+        name: sap_install
+      vars:
+        role: ers
+
+    - name: main | bring ascs back online 
+      command: pcs node unstandby {{ node1 }}
+
+    - name: main | set profile id facts
+      set_fact:
+        ascs_instance_profile_name: "{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}_{{ sap.logical_hosts.ascs.hostname }}"
+        ers_instance_profile_name: "{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}_{{ sap.logical_hosts.ers.hostname }}"
+
+    - name: main | (A)SCS profile additional lines
+      lineinfile:
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ascs_instance_profile_name }}
+        line: "{{ item }}"
+      loop:
+        - enque/encni/set_so_keepalive = true
+
+    - name: main | ERS profile line modification
+      lineinfile:
+        regexp: '^{{ item.reg }}'
+        line: "{{ item.line }}"
+        path: /sapmnt/{{ sap.sid|upper }}/profile/{{ ers_instance_profile_name }}
+      loop:
+        - { reg: Restart_Program_00 ,line: 'Start_Program_00 = local $(_ER) pf=$(_PFL) NR=$(SCSID)' }
+        - { reg: Autostart ,line: '# Autostart = 1' }
+
+  when: ansible_hostname == node2 and platform == 'azure'
+
+- name: RedHat | adding value to grub entry
+  replace:
+    path: /usr/sap/sapservices
+    regexp: '^LD_LIBRARY_PATH='
+    replace: '#LD_LIBRARY_PATH='
+  when: platform == 'azure'
+
+- name: main | ascs
+  block: 
+
+    - name: main | set cluster maintenace mode in Redhat
+      command: pcs property set maintenance-mode="true"
+
+    - name: main | set up pcs cluster resource(if required)
+      include_tasks: pcs_resource_sap.yml
+    
+    - name: main | bring ascs back online
+      command: pcs node unstandby {{ node1 }}
+    
+    - name: main | set cluster maintenace mode in Redhat
+      command: pcs property set maintenance-mode="false"
+
+  when: ansible_hostname == node1 and platform == 'azure'
+
+- name: main | ascs
+  block: 
+    
+    - name: main | set up pcs cluster nosap resource(if required)
+      include_tasks: pcs_resource_nosap.yml
+    
+    - name: main | set up pcs cluster sap resource(if required)
+      include_tasks: pcs_resource_sap.yml
+    
+  when: ansible_hostname == node1 and platform == 'aws'
+
+
+- name: main | enable cluster
+  command: pcs cluster enable
+  when: platform == 'aws'

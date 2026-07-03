@@ -1,0 +1,37 @@
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name: listener update for primary db
+  block:
+    - name: Ensure backup directory exists.
+      become: yes
+      become_user: "{{ oracle_installation_user }}"
+      file:
+        path: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup"
+        state: directory
+        mode: 0644
+
+    - name: backing up listener file
+      copy:
+        src: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/listener.ora"
+        dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup/listener.ora"
+        remote_src: yes
+
+    - name: creating new listener file
+      become: yes
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "listener.j2"
+        dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/listener.ora" 
+  when: ansible_hostname == dbnode1
+
+- name: listener update for secondary db
+  block:
+      - name: creating new listener file
+        become: yes
+        become_user: "{{ oracle_installation_user }}"
+        template:
+          src: "listener.j2"
+          dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/listener.ora" 
+  when: ansible_hostname == dbnode2

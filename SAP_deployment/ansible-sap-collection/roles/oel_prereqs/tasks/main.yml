@@ -1,0 +1,9 @@
+---
+
+- name: main | packages installation 
+  include_tasks: azure-packages.yml
+  when: platform == 'azure'
+
+- name: main | packages installation
+  include_tasks: aws-packages.yml 
+  when: platform == 'aws'

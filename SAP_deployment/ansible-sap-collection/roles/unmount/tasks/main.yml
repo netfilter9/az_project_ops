@@ -1,0 +1,25 @@
+---
+
+- name: main | handle "mount" mode
+  block:
+
+    - name: unmount the share
+      command: umount {{ delete_dir }}
+
+    - name: remove auto.direct entry
+      lineinfile:
+        regexp: '^{{ delete_dir }}'
+        line: "{{ delete_dir }} -nfsvers=3,nosymlink,sync {{ sap.nfs.server }}:/{{ delete_dir }}"
+        path: /etc/auto.direct
+        state: absent
+
+    - name: autofs | enable autofs services
+      systemd:
+        name: autofs
+        enabled: yes
+        state: restarted
+
+    - name: remove the temporary mount point
+      file:
+        path: "{{ delete_dir }}"
+        state: absent

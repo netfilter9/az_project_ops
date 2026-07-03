@@ -1,0 +1,74 @@
+---
+
+- name: test path SAPSOF
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_shell : |
+    Test-Path C:\ClusterStorage\SAPSOF
+  become: yes
+  become_method: runas
+  register: test_path
+
+- set_fact:
+    test_path: "{{ test_path.stdout_lines[0] | bool }}"
+- debug:
+    var: test_path
+
+- name: VolumeCreation
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_shell : |
+    New-Volume -StoragePoolFriendlyName S2D* -FriendlyName SAPSOF -FileSystem CSVFS_ReFS -Size {{ cluster.sapmnt_size }}GB -ResiliencySettingName Mirror 
+  register: volume_creation
+  become: yes
+  become_method: runas
+  when: test_path == false
+
+- name: sapglobal folder creation
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_file:
+    path: C:\ClusterStorage\SAPSOF\usr\sap\{{ sid | default(sap.sid) | upper }}\SYS
+    state: directory
+  become_method: runas
+
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+- debug:
+    msg: "{{ domainName }}"
+
+- set_fact:
+    ascs_node1: "{{ ascs_node1.split('.')[0] }}"
+- debug:
+    msg: "{{ ascs_node1.split('.') }}"
+
+- debug:
+    msg: "{{ ascs_node2 }}"
+- set_fact:
+    ascs_node2: "{{ ascs_node2.split('.')[0] }}"
+    
+    
+- name: sapmnt smb share
+  win_share:
+    name: sapmnt
+    description: sapmnt share
+    path: "C:\\ClusterStorage\\SAPSOF\\usr\\sap"
+    list: no
+    full: "BUILTIN\\Administrators,{{ domainName }}\\{{ ascs_node1 }}$,{{ domainName }}\\{{ ascs_node2 }}$,{{ domainName }}\\sap_{{ sid | default(sap.sid) }}_GlobalAdmin"
+    
+- name: Add allow rights
+  win_acl:
+    path: "C:\\ClusterStorage\\SAPSOF\\usr\\sap"
+    user: "{{ item }}"
+    rights: FullControl
+    type: allow
+    state: present
+    propagation: 'None'
+  loop:
+    - "{{ domainName }}\\{{ ascs_node1 }}$"
+    - "{{ domainName }}\\{{ ascs_node2 }}$"
+    - "{{ domainName }}\\sap_{{ sid | default(sap.sid) }}_GlobalAdmin"
+    

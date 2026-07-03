@@ -1,0 +1,20 @@
+{# 
+    generate vm summary 
+#}
+{% for resource in gce_json if resource.kind=="compute#instance" %}
+  {% if loop.first %}
+# VM Summary (All VMs)
+---
+|Hostname|Vm Size|Os Type|
+|-|-|-|
+  {% endif %}
+  
+  {%- set row = [
+      resource.name,
+      resource.machineType.split('/')|last,
+      "Windows" if ("windows" in resource.disks[0].licenses[0]) else "Linux",
+    ]
+  -%}
+
+|{{ row | join('|') }}|
+{% endfor %}

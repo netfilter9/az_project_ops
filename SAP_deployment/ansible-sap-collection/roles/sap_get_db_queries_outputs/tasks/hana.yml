@@ -1,0 +1,45 @@
+- name: copy hana scripts from local to target nodes
+  copy:
+    src: "../files/"
+    dest: "/tmp/"
+    mode: '0777'
+
+-  name: Execute hana queries
+   shell: sudo su - {{ db_sid | lower }}adm -c "HDB version"
+   register: db_version_outputs
+
+- debug: var=db_version_outputs
+
+- name: Write ouptut for hana db version
+  template:
+    src: "get-hana-version.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/get-hana-version_outputs.json'
+  become: yes
+  delegate_to: localhost
+
+-  shell: sudo su - {{ sid | lower }}adm -c "hdbsql -i {{ db_instance_number }} -d {{ db_sid }} -u system -p {{ db_password }} -I "/tmp/{{ item.name }}.sql""
+   register: output
+   args:
+     executable: /bin/bash
+   with_items:
+     - "{{ hana_queries }}"    
+
+- debug: var=output
+
+- name: Write ouptut
+  template:
+    src: "{{ item.name }}.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/{{ item.name }}_outputs.json'
+  become: yes
+  delegate_to: localhost
+  with_items:
+       - "{{ hana_queries }}"
+  loop_control:
+       index_var: index
+
+- name: delete query file from target nodes
+  file:
+     path: /tmp/{{ item.name }}.sql
+     state: absent
+  with_items:
+     - "{{ hana_queries }}"     

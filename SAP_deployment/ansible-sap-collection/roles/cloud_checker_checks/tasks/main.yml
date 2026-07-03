@@ -1,0 +1,118 @@
+---
+- name: set output format
+  set_fact:
+    output: 'json'
+   
+
+- name: input file path
+  set_fact:
+    input_path: ../json-path
+    excel_filepath: "{{ lookup('first_found','json2excel.py')}}"
+    certifiedvmspath: "{{ lookup('first_found','certifiedvms')}}"
+    certifiedhanavmspath: "{{ lookup('first_found','certifiedhana.txt')}}"
+    olap_oltp_scaleoutpath: "{{ lookup('first_found','olap_oltp_scaleout.json')}}"
+    text2json_filepath: "/tmp/txt2json.py"
+
+- name: azure.yml | create folder to store segregated output
+  file:
+    path: "{{ input_path }}"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create folder to store segregated output
+  file:
+    path: "{{ excel_output_path }}"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create individual folder to store Infra check outputs
+  file:
+    path: "{{ input_path }}/Infra-checks"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create individual folder to store DB check outputs
+  file:
+    path: "{{ input_path }}/DB-checks"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create individual folder to store OS check outputs
+  file:
+    path: "{{ input_path }}/OS-checks"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create individual folder to store Platform check outputs
+  file:
+    path: "{{ input_path }}/Platform-checks"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: azure.yml | create individual folder to store abap check outputs
+  file:
+    path: "{{ input_path }}/Abap-checks"
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+
+
+###################################################################################################################
+###################################################################################################################
+
+- name: read certifiedvms text file
+  command: cat {{ certifiedvmspath }}
+  register: storage_row
+  delegate_to: localhost
+  when: "'db' not in group_names"
+
+- name: azure.yml | convert stdout to a fact
+  set_fact:
+    storage_list: "{{storage_row.stdout_lines}}" 
+  when: "'db' not in group_names"  
+
+- name: get storage list
+  debug:
+    var: storage_list
+
+- name: read certifiedhana text file
+  command: cat {{ certifiedhanavmspath }}
+  register: hanavm_row
+  delegate_to: localhost 
+  when: "'db' in group_names"
+
+- name: azure.yml | convert stdout to a fact
+  set_fact:
+    hanavm_list: "{{hanavm_row.stdout_lines}}"
+  when: "'db' in group_names"
+
+- name: load var from  olap_oltp_scaleout file
+  include_vars:
+    file: "{{ olap_oltp_scaleoutpath }}"
+    name: imported_var
+  delegate_to: localhost
+  when: "'db' in group_names"
+      
+- name: importing tasks to perform
+  include_tasks: "{{ check }}_checks.yml"
+  
+
+- name: execute python code for converting all jsons to excel
+  command: python {{ excel_filepath }} --input={{ input_path }} --output={{ excel_output_path }}
+  register: output
+  delegate_to: localhost 
+  

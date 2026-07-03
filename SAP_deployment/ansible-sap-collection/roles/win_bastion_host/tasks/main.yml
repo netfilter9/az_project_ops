@@ -1,0 +1,30 @@
+---
+
+- name: assert that the system is supported as a bastion host
+  assert:
+    that:
+      - ansible_os_family == bastion_host_os_family
+      - ansible_distribution == bastion_host_distribution
+      - ansible_distribution_version is
+        version(bastion_host_min_distribution_version, '>=')
+    fail_msg: 'The bastion host must be running CentOS 7.7 or greater'
+    success_msg: 'Target is suitable to be used as a bastion host'
+
+- name: install system packages required for kerberos integration
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  package:
+    name: "{{ bastion_host_kerberos_packages }}"
+    state: present
+  become: yes
+  when:
+    - bastion_host_use_kerberos | bool
+    - bastion_host_use_python3_venv | bool
+
+- name: include python3 venv tasks
+  include_tasks:
+    file: venv.yml
+  when:
+    - bastion_host_use_python3_venv | bool
+
+

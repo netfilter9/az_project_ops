@@ -1,0 +1,39 @@
+---
+
+- name: set disk list as a fact
+  set_fact: 
+    listenerName: "{{ cluster.sqllistener | default (cluster.sqlavailabilityGroup + 'lsnr') }}"
+
+- name: sql server prereqs
+  include_tasks: 01-prereqs.yml
+  tags:
+    - sql-prereqs
+  when: inventory_hostname == node1
+
+- name: sql server prereqs
+  include_tasks: 02-always_on_prereqs.yml
+  tags:
+    - sql-alwayson-prereqs
+
+- name: sql server prereqs
+  include_tasks: 03-create-sql-login.yml
+  tags:
+    - sql-sql-login
+  when: inventory_hostname == node1
+
+- name: DB load on secondary
+  include_tasks: 04-secondary_sap_dbload.yml
+  tags:
+    - wait-for-AG
+  when: inventory_hostname == node2
+
+- name: Edit Default.PFL file(Profile Edit)
+  include_tasks: 05-edit-default-pfl.yml
+
+- name: SAP install on Secondary
+  include_tasks: 06-sap-install-secondary.yml
+  when: inventory_hostname == node2
+
+- name: Re-install SAP on Secondary
+  include_tasks: 06-sap-install-secondary.yml
+  when: inventory_hostname == node2

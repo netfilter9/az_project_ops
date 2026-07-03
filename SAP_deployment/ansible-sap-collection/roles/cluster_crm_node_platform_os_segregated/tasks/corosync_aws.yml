@@ -1,0 +1,61 @@
+- name: running corosync keygen
+  command: corosync-keygen
+  when: ansible_hostname == node1
+
+- name: cluster | copy files over
+  command: scp -o  StrictHostKeyChecking=no {{ node1 }}:/etc/corosync/authkey /etc/corosync/
+  when: ansible_hostname == node2
+
+- name: fetch instance id
+  command: aws ec2 describe-instances --filters Name=private-ip-address,Values={{primary_ip}} --query "Reservations[*].Instances[*].[InstanceId]" --output text
+  register: primary_id
+
+- name: fetch instance id
+  command: aws ec2 describe-instances --filters Name=private-ip-address,Values={{secondary_ip}} --query "Reservations[*].Instances[*].[InstanceId]" --output text
+  register: secondary_id
+
+- name: setting fact for sid
+  set_fact:
+    pri_id: "{{ primary_id.stdout }}"
+    sec_id: "{{ secondary_id.stdout }}"
+
+- name: create tags on primary and secondary servers
+  command: aws ec2 create-tags --resources "{{ pri_id }}" --tags Key={{ key_name}},Value={{ node1 }} --region "{{ region }}"
+    
+- name: create tags on primary and secondary servers
+  command: aws ec2 create-tags --resources "{{ sec_id }}" --tags Key={{ key_name }},Value={{ node2 }} --region "{{ region }}"
+
+- name: review instance settings that conflict with cluster actions on primary server
+  command: aws ec2 modify-instance-maintenance-options --instance-id "{{ pri_id }}" --auto-recovery disabled
+  when: ansible_hostname == node1
+
+- name: review instance settings that conflict with cluster actions on secondary server
+  command: aws ec2 modify-instance-maintenance-options --instance-id "{{ sec_id }}" --auto-recovery disabled
+  when: ansible_hostname == node2
+
+- name: disable source/destination check on primary server
+  command: aws ec2 modify-instance-attribute --instance-id "{{ pri_id }}" --no-source-dest-check
+  when: ansible_hostname == node1
+
+- name: disable source/destination check on secondary server
+  command: aws ec2 modify-instance-attribute --instance-id "{{ sec_id }}" --no-source-dest-check
+  when: ansible_hostname == node2
+
+- name: disable API stop on primary server
+  command: aws ec2 modify-instance-attribute --instance-id "{{ pri_id }}" --no-disable-api-stop
+  when: ansible_hostname == node1
+
+- name: disable API stop on secondary server
+  command: aws ec2 modify-instance-attribute --instance-id "{{ sec_id }}" --no-disable-api-stop
+  when: ansible_hostname == node2 
+
+- name: main | stop pacemaker
+  command: systemctl stop pacemaker
+       
+- name: copy corosync.conf file to /etc/corosync/
+  template:
+    src: "aws_{{ ansible_os_family }}_corosync.j2"
+    dest: "/etc/corosync/corosync.conf"
+
+- name: main | start pacemaker
+  command: systemctl start pacemaker

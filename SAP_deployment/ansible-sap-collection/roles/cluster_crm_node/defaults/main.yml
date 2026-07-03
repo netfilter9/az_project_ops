@@ -1,0 +1,14 @@
+---
+create_cluster:
+   azure:
+      - ha-cluster-init -y csync2
+      - ha-cluster-init -y -i eth0
+   gcp: 
+      - corosync-keygen
+      - ha-cluster-init -y csync2
+
+join_second_node:
+   azure:
+      - ha-cluster-join -y -c {{ node1 }}
+   gcp: 
+      - ha-cluster-join -y -c {{ node1 }} csync2  

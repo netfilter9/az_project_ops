@@ -1,0 +1,146 @@
+---
+
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- debug:
+    msg: "{{ domainName }}"
+
+- name: copy sql code
+  template:
+    src: backup_full.j2
+    dest: C:\backup_full.sql
+
+- name: Run select sql command
+  win_shell: sqlcmd -S {{ node1 }} -i C:\\backup_full.sql
+
+- name: backup folder creation
+  win_file:
+    path: E:\BackUp\{{ sap.sid }}
+    state: directory
+
+- name: backup share
+  win_share:
+    name: backup
+    description: backup share
+    path: "E:\\BackUp"
+    list: no
+    full: "Everyone"
+
+- name: test file backup
+  vars:
+    ansible_become_user: "{{ ansible_user }}"
+    ansible_become_pass: "{{ ansible_password }}"
+  win_shell : |
+    Test-Path "E:\BackUp\EC1\FirstFullBackUp.bak"
+  become: yes
+  become_method: runas
+  register: test_path
+
+- set_fact:
+    test_path: "{{ test_path.stdout_lines[0] | bool }}"
+- debug:
+    var: test_path
+
+- name: create backup
+  win_shell: Invoke-Sqlcmd -ServerInstance {{ node1 }} -QueryTimeout 21600 -Query `
+              "BACKUP DATABASE {{ sap.sid }} TO  DISK = N'E:\BackUp\{{ sap.sid }}\FirstFullBackUp.bak' WITH NOFORMAT, NOINIT,  NAME = N'{{ sap.sid }}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10"
+  when: test_path == false
+  
+- name: SQL Server AG create
+  win_dsc:
+      resource_name: DSC_SqlAG
+      Name: "{{ cluster.sqlavailabilityGroup }}"
+      InstanceName: "{{ mssql_params.install.instance_name }}"
+      ServerName: "{{ node1 }}"
+      PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+      PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: SQL Server AG replica create
+  win_dsc:
+    resource_name: DSC_SqlAGReplica
+    Ensure: Present
+    Name: "{{ node2.split('.')[0] }}"
+    AvailabilityGroupName: "{{ cluster.sqlavailabilityGroup }}"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    ServerName: "{{ node2 }}"
+    PrimaryReplicaServerName: "{{ node1 }}"
+    PrimaryReplicaInstanceName: "{{ mssql_params.install.instance_name }}"
+    AvailabilityMode: "SynchronousCommit"
+    ConnectionModeInPrimaryRole: "AllowAllConnections"
+    ConnectionModeInSecondaryRole: "AllowAllConnections"
+    FailoverMode: "Automatic"
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: copy sql code
+  template:
+    src: failover_mode.j2
+    dest: C:\failover_mode.sql
+
+- name: Run select sql command
+  win_shell: sqlcmd -S {{ node1 }} -i C:\\failover_mode.sql
+
+- name: SQL Server wait for AG 
+  win_dsc:
+    resource_name: DSC_SqlWaitForAG
+    Name: "{{ cluster.sqlavailabilityGroup }}"
+    RetryIntervalSec: 300
+    RetryCount: 50  
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+
+- name: Add DB to AG
+  win_dsc:
+    resource_name: DSC_SqlAGDatabase
+    Ensure: Present
+    AvailabilityGroupName: "{{ cluster.sqlavailabilityGroup }}"
+    BackupPath: "\\\\{{ node1 }}\\Backup\\{{sap.sid | upper }}"
+    DatabaseName: "{{ sap.sid | upper }}"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    ServerName: "{{ node1 }}"
+    PsDscRunAsCredential_username: "{{ mssql_params.service_accounts.users.service.username }}"
+    PsDscRunAsCredential_password: "{{ mssql_params.service_accounts.users.service.password }}"
+
+- name: Run select
+  win_shell: (((ipconfig | Select-String "Subnet Mask")[0]).ToString().Split(":")[-1]).trim()
+  register: subnet_mask
+
+- set_fact:
+    subnet_mask: "{{ subnet_mask.stdout }}"
+
+- debug:
+    msg: "{{ subnet_mask }}"
+
+- name: Add Listener to AG
+  win_dsc:
+    resource_name: DSC_SqlAGListener
+    Ensure: Present
+    Name: "{{ listenerName }}"
+    AvailabilityGroup: "{{ cluster.sqlavailabilityGroup }}"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    ServerName: "{{ node1 }}"
+    port: 1433
+    IpAddress: "{{ sap.logical_hosts.db.ip }}/{{ subnet_mask }}"
+    PsDscRunAsCredential_username: "{{ mssql_params.service_accounts.users.service.username }}"
+    PsDscRunAsCredential_password: "{{ mssql_params.service_accounts.users.service.password }}"
+
+- name: Setting probe port
+  template:
+    src: probe.db1.j2
+    dest: C:\db1_probe.ps1
+
+- name: set probe ports for sql
+  win_shell: C:\db1_probe.ps1
+
+- name: stop Cluster 
+  win_shell: Stop-ClusterResource -Name {{ cluster.sqlavailabilityGroup }}
+
+- name: start Cluster 
+  win_shell: Start-ClusterResource -Name {{ cluster.sqlavailabilityGroup }} 
+
+
+
+
+

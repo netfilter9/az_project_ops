@@ -1,0 +1,54 @@
+- name: Install Packages
+  package: 
+    name:
+      - dnsmasq
+      - cloud-netconfig-azure
+    state: latest
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+
+- name: Enable and restart dnsasp Service
+  service:
+    name: "{{ item }}"
+    enabled: yes  
+    state: restarted  
+  with_items:
+    - dnsmasq.service
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+
+- name: Update netconfig for DNS
+  lineinfile:
+    regexp: "{{ item.regex }}"
+    line: "{{ item.line }}"
+    path: /etc/sysconfig/network/config
+  with_items:
+    - { regex: NETCONFIG_DNS_FORWARDER="resolver", line: NETCONFIG_DNS_FORWARDER="dnsmasq" }
+    - { regex: NETCONFIG_MODULES_ORDER="dns-resolver dns-bind dns-dnsmasq nis ntp-runtime", line: NETCONFIG_MODULES_ORDER="cloud-netconfig dns-resolver dns-bind dns-dnsmasq nis ntp-runtime" }
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+
+- name: Update netconfig"
+  command: "netconfig update -f"
+  ignore_errors: true
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+
+- name: adding values in /etc/sysconfig/network/ifcfg-eth0
+  lineinfile:
+    path: /etc/sysconfig/network/ifcfg-eth0
+    regexp: 'CLOUD_NETCONFIG_MANAGE='
+    line: CLOUD_NETCONFIG_MANAGE="yes"
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+    
+#Update Resolv.conf for DNS Suffix
+- name: Update resolv.conf
+  lineinfile:
+    regexp: '^search reddog.microsoft.com'
+    line: search {{ dns_suffix }}
+    path: /etc/resolv.conf
+
+- name: tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: net.ipv4.tcp_keepalive_time, value: 120}
+    - { name: net.ipv4.tcp_timestamps, value: 0}

@@ -1,0 +1,2 @@
+hostname: vm-vcsi-dev-weu-sapecc-001
+virtual hostname: SAPDEVDB01

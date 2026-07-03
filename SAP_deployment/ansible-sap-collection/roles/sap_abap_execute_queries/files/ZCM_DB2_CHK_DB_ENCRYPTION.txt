@@ -1,0 +1,93 @@
+*&*******************************************************************&*
+* Report              :   ZCM_DB2_CHK_DB_ENCRYPTION                   *
+* Title               :   Database Encryption Check for DB2 Database  *
+* Created by          :   Ruchir Kamble                               *
+* Created on          :   23/11/2020                                  *
+* Purpose             :   This report is used to check if Database    *
+*                     :   is encrypted or not from tcode DBACOCKPIT   *
+*                     :   during Cloud Migration                      *
+*---------------------------------------------------------------------*
+REPORT zcm_db2_chk_db_encryption.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep         TYPE c VALUE '|'                LENGTH 1,
+             lc_partitn     TYPE db6pmcd-partitn VALUE '0',
+             lc_func_id     TYPE i VALUE '41',
+             lc_export      TYPE c VALUE 'EXPORT'           LENGTH 6,
+             lc_title       TYPE c VALUE 'Database Check'   LENGTH 15,
+             lc_description TYPE c VALUE 'Description'      LENGTH 15,
+             lc_curr_value  TYPE c VALUE 'Current Value'    LENGTH 20,
+             lc_delay_value TYPE c VALUE 'Delayed Value'    LENGTH 20,
+             lc_err_msg     TYPE c VALUE 'No entries found' LENGTH 20.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        lv_action TYPE char10,
+        lt_data   TYPE TABLE OF btcxpm.
+
+  CLEAR: ls_input, lv_action.
+
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+
+      CALL FUNCTION 'DB6_PM_CLPCOMMANDS'
+        EXPORTING
+          partitn               = lc_partitn
+          functionid            = lc_func_id
+        TABLES
+          exec_protocol         = lt_data
+        EXCEPTIONS
+          invalid_parameter_set = 1
+          c_call_failed         = 2
+          adbc_error            = 3
+          permission_denied     = 4
+          system_error          = 5
+          OTHERS                = 6.
+
+        " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+      IF sy-subrc EQ 0.
+
+        " Adding heading to the output
+        CONCATENATE lc_description lc_sep lc_curr_value
+                    lc_sep lc_delay_value
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        LOOP AT lt_data INTO DATA(ls_data).
+
+          IF ls_data-message CP '*Encrypted database*'.
+            CONDENSE ls_data-message.
+            ls_output = ls_data-message.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+          ENDIF.
+
+        ENDLOOP.
+      ELSE.
+        ls_output-wa = |{ lc_err_msg }|.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+      ENDIF.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+ENDFORM.

@@ -1,0 +1,26 @@
+---
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+    dbtype: "{{ sap.db.type | lower }}"
+    audit_dbserver: "{{ bods.ips.audit.dbserver | default(default_audit_dbserver) }}"    
+    cms_dbserver: "{{ bods.ips.cms.dbserver | default(default_cms_dbserver) }}"
+    
+- name: main | install packages
+  import_tasks: packages.yml
+  tags:
+    - packages
+  when: group_names != 'db'
+
+- name: main | set environment variables
+  import_tasks: env_set.yml
+  tags:
+    - env_set
+  when: group_names != 'db'
+
+- name: main | copy interfaces file
+  import_tasks: interfaces.yml
+  tags:
+    - interfaces
+  when: dbtype == 'sybase'
+

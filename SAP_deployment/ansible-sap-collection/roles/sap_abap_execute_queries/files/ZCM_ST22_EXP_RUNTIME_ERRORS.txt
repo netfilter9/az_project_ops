@@ -1,0 +1,122 @@
+*&********************************************************************&*
+* Report              :   ZCM_ST22_EXP_RUNTIME_ERRORS                  *
+* Title               :   Export ST22 Dumps                            *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   24/08/2020                                   *
+* Purpose             :   This report is used to Export Dumps during   *
+*                         Cloud Migration                              *
+*----------------------------------------------------------------------*
+REPORT zcm_st22_exp_runtime_errors.
+
+TYPES: BEGIN OF  snap_alv.
+    INCLUDE TYPE rdumpov.
+TYPES: ct TYPE lvc_t_scol.
+TYPES: END OF snap_alv.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'                 LENGTH 1,
+           lc_null       TYPE c VALUE 'NULL'              LENGTH 4,
+           lc_export     TYPE c VALUE 'EXPORT'            LENGTH 6,
+           lc_date       TYPE c VALUE 'CurrentDate'       LENGTH 15,
+           lc_time       TYPE c VALUE 'Time'              LENGTH 4,
+           lc_app_server TYPE c VALUE 'ApplicationServer' LENGTH 25,
+           lc_user       TYPE c VALUE 'User'              LENGTH 4,
+           lc_client_id  TYPE c VALUE 'ClientID'          LENGTH 15,
+           lc_keep       TYPE c VALUE 'Keep'              LENGTH 4,
+           lc_runtime    TYPE c VALUE 'RuntimeError'      LENGTH 14,
+           lc_exception  TYPE c VALUE 'Exception'         LENGTH 12,
+           lc_canc_prog  TYPE c VALUE 'CanceledProgram'   LENGTH 25,
+           lc_wp_index   TYPE c VALUE 'WPIndex'           LENGTH 10,
+           lc_trans_id   TYPE c VALUE 'TransactionID'     LENGTH 20,
+           lc_title      TYPE c VALUE
+           'List of Runtime Errors'                       LENGTH 35,
+           lc_err_msg    TYPE c VALUE
+           'No Runtime Errors found in the system'        LENGTH 40
+           ##NO_TEXT.
+
+DATA : ls_input  TYPE tab512,
+       ls_output TYPE tab512,
+       lv_action TYPE char10,
+       lv_modno  TYPE char4,
+       lv_date   TYPE sy-datum,
+       lt_snap   TYPE TABLE OF snap_alv,
+       ls_snap   TYPE snap_alv.
+
+LOAD-OF-PROGRAM.
+
+  CLEAR:lv_action.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.                     " If action is EXPORT
+
+      " To fetch dumps from the system
+      PERFORM select_snap_beg IN PROGRAM  rsshowrabax
+                     CHANGING lt_snap.
+
+      " To delete dumps post 30 days from current date
+      lv_date = sy-datum - 30.
+      DELETE lt_snap WHERE datum < lv_date.
+
+        " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      IF lt_snap IS NOT INITIAL.
+
+        " Adding headings to the output
+        CONCATENATE lc_date       lc_sep
+                    lc_time       lc_sep
+                    lc_app_server lc_sep
+                    lc_user       lc_sep
+                    lc_client_id  lc_sep
+                    lc_keep       lc_sep
+                    lc_runtime    lc_sep
+                    lc_exception  lc_sep
+                    lc_canc_prog  lc_sep
+                    lc_wp_index   lc_sep
+                    lc_trans_id
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_snap INTO ls_snap.
+
+          lv_modno = ls_snap-modno.
+
+          IF ls_snap-rexception IS INITIAL.
+            ls_snap-rexception = lc_null.
+          ENDIF.
+
+          CONCATENATE ls_snap-datum      lc_sep
+                      ls_snap-uzeit      lc_sep
+                      ls_snap-ahost      lc_sep
+                      ls_snap-uname      lc_sep
+                      ls_snap-mandt      lc_sep
+                      ls_snap-xhold      lc_sep
+                      ls_snap-errorid    lc_sep
+                      ls_snap-rexception lc_sep
+                      ls_snap-gprogram   lc_sep
+                      lv_modno           lc_sep
+                      ls_snap-tid
+                    INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        " No Runtime Errors found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.

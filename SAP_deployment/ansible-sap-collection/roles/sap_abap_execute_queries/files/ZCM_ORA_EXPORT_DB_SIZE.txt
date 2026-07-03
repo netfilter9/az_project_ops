@@ -1,0 +1,100 @@
+REPORT ZCM_ORA_EXPORT_DB_SIZE.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input      TYPE tab512,
+        ls_output     TYPE tab512,
+        ls_prefinal   TYPE string,
+        lv_action     TYPE char8,
+        lv_size       TYPE string,
+        lv_used_space TYPE string,
+        lv_free_space TYPE string.
+
+  DATA :tab_db_ge_hi_d             TYPE TABLE OF  dbase_hist_avg,
+        tab_db_ge_hi_d_with_dup    TYPE TABLE OF    dbase_hist,
+        tab_db_ge_hi_d_without_dup TYPE TABLE OF    dbase_hist,
+        tab_db_ge_hi_w             TYPE TABLE OF    dbase_hist_avg,
+        tab_db_ge_hi_w_with_dup    TYPE TABLE OF    dbase_hist,
+        tab_db_ge_hi_w_without_dup TYPE TABLE OF    dbase_hist,
+        tab_db_ge_hi_m             TYPE TABLE OF    dbase_hist_avg,
+        tab_db_ge_hi_m_with_dup    TYPE TABLE OF    dbase_hist,
+        tab_db_ge_hi_m_without_dup TYPE TABLE OF    dbase_hist.
+
+
+  CLEAR: ls_input, lv_action.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN 'EXPORT'.
+
+      CALL FUNCTION 'C_ORA_DB_INIT'
+        EXPORTING
+          i_remote_system            = 'DEFAULT'
+        IMPORTING
+*         wa_db_ge_md                =
+*         db_last_analysis_date      =
+*         db_last_analysis_time      =
+         size                       = lv_size
+          used_space                 = lv_used_space
+*         per_used                   =
+          free_space                 = lv_free_space
+*         per_free                   =
+*         per_data                   =
+*         per_temp                   =
+*         per_tab                    =
+*         per_ind                    =
+*         per_oth                    =
+*         db_anal_d_hist_day_304     =
+*         db_anal_t_hist_day_304     =
+*         db_anal_d_hist_week_305    =
+*         db_anal_t_hist_week_305    =
+*         db_anal_d_hist_month_306   =
+*         db_anal_t_hist_month_306   =
+        TABLES
+          tab_db_ge_hi_d             = tab_db_ge_hi_d
+          tab_db_ge_hi_d_with_dup    = tab_db_ge_hi_d_with_dup
+          tab_db_ge_hi_d_without_dup = tab_db_ge_hi_d_without_dup
+          tab_db_ge_hi_w             = tab_db_ge_hi_w
+          tab_db_ge_hi_w_with_dup    = tab_db_ge_hi_w_with_dup
+          tab_db_ge_hi_w_without_dup = tab_db_ge_hi_w_without_dup
+          tab_db_ge_hi_m             = tab_db_ge_hi_m
+          tab_db_ge_hi_m_with_dup    = tab_db_ge_hi_m_with_dup
+          tab_db_ge_hi_m_without_dup = tab_db_ge_hi_m_without_dup.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+*Title
+  ls_output = 'CurrentAndFreeSize'.
+  APPEND ls_output TO lt_output.
+
+*Column Headings
+  CONCATENATE 'Size' lc_sep
+              'UsedSpace' lc_sep
+              'FreeSpace'
+              INTO ls_output.
+  APPEND ls_output TO lt_output.
+
+* Data
+  CONCATENATE lv_size lc_sep
+              lv_used_space lc_sep
+              lv_free_space
+              INTO ls_output.
+  APPEND ls_output TO lt_output.
+
+
+ENDFORM.

@@ -1,0 +1,41 @@
+- name: run hadr commands on primary
+  command: su - db2{{ sap.db.sid|lower }} -c "{{ item }}"
+  with_items:
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_LOCAL_HOST "{{ node1 }}"
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_LOCAL_SVC {{ sap.db.sid | upper }}_HADR_1
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_REMOTE_HOST "{{ node2 }}"
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_REMOTE_SVC {{ sap.db.sid | upper }}_HADR_2
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_REMOTE_INST db2{{ sap.db.sid | lower }}
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_TIMEOUT 120
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_SYNCMODE NEARSYNC
+    - db2 update db cfg for {{ sap.db.sid | upper }} using HADR_PEER_WINDOW 300
+    - db2 update db cfg for {{ sap.db.sid | upper }} using LOGINDEXBUILD ON
+    - db2 update db cfg for {{ sap.db.sid | upper }} using LOGARCHMETH1 LOGRETAIN
+  register: db2cmd
+
+- name: Deactivating the database
+  command: su - db2{{ sap.db.sid|lower }} -c "{{ item }}"
+  with_items:
+    - db2 terminate
+    - db2 deactivate db {{ sap.db.sid | upper }}
+  
+- name: Take offline backup
+  command: 
+    cmd: su - db2{{ sap.db.sid|lower }} -c "{{ item }}"
+    creates: /db2/{{ sap.db.sid | upper }}/MEDIAS/BACKUP/{{ sap.db.sid | upper }}.0.db2{{ sap.db.sid | lower }}.DBPART000.*
+  with_items:
+    - db2 backup database {{ sap.db.sid | upper }} to /db2/{{ sap.db.sid | upper }}/MEDIAS/BACKUP 
+  register: backup
+
+- name: verify backup
+  command: su - db2{{ sap.db.sid|lower }} -c "{{ item }}"
+  with_items:
+    - db2ckbkp /db2/{{ sap.db.sid }}/MEDIAS/BACKUP/{{ sap.db.sid | upper }}.0.db2{{ sap.db.sid | lower }}.DBPART000.*
+    - db2 activate db {{ sap.db.sid | upper }}
+  register: verout
+
+- name: output of backup verification
+  debug:
+    var: verout
+  
+    

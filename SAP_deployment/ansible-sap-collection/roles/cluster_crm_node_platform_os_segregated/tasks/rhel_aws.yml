@@ -1,0 +1,26 @@
+---
+- name: Start PCS Service
+  command: "{{ item }}"
+  with_items: 
+    - systemctl start pcsd.service
+    - systemctl enable pcsd.service
+
+- name: rhel | setup ssh keys for azure and rhel
+  import_tasks: ssh_key_setup.yml
+  tags:
+    - ssh
+
+- name: rhel | run base ha cluster commands for aws and rhel
+  import_tasks: rhel_ha_cluster.yml
+  tags:
+    - rhel_ha_cluster
+
+- name: rhel | perform corosync service tuning for aws and rhel
+  include_tasks: corosync_aws.yml
+  tags:
+    - corosync_aws
+    
+- name: rhel | stonith configuration commands for aws and rhel
+  import_tasks: aws_stonith.yml
+  tags:
+    - aws_stonith

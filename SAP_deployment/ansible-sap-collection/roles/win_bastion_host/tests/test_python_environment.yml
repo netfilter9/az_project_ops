@@ -1,0 +1,30 @@
+---
+
+- name: test python environment
+  hosts: bastion
+  gather_facts: yes
+
+  tasks:
+
+    - name: debug ansible_python_interpreter
+      debug:
+        var: ansible_python_interpreter
+
+    - name: debug discovered_interpreter_python
+      debug:
+        var: discovered_interpreter_python
+
+    - name: debug ansible_playbook_python
+      debug:
+        var: ansible_playbook_python
+
+    - name: debug ansible_python_version
+      debug:
+        var: ansible_python_version
+
+    - name: assert that playbook is running in python3 environment
+      assert:
+        that:
+          - discovered_interpreter_python is undefined
+          - ansible_playbook_python is search('python3')
+          - ansible_python_version is version('3.6','>=')

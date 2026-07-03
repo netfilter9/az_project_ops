@@ -1,0 +1,454 @@
+*&********************************************************************&*
+* Report              :   ZCM_SCC4_UPD_CLIENT_SETTINGS                 *
+* Title               :   Restore Client Settings                      *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   13/10/2020                                   *
+* Purpose             :   This report is for restoring Client settings *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+
+REPORT zcm_scc4_upd_client_settings.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'            LENGTH 1,
+           lc_insert     TYPE c VALUE 'I'            LENGTH 1,
+           lc_update     TYPE c VALUE 'U'            LENGTH 1,
+           lc_delete     TYPE c VALUE 'D'            LENGTH 1,
+           lc_title      TYPE c VALUE
+           'Restore Client Settings'                 LENGTH 30,
+           lc_insert_msg TYPE c VALUE
+           'Number of entries created in SCC4:'      LENGTH 50
+           ##no_text,
+           lc_update_msg TYPE c VALUE
+           'Number of entries updated in SCC4:'      LENGTH 50
+           ##no_text,
+           lc_delete_msg TYPE c VALUE
+           'Number of entries deleted in SCC4:'      LENGTH 50
+           ##no_text,
+           lc_fail_ins   TYPE c VALUE
+           'Failed to create for client'             LENGTH 35
+           ##no_text,
+           lc_fail_upd   TYPE c VALUE
+           'Failed to update for client'             LENGTH 35
+           ##no_text,
+           lc_fail_del   TYPE c VALUE
+           'Failed to delete for client'             LENGTH 35
+           ##no_text,
+           lc_err_msg    TYPE c VALUE
+           'No SCC4 entries to restore'              LENGTH 35
+           ##no_text.
+
+DATA: ls_input      TYPE tab512,
+      ls_output     TYPE tab512,
+      lt_output     TYPE TABLE OF tab512 WITH HEADER LINE,
+      lt_msg        TYPE TABLE OF tab512,
+      ls_msg        TYPE tab512,
+      lv_action     TYPE char10,
+      lv_lines      TYPE i,
+      lv_count_ins  TYPE i,
+      lv_count_upd  TYPE i,
+      lv_count_del  TYPE i,
+      lv_mandt      TYPE mandt,
+      lv_mtext      TYPE mtext_d,
+      lv_ort01      TYPE ort01,
+      lv_mwaer      TYPE mwaer,
+      lv_adrnr      TYPE char10,
+      lv_cccategory TYPE cccategory,
+      lv_cccoractiv TYPE cccoractiv,
+      lv_ccnocliind TYPE ccnocliind,
+      lv_cccopylock TYPE cccopylock,
+      lv_ccnocascad TYPE ccnocascad,
+      lv_ccsoftlock TYPE ccsoftlock,
+      lv_ccorigcont TYPE ccorigcont,
+      lv_ccimaildis TYPE ccimaildis,
+      lv_cctemplock TYPE cctemplock,
+      lv_changeuser TYPE as4user,
+      lv_changedate TYPE as4date,
+      lv_logsys     TYPE logsys,
+      lt_bdcdata    TYPE TABLE OF bdcdata,
+      ls_bdcdata    TYPE bdcdata,
+      lt_messtab    TYPE TABLE OF bdcmsgcoll,
+      ls_messtab    TYPE bdcmsgcoll.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                   ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+
+  " To remove NULL and N in the input
+  PERFORM null_check TABLES lt_input.
+
+  DESCRIBE TABLE lt_input LINES lv_lines.
+
+ " Adding title to the output
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  IF lv_lines < 2.
+    " No SCC4 entries to restore
+    ls_output = lc_err_msg.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  " To delete heading
+  DELETE lt_input INDEX 1.
+
+  LOOP AT lt_input INTO ls_input.
+
+    CLEAR: lv_mandt, lv_ort01, lv_mwaer, lv_cccategory,
+           lv_cccoractiv, lv_ccnocliind, lv_cccopylock,
+           lv_ccimaildis, lv_logsys, lv_action.
+
+    SPLIT ls_input AT lc_sep INTO
+          lv_mandt
+          lv_mtext
+          lv_ort01
+          lv_mwaer
+          lv_adrnr
+          lv_cccategory
+          lv_cccoractiv
+          lv_ccnocliind
+          lv_cccopylock
+          lv_ccnocascad
+          lv_ccsoftlock
+          lv_ccorigcont
+          lv_ccimaildis
+          lv_cctemplock
+          lv_changeuser
+          lv_changedate
+          lv_logsys
+          lv_action.
+
+    IF lv_action EQ lc_insert.                " If action is Insert
+
+      PERFORM insert TABLES lt_output USING lv_mandt lv_mtext
+            lv_ort01 lv_mwaer lv_cccategory lv_cccoractiv
+            lv_ccnocliind lv_cccopylock lv_ccimaildis lv_logsys.
+
+    ELSEIF lv_action EQ lc_update.            " If action is Update
+
+      PERFORM update TABLES lt_output USING lv_mandt lv_mtext
+            lv_ort01 lv_mwaer lv_cccategory lv_cccoractiv
+            lv_ccnocliind lv_cccopylock lv_ccimaildis lv_logsys.
+
+    ELSEIF lv_action EQ lc_delete.            " If action is Delete
+
+      PERFORM delete TABLES lt_output USING lv_mandt.
+
+    ENDIF.
+
+  ENDLOOP.
+
+  ls_output-wa = |{ lc_insert_msg } { lv_count_ins } |.
+  APPEND ls_output TO lt_output.
+
+  ls_output-wa = |{ lc_update_msg } { lv_count_upd } |.
+  APPEND ls_output TO lt_output.
+
+  ls_output-wa = |{ lc_delete_msg } { lv_count_del } |.
+  APPEND ls_output TO lt_output.
+
+ENDFORM.
+
+FORM insert TABLES lt_output USING lv_mandt lv_mtext lv_ort01
+      lv_mwaer lv_cccategory lv_cccoractiv lv_ccnocliind
+      lv_cccopylock lv_ccimaildis lv_logsys.
+
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-MANDT(01)'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=AEND'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-MTEXT(01)'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=NEWL'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0030'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-CCIMAILDIS'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=SAVE'.
+  PERFORM bdc_field       USING 'T000-MANDT'
+                                lv_mandt.
+  PERFORM bdc_field       USING 'T000-MTEXT'
+                                lv_mtext.
+  PERFORM bdc_field       USING 'T000-ORT01'
+                                lv_ort01.
+  PERFORM bdc_field       USING 'T000-LOGSYS'
+                                lv_logsys.
+  PERFORM bdc_field       USING 'T000-MWAER'
+                                lv_mwaer.
+  PERFORM bdc_field       USING 'T000-CCCATEGORY'
+                                lv_cccategory.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_ACTV'
+                                lv_cccoractiv.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_CLOS'
+                                'X'.
+  PERFORM bdc_field       USING 'T000-CCNOCLIIND'
+                                lv_ccnocliind.
+  PERFORM bdc_field       USING 'T000-CCCOPYLOCK'
+                                lv_cccopylock.
+  PERFORM bdc_field       USING 'T000-CCIMAILDIS'
+                                lv_ccimaildis.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0030'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-MTEXT'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=ENDE'.
+  PERFORM bdc_field       USING 'T000-MTEXT'
+                                lv_mtext.
+  PERFORM bdc_field       USING 'T000-ORT01'
+                                lv_ort01.
+  PERFORM bdc_field       USING 'T000-LOGSYS'
+                                lv_logsys.
+  PERFORM bdc_field       USING 'T000-MWAER'
+                                lv_mwaer.
+  PERFORM bdc_field       USING 'T000-CCCATEGORY'
+                                lv_cccategory.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_CLOS'
+                                'X'.
+  PERFORM bdc_field       USING 'T000-CCNOCLIIND'
+                                lv_ccnocliind.
+  PERFORM bdc_field       USING 'T000-CCCOPYLOCK'
+                                lv_cccopylock.
+  PERFORM bdc_field       USING 'T000-CCIMAILDIS'
+                                lv_ccimaildis.
+
+  PERFORM bdc_transaction TABLES lt_msg USING 'SCC4'.
+
+  " Display if any error message
+  IF lt_msg[] IS NOT INITIAL.
+
+    READ TABLE lt_msg INTO ls_msg INDEX 1.
+    CONCATENATE lc_fail_ins lv_mandt ':' ls_msg
+    INTO lt_output SEPARATED BY space.
+    APPEND lt_output.
+
+    ELSE.
+
+      " If no error add the counter
+      lv_count_ins = lv_count_ins + 1.
+  ENDIF.
+  REFRESH : lt_msg[].
+
+ENDFORM.
+
+FORM update TABLES lt_output USING lv_mandt lv_mtext lv_ort01
+      lv_mwaer lv_cccategory lv_cccoractiv lv_ccnocliind
+      lv_cccopylock lv_ccimaildis lv_logsys..
+
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                lv_mandt.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=AEND'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-ORT01(04)'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=DETA'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0030'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-CCIMAILDIS'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=SAVE'.
+  PERFORM bdc_field       USING 'T000-MTEXT'
+                                lv_mtext.
+  PERFORM bdc_field       USING 'T000-ORT01'
+                                lv_ort01.
+  PERFORM bdc_field       USING 'T000-LOGSYS'
+                                lv_logsys.
+  PERFORM bdc_field       USING 'T000-MWAER'
+                                lv_mwaer.
+  PERFORM bdc_field       USING 'T000-CCCATEGORY'
+                                lv_cccategory.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_OFF'
+                                'X'.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_CLOS'
+                                ''.
+  PERFORM bdc_field       USING 'T000-CCNOCLIIND'
+                                lv_ccnocliind.
+  PERFORM bdc_field       USING 'T000-CCCOPYLOCK'
+                                lv_cccopylock.
+  PERFORM bdc_field       USING 'T000-CCIMAILDIS'
+                                lv_ccimaildis.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0030'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-MTEXT'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=ENDE'.
+  PERFORM bdc_field       USING 'T000-MTEXT'
+                                lv_mtext.
+  PERFORM bdc_field       USING 'T000-ORT01'
+                                lv_ort01.
+  PERFORM bdc_field       USING 'T000-LOGSYS'
+                                lv_logsys.
+  PERFORM bdc_field       USING 'T000-MWAER'
+                                lv_mwaer.
+  PERFORM bdc_field       USING 'T000-CCCATEGORY'
+                                lv_cccategory.
+  PERFORM bdc_field       USING 'T000_0001-CCCOR_OFF'
+                                'X'.
+  PERFORM bdc_field       USING 'T000-CCIMAILDIS'
+                                lv_ccimaildis.
+
+  PERFORM bdc_transaction  TABLES lt_msg USING 'SCC4'.
+
+  " Display if any error message
+  IF lt_msg[] IS NOT INITIAL.
+
+    READ TABLE lt_msg INTO ls_msg INDEX 1.
+    CONCATENATE lc_fail_upd lv_mandt ':' ls_msg
+    INTO lt_output SEPARATED BY space.
+    APPEND lt_output.
+
+    ELSE.
+
+      " If no error add the counter
+      lv_count_upd = lv_count_upd + 1.
+  ENDIF.
+  REFRESH : lt_msg[].
+
+ENDFORM.
+
+
+FORM delete TABLES lt_output USING lv_mandt.
+
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                'T000-MANDT(01)'.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=AEND'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                lv_mandt.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=DELE'.
+  PERFORM bdc_field       USING 'VIM_MARKED(04)'
+                                'X'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                lv_mandt.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=SAVE'.
+  PERFORM bdc_dynpro      USING 'SAPL0SZZ' '0020'.
+  PERFORM bdc_field       USING 'BDC_CURSOR'
+                                lv_mandt.
+  PERFORM bdc_field       USING 'BDC_OKCODE'
+                                '=ENDE'.
+  PERFORM bdc_transaction TABLES lt_msg USING 'SCC4'.
+
+  " Display if any error message
+  IF lt_msg[] IS NOT INITIAL.
+
+    READ TABLE lt_msg INTO ls_msg INDEX 1.
+    CONCATENATE lc_fail_del lv_mandt ':' ls_msg
+    INTO lt_output SEPARATED BY space.
+    APPEND lt_output.
+
+    ELSE.
+
+      " If no error add the counter
+      lv_count_del = lv_count_del + 1.
+  ENDIF.
+  REFRESH : lt_msg[].
+
+ENDFORM.
+
+FORM bdc_dynpro USING program dynpro.
+  CLEAR ls_bdcdata.
+  ls_bdcdata-program  = program.
+  ls_bdcdata-dynpro   = dynpro.
+  ls_bdcdata-dynbegin = 'X'.
+  APPEND ls_bdcdata TO lt_bdcdata.
+ENDFORM.
+
+
+FORM bdc_field USING fnam fval.
+
+  CLEAR ls_bdcdata.
+  ls_bdcdata-fnam = fnam.
+  ls_bdcdata-fval = fval.
+  APPEND ls_bdcdata TO lt_bdcdata.
+
+ENDFORM.
+
+FORM bdc_transaction TABLES lt_msg STRUCTURE tab512
+                      USING tcode TYPE any.
+  DATA: lv_mstring(480),
+        lv_subrc           LIKE sy-subrc,
+        lx_auth_check      TYPE REF TO cx_root,
+        lv_auth_check_text TYPE string,
+        ls_msg             TYPE tab512.
+
+  CONSTANTS: lc_99    TYPE c VALUE '99' LENGTH 2,
+             lc_comma TYPE c VALUE ','  LENGTH 1,
+             lc_n     TYPE c VALUE 'N'  LENGTH 1,
+             lc_l     TYPE c VALUE 'L'  LENGTH 1.
+
+  REFRESH lt_messtab.
+  TRY.
+      CALL TRANSACTION tcode WITH AUTHORITY-CHECK
+                       USING lt_bdcdata
+                       MODE   lc_n
+                       UPDATE lc_l
+                       MESSAGES INTO lt_messtab.
+    CATCH cx_sy_authorization_error INTO lx_auth_check.
+*     Authorization missing for user when executing transaction
+      lv_auth_check_text = lx_auth_check->get_text( ).
+      sy-subrc = lc_99.
+  ENDTRY.
+  lv_subrc = sy-subrc.
+
+  IF lv_subrc <> lc_99.
+    LOOP AT lt_messtab INTO ls_messtab.
+      MESSAGE ID     ls_messtab-msgid
+              TYPE   ls_messtab-msgtyp
+              NUMBER ls_messtab-msgnr
+              INTO   lv_mstring
+              WITH   ls_messtab-msgv1
+                     ls_messtab-msgv2
+                     ls_messtab-msgv3
+                     ls_messtab-msgv4.
+      IF ls_messtab-msgtyp = 'E'.
+        ls_msg = lv_mstring.
+        APPEND ls_msg TO lt_msg.
+        CLEAR: ls_messtab,ls_msg.
+      ENDIF.
+    ENDLOOP.
+  ELSE.
+    " No authorization error
+    CLEAR: ls_msg.
+    ls_msg = lv_auth_check_text.
+    APPEND ls_msg TO lt_msg.
+  ENDIF.
+  SKIP.
+  REFRESH lt_bdcdata.
+ENDFORM.
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '|N|'
+    IN TABLE lt_table WITH '| |'.
+    FIND '|N|' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '|NULL|'
+    IN TABLE lt_table WITH '| |'.
+    FIND '|NULL|' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

@@ -1,0 +1,18 @@
+---
+- name: main | download gcp stonith
+  get_url:
+    url: https://storage.googleapis.com/sapdeploy/pacemaker-gcp/gcpstonith
+    dest: /usr/lib64/stonith/plugins/external/gcpstonith
+    mode: '0755'
+
+- name: main | create gcp fencing directory
+  file:
+    path: /usr/lib/ocf/resource.d/gcp
+    state: directory
+    recurse: yes
+
+- name: main | download gcp alias
+  get_url:
+    url: https://storage.googleapis.com/sapdeploy/pacemaker-gcp/alias
+    dest: /usr/lib/ocf/resource.d/gcp/alias
+    mode: '0755'

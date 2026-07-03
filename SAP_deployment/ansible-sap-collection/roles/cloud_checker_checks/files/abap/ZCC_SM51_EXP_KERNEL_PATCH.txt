@@ -1,0 +1,141 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCC_SM51_EXP_KERNEL_PATCH                   *
+* Title               :   Kernel & Patch Export                       *
+* Purpose             :   This report is used to export kernel and    *
+*                     :   patch details from system                   *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SM51                                                                *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* XXXXX               :     X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-03-2021  Initial  Ashwini B G    Local     To Export Kernel and   *
+*                                              patch details          *
+*---------------------------------------------------------------------*
+REPORT zcc_sm51_exp_kernel_patch.
+
+FORM get_config TABLES ft_input  STRUCTURE tab512
+                       ft_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep     TYPE c       VALUE '|',
+             lc_act_exp TYPE char6   VALUE 'EXPORT',
+             lc_sys_id  TYPE char9   VALUE 'System ID',
+             lc_kernel  TYPE char14  VALUE 'Kernel Release',
+             lc_patch   TYPE char18  VALUE 'Kernel Patch level',
+             lc_kernel1 TYPE char14  VALUE 'kernel release',
+             lc_patch1  TYPE char18  VALUE 'kernel patch level',
+             lc_title   TYPE char23  VALUE 'Kernel and Patch values',
+             lc_no_inp  TYPE char25  VALUE 'No input',
+             lc_inc_inp TYPE char25  VALUE 'Incorrect input',
+             lc_msg     TYPE char100 VALUE
+             'No data found'.
+
+  DATA: ls_input           TYPE tab512,
+        ls_output          TYPE tab512,
+        lv_action          TYPE char8,
+        lt_sys_info        TYPE STANDARD TABLE OF bdi_log,
+        ls_sys_info        TYPE  bdi_log,
+        lv_kern_rel        TYPE thllines-thline,
+        lv_kern_patchlevel TYPE thllines-thline.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Title
+  CLEAR: ls_output.
+  ls_output = lc_title.
+  APPEND ls_output TO ft_output.
+
+  " Read input values from Python/Ansibel
+  READ TABLE ft_input INTO ls_input INDEX 1.
+  IF sy-subrc EQ 0.
+    lv_action = ls_input.
+  ELSE.
+    " No input
+    ls_output = lc_no_inp.
+    APPEND ls_output TO ft_output.
+    CLEAR: ls_output.
+    RETURN.
+  ENDIF.
+
+  CASE lv_action.
+
+    WHEN lc_act_exp. "EXPORT
+* The system data i.e. Kernel and patch details
+* are fetched and exported to Python.
+
+* Kernel and Patch Info
+      CLEAR: lt_sys_info[].
+      CALL FUNCTION '/SDF/CCMS_GET_SYSTEM_INFO'
+        TABLES
+          sys_info       = lt_sys_info
+        EXCEPTIONS
+          no_authority   = 1
+          internal_error = 2
+          OTHERS         = 3.
+      IF sy-subrc EQ 0.
+        CLEAR: lv_kern_rel,ls_sys_info.
+        READ TABLE lt_sys_info INTO ls_sys_info
+        WITH KEY tcode = lc_kernel1. "'kernel release'
+        IF sy-subrc EQ 0.
+          lv_kern_rel = ls_sys_info-comm.
+        ENDIF.
+        CLEAR: ls_sys_info,lv_kern_patchlevel.
+        READ TABLE lt_sys_info INTO ls_sys_info
+        WITH KEY tcode = lc_patch1. "''kernel patch level'
+        IF sy-subrc EQ 0.
+          lv_kern_patchlevel = ls_sys_info-comm.
+        ENDIF.
+      ELSE.
+        " Error message
+        CLEAR: ls_output.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4
+        INTO ls_output.
+        APPEND ls_output TO ft_output.
+        RETURN.
+      ENDIF.
+
+      IF lv_kern_rel IS NOT INITIAL AND
+         lv_kern_patchlevel IS NOT INITIAL.
+
+        " Heading Cloumns
+        CLEAR: ls_output.
+        CONCATENATE lc_sys_id lc_sep
+                    lc_kernel lc_sep
+                    lc_patch INTO ls_output.
+        APPEND ls_output TO ft_output.
+
+        " Data
+        CLEAR: ls_output.
+        CONCATENATE sy-sysid lc_sep
+                    lv_kern_rel lc_sep
+                    lv_kern_patchlevel INTO ls_output.
+        APPEND ls_output TO ft_output.
+
+      ELSE.
+
+        CLEAR: ls_output.
+        " No data found
+        ls_output = lc_msg.
+        APPEND ls_output TO ft_output.
+        RETURN.
+
+      ENDIF.
+
+    WHEN OTHERS.
+
+      " Incorrect Input
+      ls_output = lc_inc_inp.
+      APPEND ls_output TO ft_output.
+      CLEAR: ls_output.
+      RETURN.
+
+  ENDCASE.
+
+ENDFORM.

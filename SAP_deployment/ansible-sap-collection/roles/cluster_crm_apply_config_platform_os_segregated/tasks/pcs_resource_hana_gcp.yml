@@ -1,0 +1,53 @@
+
+- name: hana | gcp cluster configuration
+  block: 
+    - name: pcs_resource_hana_gcp | pcs cluster start
+      command: pcs cluster start --all
+    
+    - name: pcs_resource_hana_gcp | pcs topology resource create
+      command: pcs resource create SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHanaTopology SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} op start timeout=600 op stop timeout=300 op monitor interval=10 timeout=600 clone clone-max=2 clone-node-max=1 interleave=true
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: pcs_resource_hana_gcp | pcs saphana resource create
+      command: pcs resource create SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} SAPHana SID={{ sap.db.sid|upper }} InstanceNumber={{ sap.instance_numbers.db }} PREFER_SITE_TAKEOVER=true DUPLICATE_PRIMARY_TIMEOUT=7200 AUTOMATED_REGISTER=true op start timeout=3600 op stop timeout=3600 op monitor interval=61 role="Slave" timeout=700 op monitor interval=59 role="Master" timeout=700 op promote timeout=3600 op demote timeout=3600 promotable meta notify=true clone-max=2 clone-node-max=1 interleave=true
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: pcs_resource_hana_gcp | pcs vip resource create
+      command: pcs resource create vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }} IPaddr2 ip={{ sap.logical_hosts.db.ip }} nic=eth0 cidr_netmask=32
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: pcs_resource_hana_gcp | pcs order constraint create
+      command: pcs constraint order SAPHanaTopology_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone \then SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone symmetrical=false
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("duplicate constraint already exists"))  
+
+    - name: pcs_resource_hana_gcp | pcs rsc healthcheck create
+      command: pcs resource create rsc_healthcheck_{{ sap.db.sid|upper }} service:haproxy
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: pcs_resource_hana_gcp | pcs group create
+      command: pcs resource group add g-{{ sap.db.sid|upper }}_db rsc_healthcheck_{{ sap.db.sid|upper }} vip_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("already exists")) 
+
+    - name: pcs_resource_hana_gcp | pcs colocation constraint create
+      command: pcs constraint colocation add g-{{ sap.db.sid|upper }}_db with master SAPHana_{{ sap.db.sid|upper }}_{{ sap.instance_numbers.db }}-clone 4000
+      register: result
+      failed_when: 
+        - result.failed
+        - not (result.stderr.find("duplicate constraint already exists"))  

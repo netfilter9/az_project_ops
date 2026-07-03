@@ -1,0 +1,172 @@
+---
+- name: packages | install common packages
+  package:
+    name:
+     - 'lvm*'
+     - tcsh
+    state: present
+
+- name: packages | install common packages for HA
+  package:
+    name:
+     - pcs
+     - pacemaker
+     - fence-agents-azure-arm
+    state: present
+  when: node2 is defined
+
+- name: packages | install packages for azure in RHEL < 8.x
+  package:
+    name:
+     - autofs
+     - uuidd
+     - nmap-ncat
+     - compat-sap-c++-7
+     - cairo
+     - expect
+     - graphviz
+     - iptraf-ng
+     - krb5-workstation
+     - krb5-libs
+     - libcanberra-gtk2
+     - libicu
+     - libpng12
+     - libssh2
+     - libtool-ltdl
+     - libatomic
+     - lm_sensors
+     - numactl
+     - openssl098e
+     - openssl
+     - PackageKit-gtk3-module
+     - rsyslog
+     - sudo
+     - xorg-x11-xauth
+     - xulrunner
+    state: present  
+  when: platform == 'azure' and ansible_distribution_major_version < '8'
+  
+- name: packages | install packages for azure in RHEL > 8.x
+  package:
+    name:
+     - autofs
+     - uuidd
+     - nmap-ncat
+     - compat-sap-c++*
+     - cairo
+     - expect
+     - graphviz
+     - iptraf-ng
+     - krb5-workstation
+     - krb5-libs
+     - libcanberra-gtk2
+     - libicu
+     - libpng12
+     - libssh2
+     - libtool-ltdl
+     - libatomic
+     - lm_sensors
+     - numactl
+     - openssl
+     - PackageKit-gtk3-module
+     - rsyslog
+     - sudo
+     - xorg-x11-xauth
+    state: present
+  when: platform == 'azure' and ansible_distribution_major_version >= '8'
+  
+- name: packages | install packages for aws
+  package:
+    name:
+     - awscli
+     - fence-agents-aws
+    state: present
+  when: platform == 'aws'
+
+- name: packages | install packages in RHEL >8.x for nondb
+  package:
+    name:
+      - uuidd
+      - libnsl
+      - tcsh
+      - psmisc
+      - nfs-utils
+      - bind-utils            
+    state: present
+  when: ansible_distribution_major_version >= '8' and group_names != 'db'
+
+- name: packages | install packages in RHEL >8.x for db
+  package:
+    name:
+      - uuidd
+      - libnsl
+      - tcsh
+      - psmisc
+      - nfs-utils
+      - bind-utils
+      - expect
+      - gtk2
+      - krb5-workstation
+      - krb5-libs
+      - libaio
+      - libatomic
+      - libcanberra-gtk2
+      - libibverbs
+      - libicu
+      - libtool-ltdl
+      - numactl
+      - openssl
+      - PackageKit-gtk3-module
+      - rsyslog
+      - sudo
+      - xfsprogs
+      - xorg-x11-xauth
+      - compat-sap-c++-9
+      - tuned
+      - tuned-profiles-sap-hana
+      - cairo
+      - graphviz
+      - iptraf-ng
+      - lm_sensors
+      - net-tools        
+    state: present
+  when: ansible_distribution_major_version >= '8' and group_names != 'db'
+
+- name: packages | install packages for sybase DB 
+  package:
+    name:
+          - libgcc.i686
+          - glibc.i686
+          - libnsl
+          - libnsl.so.1
+          - openmotif
+          - libXp
+          - libXt
+          - libXtst.i686
+          - libXi
+          - libXmu
+          - libXext
+          - libXext.i686
+          - libSM
+          - libICE
+          - libX11
+          - libXtst-devel
+          - libXi-devel
+          - openmotif-devel
+          - libXmu-devel
+          - libXt-devel
+          - libXext-devel
+          - libXp-devel
+          - libX11-devel
+          - libSM-devel
+          - libICE-devel
+          - gtk2
+          - gtk2.i686
+          - libgcc
+          - libpng12
+          - libXft
+          - libXtst
+    state: present
+  when: 
+    - dbtype == 'sybase' 
+    - "'db' in group_names"

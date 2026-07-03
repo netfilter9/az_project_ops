@@ -1,0 +1,238 @@
+*&********************************************************************&*
+* Report              :   ZCM_SCOT_EXP_SMTP_NODES                      *
+* Title               :   Capture SMTP Nodes (SCOT)                    *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   11/09/2020                                   *
+* Purpose             :   This report is for capturing SMTP nodes in   *
+*                         SCOT data during Cloud Migration             *
+*----------------------------------------------------------------------*
+REPORT zcm_scot_exp_smtp_nodes.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'          LENGTH 1,
+           lc_smtp       TYPE c VALUE 'S'          LENGTH 1,
+           lc_null       TYPE c VALUE 'NULL'       LENGTH 4,
+           lc_export     TYPE c VALUE 'EXPORT'     LENGTH 6,
+           lc_node       TYPE c VALUE 'NODE'       LENGTH 4,
+           lc_descrip    TYPE c VALUE 'DESCRIP'    LENGTH 8,
+           lc_active     TYPE c VALUE 'ACTIVE'     LENGTH 6,
+           lc_retry_min  TYPE c VALUE 'RETRY_MIN'  LENGTH 10,
+           lc_mail_host  TYPE c VALUE 'MAILHOST'   LENGTH 10,
+           lc_mail_port  TYPE c VALUE 'MAILPORT'   LENGTH 10,
+           lc_addr_type  TYPE c VALUE 'ADDRTYPE'   LENGTH 8,
+           lc_convert_s  TYPE c VALUE 'CONVERTS'   LENGTH 10,
+           lc_convert_l  TYPE c VALUE 'CONVERTL'   LENGTH 10,
+           lc_convert_o  TYPE c VALUE 'CONVERTO'   LENGTH 10,
+           lc_convert_t  TYPE c VALUE 'CONVERTT'   LENGTH 10,
+           lc_mandt      TYPE c VALUE 'MANDT'      LENGTH 5,
+           lc_snd_system TYPE c VALUE 'SND_SYSTEM' LENGTH 12,
+           lc_snd_client TYPE c VALUE 'SND_CLIENT' LENGTH 12,
+           lc_snd_group  TYPE c VALUE 'SND_GROUP'  LENGTH 12,
+           lc_rec_type   TYPE c VALUE 'REC_TYPE'   LENGTH 10,
+           lc_rec_addr   TYPE c VALUE 'REC_ADDR'   LENGTH 10,
+           lc_generic    TYPE c VALUE 'GENERIC'    LENGTH 10,
+           lc_length     TYPE c VALUE 'LENGTH'     LENGTH 6,
+           lc_sxnodes    TYPE c VALUE 'SXNODES'    LENGTH 8,
+           lc_sxserv     TYPE c VALUE 'SXSERV'     LENGTH 8,
+           lc_sxroute    TYPE c VALUE 'SXROUTE'    LENGTH 9,
+           lc_title      TYPE c VALUE 'SMTP Nodes - SXNODES' LENGTH 10,
+           lc_err_nodes  TYPE c VALUE
+           'No data found in SXNODES table'        LENGTH 40
+           ##NO_TEXT,
+           lc_err_serv   TYPE c VALUE
+           'No data found in SXSERV table'         LENGTH 40
+           ##NO_TEXT,
+           lc_err_route  TYPE c VALUE
+           'No data found in SXROUTE table'        LENGTH 40
+           ##NO_TEXT.
+
+DATA : ls_input   TYPE tab512,
+       ls_output  TYPE tab512,
+       lv_action  TYPE char20,
+       lv_length  TYPE char3,
+       lt_nodes   TYPE TABLE OF sxnodes,
+       ls_nodes   TYPE sxnodes,
+       lt_sxserv  TYPE TABLE OF sxserv,
+       ls_sxserv  TYPE sxserv,
+       lt_sxroute TYPE TABLE OF sxroute,
+       ls_sxroute TYPE sxroute.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      SELECT node descrip active retry_min
+             mail_host mail_port
+             FROM sxnodes
+             INTO CORRESPONDING FIELDS OF TABLE lt_nodes
+             WHERE node_type EQ lc_smtp.
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      " Adding table name
+"      ls_output = lc_sxnodes.
+ "     APPEND ls_output TO lt_output.
+
+      IF lt_nodes IS NOT INITIAL.
+
+        " Adding headings to the output for sxnodes
+        CONCATENATE lc_node         lc_sep
+                    lc_descrip      lc_sep
+                    lc_active       lc_sep
+                    lc_retry_min    lc_sep
+                    lc_mail_host    lc_sep
+                    lc_mail_port
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_nodes INTO ls_nodes.
+
+          IF ls_nodes-active IS INITIAL.
+            ls_nodes-active = lc_null.
+          ENDIF.
+
+          IF ls_nodes-retry_min IS INITIAL.
+            ls_nodes-retry_min = lc_null.
+          ENDIF.
+
+          CONCATENATE ls_nodes-node       lc_sep
+                      ls_nodes-descrip    lc_sep
+                      ls_nodes-active     lc_sep
+                      ls_nodes-retry_min  lc_sep
+                      ls_nodes-mail_host  lc_sep
+                      ls_nodes-mail_port
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        " No data found in SXNODES table
+        ls_output =  lc_err_nodes.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+      " Adding empty line
+      ls_output = space.
+      APPEND ls_output TO lt_output.
+
+      SELECT node addr_type convert_s convert_l
+             convert_o convert_t FROM sxserv
+             INTO CORRESPONDING FIELDS OF TABLE lt_sxserv.
+
+      " Adding table name
+      ls_output = lc_sxserv.
+      APPEND ls_output TO lt_output.
+
+      IF lt_sxserv IS NOT INITIAL.
+
+        LOOP AT lt_sxserv INTO ls_sxserv.
+
+          " Adding headings to the output for sxserve
+          CONCATENATE lc_node         lc_sep
+                      lc_addr_type    lc_sep
+                      lc_convert_s    lc_sep
+                      lc_convert_l    lc_sep
+                      lc_convert_o    lc_sep
+                      lc_convert_t
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+          CONCATENATE ls_sxserv-node        lc_sep
+                      ls_sxserv-addr_type   lc_sep
+                      ls_sxserv-convert_s   lc_sep
+                      ls_sxserv-convert_l   lc_sep
+                      ls_sxserv-convert_o   lc_sep
+                      ls_sxserv-convert_t
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+      ELSE.
+        " No data found in SXSERV table
+        ls_output =  lc_err_serv.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+      " Adding empty line
+      ls_output = space.
+      APPEND ls_output TO lt_output.
+
+      SELECT mandt snd_system snd_client snd_group
+             rec_type rec_addr generic length node
+             FROM sxroute INTO CORRESPONDING FIELDS OF TABLE
+             lt_sxroute.
+
+      " Adding table name
+      ls_output = lc_sxroute.
+      APPEND ls_output TO lt_output.
+
+      IF lt_sxroute IS NOT INITIAL.
+
+        " Adding headings to the output for sxroute
+        CONCATENATE lc_mandt        lc_sep
+                    lc_snd_system   lc_sep
+                    lc_snd_client   lc_sep
+                    lc_snd_group    lc_sep
+                    lc_rec_type     lc_sep
+                    lc_rec_addr     lc_sep
+                    lc_generic      lc_sep
+                    lc_length
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_sxroute INTO ls_sxroute.
+
+          CALL FUNCTION 'STRING_REVERSE'
+            EXPORTING
+              string    = ls_sxroute-rec_addr
+              lang      = 'E'
+            IMPORTING
+              rstring   = ls_sxroute-rec_addr
+            EXCEPTIONS
+              too_small = 1
+              OTHERS    = 2.
+
+          lv_length = ls_sxroute-length.
+
+          IF ls_sxroute-rec_addr IS INITIAL.
+            ls_sxroute-rec_addr = lc_null.
+          ENDIF.
+
+          CONCATENATE ls_sxroute-mandt        lc_sep
+                      ls_sxroute-snd_system   lc_sep
+                      ls_sxroute-snd_client   lc_sep
+                      ls_sxroute-snd_group    lc_sep
+                      ls_sxroute-rec_type     lc_sep
+                      ls_sxroute-rec_addr     lc_sep
+                      ls_sxroute-generic      lc_sep
+                      lv_length               lc_sep
+                      ls_sxroute-node
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        " No data found in SXROUTE table
+        ls_output =  lc_err_route.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.

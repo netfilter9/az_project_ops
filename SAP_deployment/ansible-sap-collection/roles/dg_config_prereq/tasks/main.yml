@@ -1,0 +1,7 @@
+- name: main | dg_config for dbload on both servers
+  import_tasks: dbload_both.yml
+  when: dbload_approach == 'both'
+
+- name: main | dg_config for dbload on primary servers
+  import_tasks: dbload_primary.yml
+  when: dbload_approach == 'primary'

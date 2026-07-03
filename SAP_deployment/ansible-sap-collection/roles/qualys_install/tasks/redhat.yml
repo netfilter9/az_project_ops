@@ -1,0 +1,58 @@
+#Pre-Validation tasks
+- block:
+    - name: Assert whether the OS is valid as per the doc
+      assert:
+        that:
+          #The Qualys installation supports Red Hat Linux 5.4, 6, 7, 8
+          # CentOS 5.4+, 6, 7
+          # Fedora 22, 23, 24
+          # SUSE Linux Enterprise 11, 12
+          # OpenSUSE 12, 13, Leap 42.1
+          # Amazon Linux 2015.09, 2016.09, 2017.03, 2017.09
+          # Oracle Enterprise Linux 5.11, 6, 7
+          - "(ansible_distribution == 'RedHat' and ansible_distribution_major_version in ['5', '6', '7', '8'])
+            or
+            (ansible_distribution == 'CentOS' and ansible_distribution_major_version in ['5', '6', '7'])
+            or
+            (ansible_distribution == 'Fedora' and ansible_distribution_major_version in ['22', '23', '24'])
+            or
+            ((ansible_distribution == 'SUSE' or ansible_distribution == 'SLES') and ansible_distribution_major_version in ['11', '12'])
+            or
+            (ansible_distribution == 'Amazon' and (ansible_distribution_version in ['2015.09', '2016.09', '2017.03', '2017.09'] or ansible_distribution_major_version in ['2']))
+            or 
+            (ansible_distribution == 'OracleLinux' and ansible_distribution_version == '5.11')
+            or 
+            (ansible_distribution == 'OpenSUSE Leap' and ansible_distribution_version == '42.1')
+            or 
+            (ansible_os_family == 'Suse' and not ansible_distribution == 'SUSE' and ansible_distribution_major_version in ['12', '13'])
+            or
+            (ansible_distribution == 'OracleLinux' and ansible_distribution_major_version in ['6', '7'])"
+        success_msg: "valid OS for qualys installation"
+        fail_msg: "not valid OS for qualys installation"
+
+    - name: Check if the package already installed
+      package_facts:
+        manager: auto
+
+    - name: Print the packages facts
+      debug:
+        var: ansible_facts.packages
+        verbosity: 2
+
+#Qualys installation steps
+- block:
+    - name: Install Qualys (rpm)
+      command: 'rpm -ivh /etc/Linux_RPM_QualysCloudAgent.x86_64.rpm'
+      args:
+        warn: false
+      register: rpm_install
+      failed_when: rpm_install.rc != 0 and "is already installed" not in rpm_install.stderr
+      changed_when: rpm_install.rc == 0
+
+    - name: Activate Qualys (rpm)
+      command: "./qualys-cloud-agent.sh ActivationId={{ activation_id }} CustomerId={{ customer_id }}"
+      args:
+        chdir: /usr/local/qualys/cloud-agent/bin
+    
+  when: "not 'qualys-cloud-agent' in ansible_facts.packages"
+

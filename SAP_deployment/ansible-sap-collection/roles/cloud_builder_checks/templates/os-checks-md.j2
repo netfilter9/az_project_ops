@@ -1,0 +1,393 @@
+{# 
+  create a local variable for the SAP instance reference 
+  e.g. D4H_HDB00
+#}
+{% set sidadm  = sid + "adm" %}
+{# 
+    generate tag entries 
+#}
+# {{ ansible_hostname | upper }} {{ hostvars[ansible_hostname].group_names[0] | upper }}
+# OS Checks
+---
+{% if output_usertasksmax.stdout == 'infinity' %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the value of UserTasksMax is infinity",
+  output_usertasksmax.stdout,
+  "Infinity"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the value of UserTasksMax is infinity",
+  output_usertasksmax.stdout,
+  "Infinity"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_hugepage.stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if transparent hugepages is disabled",
+  "This check is not applicable for this system"
+  "always madvise [never]"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% if output_hugepage.stdout == 'always madvise [never]' %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "OS",
+    "Checking if transparent hugepages is disabled",
+    output_hugepage.stdout,
+    "always madvise [never]"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "OS",
+    "Checking if transparent hugepages is disabled",
+    output_hugepage.stdout,
+    "always madvise [never]"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endif %}
+{% if output_ksm.stdout == '0' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if Kernel samepage merging (KSM) value is 0",
+  output_ksm.stdout,
+  "0"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if Kernel samepage merging (KSM) value is 0",
+  output_ksm.stdout,
+  "0"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_swap.stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking the size of swap in the system",
+  output_swap.stdout + "G",
+  "Please refer SAP note - "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking the size of swap in the system",
+  output_swap.stdout,
+  "Please refer SAP note - "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_uid.stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the uid of sidadm user ",
+  output_uid.stdout,
+  "Please ensure all sidadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the uid of sidadm user ",
+  output_uid.stdout,
+  "Please ensure all sidadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_sapadmuid.stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the uid of sapadm user ",
+  output_sapadmuid.stdout,
+  "Please ensure all sapadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the uid of sapadm user ",
+  output_sapadmuid.stdout,
+  "Please ensure all sapadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_groups.results[0].stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sidadm user ",
+  output_groups.results[0].stdout,
+  "Please ensure groups of all sidadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sidadm user ",
+  output_groups.results[0].stdout,
+  "Please ensure groups of all sidadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_groups.results[1].stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sapadm user ",
+  output_groups.results[1].stdout,
+  "Please ensure groups of all sapadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sapadm user ",
+  output_groups.results[1].stdout,
+  "Please ensure groups of all sapadm across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_gid.stdout == ' ' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sapadm user ",
+  output_gid.stdout,
+  "Please ensure GID of group sapsys across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Fetching the group of sapadm user ",
+  output_gid.stdout,
+  "Please ensure GID of group sapsys across all servers in an SID should be same "
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_ulimit.stdout == '1024' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "checking if the default Limit for Open files is 1024",
+  output_ulimit.stdout,
+  "1024"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "checking if the default Limit for Open files is 1024",
+  output_ulimit.stdout,
+  "1024"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_saptune.stdout == 'HANA' or 'NETWEAVER' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "checking if saptune enabled in the system",
+  output_saptune.stdout,
+  "Saptune should be Enabled in SAP sevrer"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "checking if saptune enabled in the system",
+  output_saptune.stdout,
+  "Saptune should be Enabled in SAP sevrer"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_portrange.stdout == "9000\t65499" %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if net.ipv4.ip_local_port_range is between 9000 and 65499",
+  output_portrange.stdout,
+  "9000-65499"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if net.ipv4.ip_local_port_range is between 9000 and 65499",
+  output_portrange.stdout,
+  "9000-65499"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_slowstart.stdout == '0' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the  value of net.ipv4.tcp_slow_start_after_idle is 0",
+  output_slowstart.stdout,
+  "0"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the  value of net.ipv4.tcp_slow_start_after_idle is 0",
+  output_slowstart.stdout,
+  "0"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Displaying the values of net.ipv4.tcp_wmem",
+  output_tcpwmem.stdout,
+  "Please refer SAP Note - 2382421"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Displaying the values of net.ipv4.tcp_rmem",
+  output_tcprmem.stdout,
+  "Please refer SAP Note - 2382421"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Displaying the values of net.core.wmem_max",
+  output_wmemmax.stdout,
+  "Please refer SAP Note - 2382421"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Displaying the values of net.core.rmem_max",
+  output_rmemmax.stdout,
+  "Please refer SAP Note - 2382421"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% if output_windowscaling.stdout == '1' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the value of net.ipv4.tcp_window_scaling is 1",
+  output_windowscaling.stdout,
+  "1"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "OS",
+  "Checking if the value of net.ipv4.tcp_window_scaling is 1",
+  output_windowscaling.stdout,
+  "1"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+
+
+

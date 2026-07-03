@@ -1,0 +1,28 @@
+---
+# tasks file for mount_efs_ha
+
+- name: Ensure mount directory exists.
+  file:
+    path: "/efs"
+    state: directory
+    mode: 0755
+ 
+- name: Ensure EFS volume is mounted.
+  mount:
+    name: "/efs"
+    src: "{{ sapmnt_efs_dns_name }}:/"
+    fstype: nfs4
+    opts: "{{ efs_mount_option }}"
+    state: mounted
+
+- name: Ensure mount directory exists.
+  file:
+    path: "/efs/{{ item }}"
+    state: directory
+    mode: 0755
+  loop: "{{ efs_directory }}"
+
+- name: Ensure EFS volume is unmounted.
+  mount:
+    path: "/efs"
+    state: absent

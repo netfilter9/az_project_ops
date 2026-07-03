@@ -1,0 +1,67 @@
+---
+
+- name: disable DHCP
+  win_dsc:
+    resource_name: NetIPInterface
+    InterfaceAlias: Ethernet
+    AddressFamily: IPv4
+    Dhcp: Disabled
+
+- name: add static IP addresses
+  win_dsc:
+    resource_name: IPAddress
+    InterfaceAlias: Ethernet
+    IPAddress: "{{ item.ipv4_addresses }}"
+    AddressFamily: IPv4
+
+- name: set default gateway
+  win_dsc:
+    resource_name: DefaultGatewayAddress 
+    InterfaceAlias: Ethernet
+    Address: "{{ item.default_gateway }}"
+    AddressFamily: IPv4
+
+- name: skip as source for secondary IP
+  win_dsc:
+    resource_name: IPAddressOption
+    IPAddress: "{{ item.ipv4_secondary }}"
+    SkipAsSource: true
+
+- name: set dns server on network adapter
+  win_dsc:
+    resource_name: DnsServerAddress
+    InterfaceAlias: Ethernet
+    AddressFamily: IPv4
+    Address: "{{ item.dns_servers }}"
+    Validate: true
+
+- name: unregister this connection addresses in DNS
+  win_dsc:
+    resource_name: DnsConnectionSuffix
+    InterfaceAlias: Ethernet
+    ConnectionSpecificSuffix: "{{ infra.fqdn }}" 
+    RegisterThisConnectionsAddress: false
+
+- name: Set service startup mode to auto and ensure it is started
+  win_service:
+    name: RemoteRegistry
+    start_mode: auto
+    state: started
+
+- name: disable strict name checking
+  win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\lanmanserver\parameters
+    name: DisableStrictNameChecking
+    data: 1
+    type: dword
+    state: present
+
+- name: set back connection hostnames
+  win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\MSV1_0
+    name: BackConnectionHostNames
+    data: 
+      - "{{ item.virtual_hostname }}.{{ infra.fqdn }}"
+      - "{{ item.virtual_hostname }}"
+    type: multistring
+    state: present

@@ -1,0 +1,5 @@
+[{
+    "version": "{{ db_version_outputs.stdout_lines[1].split()[1] }}",
+    "branch": "{{ db_version_outputs.stdout_lines[2].split()[1] }}" ,
+    "machine_config": "{{ db_version_outputs.stdout_lines[3].split()[1]  }}" 
+}]

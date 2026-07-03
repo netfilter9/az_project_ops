@@ -1,0 +1,60 @@
+---
+- block:
+    - name: create a new connection for rhel
+      command: "nmcli con add type ethernet con-name eth0 ifname eth0"
+
+    - name: add all ips to new connection
+      command: "nmcli con mod eth0 ipv4.addresses {{ ansible_default_ipv4.address }}{{ primary_cidr }},{{ additionalips }}"
+
+  
+    - name: add default gateway for the connection
+      command: "nmcli con mod eth0 ipv4.gateway  {{ gateway }}"
+
+    - name: Bring up the new connection
+      command: "{{ item }}"
+      with_items:
+         - nmcli con mod eth0 ipv4.method manual
+         - nmcli con up eth0 
+ 
+
+    - name: Reboot servers
+      reboot:  
+  when : ansible_os_family == "RedHat"
+
+- block:
+    - name: Install network manager
+      package:
+        name:
+          - NetworkManager
+        state: present  
+
+    - name: Disable wicked service
+      command: systemctl disable wicked
+
+    - name: Enable NetworkManager services
+      service:
+        name: NetworkManager
+        enabled: yes
+
+    - name: Reboot servers
+      reboot:     
+
+    - name: create a new connection for suse
+      command: "nmcli con add type ethernet con-name eth0 ifname eth0"
+
+    - name: add all ips to new connection
+      command: "nmcli con mod eth0 ipv4.addresses {{ ansible_default_ipv4.address }}{{ primary_cidr }},{{ additionalips }}"
+
+  
+    - name: add default gateway for the connection
+      command: "nmcli con mod eth0 ipv4.gateway  {{ gateway }}"
+
+    - name: Bring up the new connection
+      command: "{{ item }}"
+      with_items:
+         - nmcli con mod eth0 ipv4.method manual
+         - nmcli con up eth0 
+ 
+    - name: Reboot servers
+      reboot:    
+  when: ansible_os_family == 'Suse'

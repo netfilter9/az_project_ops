@@ -1,0 +1,79 @@
+# - debug:
+#     msg: "{{ product_id }}"
+
+- name: set username and primary group
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    oracle_installation_primary_group: "{{ sap.db.primary_installation_group | default('oinstall') }}"
+
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+
+- name: main | check for additional install items
+  shell: find {{ install_dir }}/sapinst/EXPORTS -name "LABEL*.ASC" -printf "%h\n" | sort -u
+  register: sap_exports_folders
+
+- name: main | check for optmizer archive file path
+  shell:  find {{ install_dir }}/sapinst/KERNEL -iname \*.SAR
+  register: optimizer_filepath 
+  when: sap.product is defined and sap.product == 'SCM Optimizer'
+  
+- debug:
+    var: optimizer_filepath.stdout_lines 
+
+- name: main | check for optmizer archive file path
+  shell:  find {{ install_dir }}/sapinst/KERNEL -iname \SAPCS*
+  register: SAPCryptoFile 
+  when: sap.product is defined and sap.product == 'MAXDB'
+
+- debug:
+    var: SAPCryptoFile.stdout_lines 
+
+- name: main | create sapinst.params
+  template:
+    src: "sapinst.params.j2"
+    dest: "{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params"
+    mode: '777'
+
+- name: main | make sure sapinst is executable
+  file:
+    path: "{{ install_dir }}/sapinst/SWPM/sapinst"
+    mode: '777'
+
+- name: main | install
+  vars:
+    hostname: "{{ virtual_hostname | default(ansible_hostname) }}"
+  command: 
+    cmd: "./sapinst SAPINST_CRL_PATH=/tmp/crlbag.p7s SAPINST_INPUT_PARAMETERS_URL=/{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params SAPINST_USE_HOSTNAME={{ hostname }} SAPINST_EXECUTE_PRODUCT_ID={{ product_id }} SAPINST_SKIP_DIALOGS=true SAPINST_START_GUI={{ sapinst_enable_gui | default(false) }} SAPINST_START_GUISERVER={{ sapinst_enable_gui | default(false) }}"
+    creates: "{{ install_dir }}/sapinst/LOGS/sapinstlog_{{ ansible_hostname }}_{{ role }}*.zip"
+  args:
+    chdir: "{{ install_dir }}/sapinst/SWPM/"
+  register: install
+
+- name: Create logs directory if it does not exist
+  file:
+    path: "{{ install_dir }}/sapinst/LOGS"
+    state: directory
+    mode: '0755'
+
+- name: main | create zip file of installation logs
+  archive:
+    path: /tmp/sapinst_instdir
+    dest: "{{ install_dir }}/sapinst/LOGS/sapinstlog_{{ ansible_hostname }}_{{ role }}_{{ ansible_date_time.iso8601 }}.zip"
+    format: zip
+    force_archive: true
+  when: install.changed
+
+- name: main | tidy up sapinst.params
+  file:
+    path: "{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params"
+    state: absent
+
+- name: main | tweak sysctl entries
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  loop:
+    - { name: net.ipv4.tcp_timestamps, value: 0}

@@ -1,0 +1,24 @@
+---
+- name: main | add dbs_syb_ha
+  lineinfile:
+    line: setenv dbs_syb_ha 1
+    dest: /home/{{ sap.sid|lower }}adm/.dbenv.csh
+    insertbefore: "^endif"
+  become: yes
+  become_user: "{{ sap.sid | lower }}adm"
+
+- name: main | add dbs_syb_server
+  lineinfile:
+    regexp: '^setenv dbs_syb_server='
+    line: setenv dbs_syb_server {{ primary_virtual_hostname }}:{{ secondary_virtual_hostname }}
+    path: /home/{{ sap.sid|lower }}adm/.dbenv.csh
+    insertbefore: "^#setenv dbs_syb_server="
+  become: yes
+  become_user: "{{ sap.sid | lower }}adm"
+
+- name: main | restart the {{ role }} service
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - su - {{ sap.sid|lower }}adm -c "sapcontrol -nr {{ instance_number }} -function StopSystem ALL "
+    - su - {{ sap.sid|lower }}adm -c "sapcontrol -nr {{ instance_number }} -function StartSystem ALL"

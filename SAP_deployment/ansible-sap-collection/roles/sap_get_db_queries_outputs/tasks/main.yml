@@ -1,0 +1,12 @@
+---
+# tasks file for get-db-queries-outputs
+- name: create folder to store outputs
+  file:
+    path: '{{ db_export_path }}{{ db_type }}'
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+  
+- name: Execute DB queries
+  include_tasks: "{{ db_type | lower}}.yml"

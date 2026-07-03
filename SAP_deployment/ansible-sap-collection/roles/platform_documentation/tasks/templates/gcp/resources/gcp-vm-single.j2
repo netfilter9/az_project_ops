@@ -1,0 +1,111 @@
+{#
+    generate individual host specifications
+#}
+{% for terraformvmnames in vm_list %}
+{% set datafound = namespace(isdatapresent=false) %}
+{% for resource in gce_json if (resource.kind=="compute#instance" and resource.name == terraformvmnames) %}
+      {%- set datafound.isdatapresent = true %}
+      {%- set vm_row = [
+        resource.name,  
+        resource.machineType.split('/')|last,
+        "Windows" if ("windows" in resource.disks[0].licenses[0]) else "Linux",
+        resource.disks[0].licenses[0].split('/')|last
+        ]
+      -%}
+
+# VM Summary ( {{ resource.name }} )
+|Hostname|Vm Size|Os Type|Image|
+|-|-|-|-|
+|{{ vm_row | join('|') }}|
+
+## Network Interfaces
+|Name|Internal IP|External IP|Alias IP|Subnet|
+|-|-|-|-|-|
+{# generate NIC summary for VM #}
+  
+  {%- set network = namespace(networkInterfaces=[]) -%}
+  {%- for entry in resource.networkInterfaces -%} {# nics #}
+  {%- set nic_data = namespace(aliasIpRanges=[], accessConfigs=[]) -%}
+          {%- if (entry.aliasIpRanges is defined) -%}
+              {%- for config in entry.aliasIpRanges -%}
+                  {%- set nic_data.aliasIpRanges = nic_data.aliasIpRanges + [config.ipCidrRange] -%}
+              {%- endfor -%}
+          {%- endif -%}
+           {%- if (entry.accessConfigs is defined) -%}
+              {%- for config in entry.accessConfigs -%}
+                  {%- set nic_data.accessConfigs = nic_data.accessConfigs + [config.natIP] -%}
+              {%- endfor -%}
+          {%- endif -%}
+      
+  {%- set nic_row = [
+      entry.name,
+      entry.networkIP,
+      nic_data.accessConfigs|join("<br>"|safe) if (entry.accessConfigs is defined) else "None",
+      nic_data.aliasIpRanges|join("<br>"|safe) if (entry.aliasIpRanges is defined) else "Null",
+      entry.subnetwork.split('/')|last
+      
+    ] 
+  -%}
+|{{ nic_row | join('|') }}|
+  {%- endfor -%} {# nics #}
+  {# #}
+
+## Disks
+|Name|Disk Size GB|Disk Type|Disk Interface|
+|-|-|-|-|
+{# generate disk summary for VM #}
+  {%- set disks = namespace(disks=[]) -%} 
+  {%- for disk in resource.disks -%} {# disks #}
+  
+  {%- set disk_row = [
+        disk.deviceName,
+        disk.diskSizeGb,
+        disk.type,
+        disk.interface
+        ]
+         
+  -%}
+|{{ disk_row | join('|') }}|
+  {# #}
+  {%- endfor -%} {# disks #}
+{%- endfor -%}
+{# #}
+
+{% if datafound.isdatapresent == false %}
+  {%- set row1 = [
+      terraformvmnames,
+      "NA",
+      "NA",
+      "NA"
+    ]
+  %}
+# VM Summary ( {{ terraformvmnames }} )
+|Hostname|Vm Size|Os Type|Image| 
+|-|-|-|-| 
+|{{ row1 | join('|') }}|
+  {%- set row2 = [
+      "NA",
+      "NA",
+      "NA",
+      "NA"
+    ]
+  %} 
+## Network Interfaces
+|Name|Internal IP|External IP|Alias IP|Subnet|
+|-|-|-|-|-|
+|{{ row2 | join('|') }}|
+  {%- set row3 = [
+      "NA",
+      "NA",
+      "NA",
+      "NA",
+      "NA"
+    ]
+  %}
+  
+## Disks
+|Name|Disk Size GB|Disk Type|Disk Interface|
+|-|-|-|-|
+|{{ row3 | join('|') }}|
+{% endif %}
+{% endfor %}

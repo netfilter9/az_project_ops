@@ -1,0 +1,50 @@
+####    ###########################################################################   #####
+####    ############################ HANA MINI CHECKS #############################   #####
+####    ###########################################################################   #####
+
+- name:  running hana mini checks on db server 
+  block:
+    - name: copy the hanaminichecks file to the server
+      copy:
+        src: "hanaminichecks_2.txt"
+        dest: "/tmp/hanaminichecks100.txt"
+
+    - name: copy the text to json python file to the server
+      copy:
+        src: "txt2json.py"
+        dest: "/tmp/txt2json.py"       
+
+    - name: set fact the hana mini checks input and the output path
+      set_fact:
+        hanaminicheck_input_path: "/tmp/hanaminichecks100.txt"
+        output_path: "/tmp/outputhana.txt"
+
+# #     ## replacing with command module
+    - name: running hdbsql command on target server
+      command: "sudo su - {{ db_sid | lower }}adm -c 'hdbsql -U {{ hdbuserstore }} -m -A -I {{ hanaminicheck_input_path }} -o {{ output_path }}'"
+
+    - name: execute python code for converting minisql text to json
+      command: python {{ text2json_filepath }} -i {{ output_path }}
+      register: output_1
+      become: true
+
+    - name: debug the contents
+      debug:
+        msg: "{{ output_1.stdout }}" 
+
+    - name : copy contents from stdout to a file  
+      copy: 
+       content: "{{ output_1.stdout }}"
+       dest: "/tmp/jsonoutput.json"
+     
+    - name: fetch file from target server to localhost
+      fetch:
+        src: "/tmp/jsonoutput.json"
+        dest: "{{ input_path }}/DB-checks/{{ ansible_hostname }}_hana.{{ output }}"
+        flat: yes  
+        
+    # - name: execute python code for converting all jsons to excel
+    #   command: python {{ excel_filepath }} --input={{ input_path }} --output={{ excel_output_path }}
+    #   register: output
+    #   delegate_to: localhost     
+  when: "'db' in group_names"

@@ -1,0 +1,19 @@
+---
+
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name:  sqlnet file 
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  template:
+    src: "sqlnet.j2"
+    dest: /oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}/network/admin/sqlnet.ora 
+
+- name: tnsnames file 
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  template:
+    src: "tnsnames.j2"
+    dest: /oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora     

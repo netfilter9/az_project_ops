@@ -1,0 +1,73 @@
+[
+{%- set errormsg = 'su: user ' + sid|lower + 'adm does not exist' -%}
+
+{%- if  output_hanaversion.rc != 0 and output_hanaversion.stderr is defined and output_hanaversion.stderr | length > 0  %} 
+{%- set dataToCheckHanaVersion = output_hanaversion.stderr -%}
+{% else %} 
+{%- set dataToCheckHanaVersion = output_hanaversion.stdout -%}
+{% endif %}
+
+{%-if output_hanaversion.rc != 0 and output_hdbsuserstore.stderr is defined and output_hdbsuserstore.stderr | length > 0  %}
+{%- set dataToCheckhdbuserstore = output_hdbsuserstore.stderr -%}
+{% else %}
+{%- set dataToCheckhdbuserstore = output_hdbsuserstore.stdout -%}
+{% endif %}
+{% if errormsg in dataToCheckHanaVersion %}
+{
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",
+        "Description": "checking for the version of HANA in the system",
+        "Current Value": "This check is not applicable for this system",
+        "Recommended Value": "HANA needs to be installed"
+}
+{% else %}
+{ 
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",   
+        "Description": "checking for the version of HANA in the system",
+        "Current Value": "{{ dataToCheckHanaVersion }}",
+        "Recommended Value": "HANA needs to be installed"
+}
+{% endif %},
+{% if errormsg in dataToCheckhdbuserstore %}
+{
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",
+        "Description": "Checking for the hdbuserstorelist in the system",
+        "Output": "This check is not applicable for this system"
+        "Current Value": "This check is not applicable for this system",
+        "Recommended Value": "HDB userstorelist"
+}
+{% else %}
+{ 
+        "HostName" : "{{ ansible_hostname }}",
+        "SID": "{{ db_sid }}",
+        "Category" : "DB",
+        "Description": "Checking for the hdbuserstorelist",
+        "Current Value": "{{ dataToCheckhdbuserstore }}", 
+        "Recommended Value": "HDB userstorelist" 
+}
+{% endif %},
+{% if output_numabal.stdout == 'disable' %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ db_sid }}",
+    "Category" : "OS",
+    "Description": "Checking if autoNUMA balance is disabled",
+    "Current Value": "{{ output_numabal.stdout }}",
+	"Recommended Value": "Disable"
+}
+{% else %}
+{
+    "HostName" : "{{ ansible_hostname }}",
+    "SID": "{{ db_sid }}",
+    "Category" : "OS",
+    "Description": "Checking if autoNUMA balancing is disabled",
+    "Current Value": "{{ output_numabal.stdout }}",
+	"Recommended Value": "Disable"
+}
+{% endif %}
+]

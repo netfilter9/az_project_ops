@@ -1,0 +1,26 @@
+{# 
+    generate tag entries 
+#}
+{% if deployment.tags is defined %}
+# Tags
+---
+Tags allow logical organizing of Azure resources and resource groups into a taxonomy. Each tag consists of a name and a value pair.   
+For example; Environment:Production, CostCentre:Sales, AutoShutdown:20:00GMT
+
+With Cloudbuilder, tags specified at the resource group level are applied to all deployed resources. For some resources, such as virtual machines, additional tags can be specified at the resource level.  
+
+
+The following tags will be applied to the resource group and all resources that support tags.  
+|Name|Value|
+|-|-|
+{% for tag_k, tag_v in deployment.tags.items() %}
+{% set row = [ 
+  tag_k,
+  tag_v
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endfor %}
+
+{% endif %}
+

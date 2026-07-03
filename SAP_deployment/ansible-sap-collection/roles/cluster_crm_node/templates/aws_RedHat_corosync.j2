@@ -1,0 +1,37 @@
+#please read the corosync.conf.5 manual page
+totem {
+    version: 2
+    cluster_name: {{ sid|lower }}-{{ platform }}
+    secauth: off
+    transport: udpu
+    token: 30000
+}
+ logging {
+fileline: off
+to_logfile: yes
+to_syslog: yes
+logfile: /var/log/cluster/corosync.log
+debug: off
+timestamp: on
+logger_subsys {
+subsys: QUORUM
+debug: off
+}
+}
+nodelist {
+node {
+ring0_addr: {{ primary_ip }}
+nodeid: 1
+}
+node {
+ring0_addr: {{ secondary_ip }}
+nodeid: 2
+}
+}
+quorum {
+# Enable and configure quorum subsystem (default: off)
+# see also corosync.conf.5 and votequorum.5
+provider: corosync_votequorum
+expected_votes: 2
+two_node: 1
+}

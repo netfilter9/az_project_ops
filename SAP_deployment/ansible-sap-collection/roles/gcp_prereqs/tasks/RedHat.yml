@@ -1,0 +1,62 @@
+---
+- name: packages | install packages
+  package:
+     name:
+       - wget
+       - lvm*
+       - sysstat
+       - libsss_sudo
+       - libgcc_s*
+       - libstdc++*
+       - libatomic*
+       - libltdl.so.*
+       - libnsl.so*
+       - csh
+       - unzip
+       - compat-sap-c++-9*
+       - nfs-utils
+     state: present
+  when: ansible_distribution_major_version >= '8'
+
+- name: systemctl start 
+  command: systemctl start nfs-server.service
+
+- name: systemctl enable 
+  command: systemctl enable nfs-server.service
+  
+- name: main | download gcloud installer
+  get_url:
+    url: https://dl.google.com/dl/cloudsdk/channels/rapid/install_google_cloud_sdk.bash
+    dest: ~/install_google_cloud_sdk.bash
+    mode: '0755'
+
+- name: main | install gcloud
+  shell: 
+    cmd: ~/install_google_cloud_sdk.bash --disable-prompts --install-dir="/usr/bin" >/dev/null
+    creates: /usr/bin/google-cloud-sdk/bin/gcloud
+
+- name: Create a symbolic link for gsutil
+  file:
+    src: /usr/bin/google-cloud-sdk/bin/gsutil
+    dest: /usr/bin/gsutil
+    state: link
+
+- name: populate /etc/environment
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^CLOUDSDK_PYTHON="
+    line: "CLOUDSDK_PYTHON=/usr/bin/python"
+  when: ansible_distribution_major_version < '8'
+
+- name: populate /etc/environment
+  lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^CLOUDSDK_PYTHON="
+    line: "CLOUDSDK_PYTHON=/usr/bin/python3"
+  when : ansible_distribution_major_version >= '8'
+
+  
+
+ 

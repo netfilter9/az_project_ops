@@ -1,0 +1,153 @@
+### Choose to Integrate Introscope Enterprise Manager: integrate or nointegrate
+chooseintroscopeintegration=nointegrate
+
+### Choose to Integrate Solution Manager Diagnostics (SMD) Agent: integrate or nointegrate
+choosesmdintegration=nointegrate
+
+### CMS cluster key
+clusterkey={{ passwords.cluster_key | default(passwords.master)}}
+
+### CMS connection port
+cmsport={{ bods.ips.ports.cmsport |default('6400') }}
+
+### Existing CMS DB password
+existingcmsdbpassword={{ passwords.cmsdbuser | default(passwords.master) }}
+
+{% if dbtype =="sybase" %}
+### Existing auditing DB server
+existingauditingdbserver={{ bods.ips.audit.dbserver | default(sap.db.sid|upper) }} 
+
+### Existing auditing DB user name
+existingauditingdbuser={{ bods.ips.audit.dbuser | default('cmsaudit') }}
+
+### Existing CMS DB server
+existingcmsdbserver={{ bods.ips.cms.dbserver | default(sap.db.sid|upper) }}
+
+### Existing CMS DB user name
+existingcmsdbuser={{ bods.ips.cms.dbuser | default('cmsuser') }}
+
+### Auditing Database Type
+usingauditdbtype=sybase
+
+### CMS Database Type
+usingcmsdbtype=sybase
+
+{% else %}
+### Existingauditing DB server
+existingauditingdbserver={{ sap.logical_hosts.db.hostname | default (ansible_hostname) }}
+
+### #property.ExistingAuditingDBDSN.description#
+existingauditingdbdsn= {{ ips_audit_dsnname }} 
+
+### Existing auditing DB user name
+existingauditingdbuser={{ bods.ips.audit.dbuser | default('SYSTEM') }}
+
+### Existincms DB server
+existingcmsdbserver={{ sap.logical_hosts.db.hostname | default (ansible_hostname) }}
+
+### Existing CMS DB user name
+existingcmsdbuser={{ bods.ips.cms.dbuser | default('SYSTEM') }}
+
+### Auditing Database Type
+usingauditdbtype=newdb
+
+### CMS Database Type
+usingcmsdbtype=newdb
+
+### #property.ExistingCMSDBDSN.description#
+existingcmsdbdsn= {{ ips_cms_dsnname }}
+
+{% endif %}
+
+### Installation Directory
+installdir={{ IPS_dir }}
+
+### LCM password
+lcmpassword={{ passwords.lcm | default(passwords.master) }}
+
+### LCM port
+lcmport={{ bods.ips.ports.lcmport |default('3690') }}
+
+### Product Keycode
+productkey= {{ passwords.ipsproductkey | default('DZ30E-UCDW30S-C0YWP0A-9DKUSBW-UW') }} 
+
+### Language Packs Selected to Install
+selectedlanguagepacks=en
+
+### Setup UI Language
+setupuilanguage=en
+
+### SIA node name
+sianame={{ virtual_hostname | default (ansible_hostname) }}
+
+### SIA connector port
+siaport={{ bods.ips.ports.siaport | default('6410') }}
+
+{% if bods.webserver == "tomcat" %}
+### Tomcat connection port
+tomcatconnectionport={{ bods.ips.ports.tomcatconnectionport |default('8080') }}
+
+### Tomcat redirect port
+tomcatredirectport={{ bods.ips.ports.tomcatredirectport |default('8443') }}
+
+### Tomcat shutdown port
+tomcatshutdownport={{ bods.ips.ports.tomcatshutdownport |default('8005') }}
+
+{% elif bods.webserver == "manual" %}
+
+### WACS port
+wacsport={{ bods.ips.ports.wacsport |default('6405') }}
+{% endif %}
+
+### Web application server type: Tomcat, manual, or WACS
+webappservertype={{ bods.webserver }}
+
+{% if installcms is defined and installcms == false %}
+
+### Choose to start servers after install: 0 or 1
+enableservers=1
+
+### Choose install type: default, custom, webtier
+installtype=custom
+
+### Choose install mode: new, expand
+neworexpandinstall=expand
+
+### Remote CMS administrator name
+remotecmsadminname=Administrator
+
+### Remote CMS administrator password
+remotecmsadminpassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### Remote CMS name
+remotecmsname={{ ips_primary_node }}
+
+### Remote CMS port
+remotecmsport={{ bods.ips.ports.cmsport |default('6400') }}
+
+requiredspace={{ requiredspace | default('7403') }}
+
+{% else %}
+
+### CMS administrator password
+cmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### Existing Auditing DB password
+existingauditingdbpassword={{ passwords.auditingdbuser | default(passwords.master) }}
+
+### Existing CMS DB reset flag: 0 or 1
+existingcmsdbreset=1
+
+### Choose install type: default, custom, webtier 
+installtype=default
+
+### Install new or use existing LCM: new or existing
+neworexistinglcm=new
+
+### Choose to Install integrated database: 0 or 1 
+selectintegrateddatabase=0
+
+requiredspace={{ requiredspace | default('7356') }}
+{% endif %}
+
+features={{ feature | default('JavaWebApps1,CMC.Monitoring,LCM,IntegratedTomcat,CMC.AccessLevels,CMC.Applications,CMC.Audit,CMC.Authentication,CMC.Calendars,CMC.Categories,CMC.CryptographicKey,CMC.Events,CMC.Folders,CMC.Inboxes,CMC.Licenses,CMC.PersonalCategories,CMC.PersonalFolders,CMC.Servers,CMC.Sessions,CMC.Settings,CMC.TemporaryStorage,CMC.UsersAndGroups,CMC.QueryResults,CMC.InstanceManager,CMS,FRS,PlatformServers.AdaptiveProcessingServer,PlatformServers.AdaptiveJobServer,ClientAuditingProxyProcessingService,LCMProcessingServices,MonitoringProcessingService,SecurityTokenService,DestinationSchedulingService,ProgramSchedulingService,Subversion,UpgradeManager,AdminTools,DataAccess.SAP,DataAccess.Peoplesoft,DataAccess.JDEdwards,DataAccess.Siebel,DataAccess.OracleEBS,DataAccess') }}

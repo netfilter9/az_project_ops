@@ -1,0 +1,13 @@
+resource {{ share.ref }}-nfs {
+     volume {{ share.drbd_num }} {
+          device    /dev/drbd{{ share.drbd_num }};
+          disk      /dev/{{ share.vg | default(share.ref) }}/{{ share.lv | default(share.ref) }};
+          meta-disk internal;
+     }
+     on {{ groups['nfs'][0] }} {
+          address   {{ hostvars[node1]['ansible_default_ipv4']['address'] }}:{{ share.nfs_port }};
+     }
+     on {{ groups['nfs'][1] }} {
+          address   {{ hostvars[node2]['ansible_default_ipv4']['address'] }}:{{ share.nfs_port }};
+     }
+}

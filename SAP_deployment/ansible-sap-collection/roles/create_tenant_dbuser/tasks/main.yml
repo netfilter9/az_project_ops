@@ -1,0 +1,10 @@
+---
+
+- name: create tenant db user 
+  command: "/usr/sap/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe/hdbsql -d {{ sap.db.tenants[0] | default('SYSTEMDB')  }} -i {{ sap.instance_numbers.db }} -u SYSTEM -p '{{ passwords.system }}' CREATE USER {{ item.name }} PASSWORD {{ item.passwords }} NO FORCE_FIRST_PASSWORD_CHANGE"
+  loop: "{{ bods.users }}" 
+  register: logfileA
+  failed_when: 
+          - logfileA.failed
+          - not (logfileA.stderr.find("user name already exists"))
+  

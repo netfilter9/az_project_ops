@@ -1,0 +1,19 @@
+[libdefaults]
+    default_realm = {{ dns_domain_name | upper }}
+    clockskew = 300
+[realms]
+    {{ dns_domain_name | upper }} = {
+        kdc = PDC.{{ dns_domain_name | upper }}
+        default_domain = {{ dns_domain_name | upper }}
+        admin_server = PDC.{{ dns_domain_name | upper }}
+    }
+[domain_realm]
+    .{{ dns_domain_name }} = {{ dns_domain_name | upper }}
+[appdefaults]
+    pam = {
+        ticket_lifetime = 1d
+        renew_lifetime = 1d
+        forwardable = true
+        proxiable = false
+        minimum_uid = 1
+    }

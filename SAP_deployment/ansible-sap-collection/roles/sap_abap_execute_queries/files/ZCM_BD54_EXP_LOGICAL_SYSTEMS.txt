@@ -1,0 +1,67 @@
+*&*******************************************************************&*
+* Report              :   ZCM_BD54_EXP_LOGICAL_SYSTEMS                *
+* Title               :   Logical Systems                             *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   04/09/2020                                  *
+* Purpose             :   This report is used to export logical system*
+*                     :   and description                             *
+*---------------------------------------------------------------------*
+REPORT ZCM_BD54_EXP_LOGICAL_SYSTEMS.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        lv_action TYPE char8.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+      DATA :lt_tbdlst TYPE TABLE OF tbdlst,
+            ls_tbdlst  TYPE tbdlst.
+	
+ls_output = 'TBDLST'.
+APPEND ls_output TO lt_output.	
+
+      SELECT * FROM tbdlst INTO TABLE lt_tbdlst.
+        IF sy-subrc <> 0.
+          ls_output = lc_msg_nodata.
+          APPEND ls_output TO lt_output.
+          RETURN.
+        ENDIF.
+
+        " Titles
+        CONCATENATE 'LogicalSystem' lc_sep
+                    'Name'
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        "Table data
+        LOOP AT lt_tbdlst INTO ls_tbdlst.
+          CONCATENATE ls_tbdlst-logsys lc_sep
+                      ls_tbdlst-stext
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ENDLOOP.
+
+      WHEN OTHERS.
+
+    ENDCASE.
+
+ENDFORM.

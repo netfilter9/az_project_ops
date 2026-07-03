@@ -1,0 +1,7 @@
+  - name: Update All Packages
+    package:
+      name: '*'
+      state: latest
+
+  - name: Reboot Systems
+    reboot:

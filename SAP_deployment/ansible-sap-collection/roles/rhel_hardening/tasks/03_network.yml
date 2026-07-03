@@ -1,0 +1,265 @@
+- name: "Ensure system is disabled when audit logs are full"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^admin_space_left_action"
+      line: "admin_space_left_action = halt"
+      state: present
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+            
+- name: "Ensure audit logs are not automatically deleted"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^max_log_file_action"
+      line: "max_log_file_action = keep_logs"
+      state: present
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+            
+- name: "Ensure auditd service is enabled"
+  service:
+      name: auditd
+      state: started
+      enabled: yes
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+    - rhel7cis_enable_auditd is defined and rhel7cis_enable_auditd
+  tags:
+      - level2
+            
+- name: "Ensure events that modify date and time information are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulestime.j2
+    dest: /etc/audit/rules.d/time_change.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+            
+- name: "Ensure events that modify user/group information are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesusr.j2
+    dest: /etc/audit/rules.d/identity.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+            
+- name: "Ensure permissions on /etc/group are configured"
+  file:
+    dest: /etc/group
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/passwd are configured"
+  file:
+    dest: /etc/passwd
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure permissions on /etc/shadow are configured"
+  file:
+    dest: /etc/shadow
+    owner: root
+    group: root
+    mode: 0640
+  when:
+    - rhel7cis_level1 is defined and rhel7cis_level1
+  tags:
+    - level1
+    
+- name: "Ensure events that modify the system's network environment are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesnet.j2
+    dest: /etc/audit/rules.d/system_local.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+            
+- name: "Ensure events that modify the system's Mandatory Access Controls are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulessysmad.j2
+    dest: /etc/audit/rules.d/MAC_policy.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure login and logout events are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesloginevt.j2
+    dest: /etc/audit/rules.d/logins.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure session initiation information is collected"
+  template:
+    src: etc/audit/rules.d/cis.rulessessioninfo.j2
+    dest: /etc/audit/rules.d/session.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure discretionary access control permission modification events are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesacpmodfy.j2
+    dest: /etc/audit/rules.d/perm_mod.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure unsuccessful unauthorized file access attempts are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesunauthfile.j2
+    dest: /etc/audit/rules.d/access.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure use of privileged commands is collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesprevlegcol.j2
+    dest: /etc/audit/rules.d/privileged.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure file deletion events by users are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulesdelevt.j2
+    dest: /etc/audit/rules.d/deletion.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure changes to system administration scope (sudoers) is collected"
+  lineinfile:
+      dest: /etc/audit/rules.d/audit.rules
+      line: "-w /etc/sudoers -p wa -k scope"
+      state: present
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure changes to system administration scope (sudoers) is collected"
+  lineinfile:
+      dest: /etc/audit/audit.rules
+      line: "-w /etc/sudoers -p wa -k scope"
+      state: present
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure changes to system administration scope (sudoers) is collected"
+  lineinfile:
+      dest: /etc/audit/rules.d/audit.rules
+      line: "-w /etc/sudoers.d -p wa -k scope"
+      state: present
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure system administrator actions (sudolog) are collected"
+  template:
+    src: etc/audit/rules.d/cis.rulessysadm.j2
+    dest: /etc/audit/rules.d/actions.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure kernel module loading and unloading is collected"
+  template:
+    src: etc/audit/rules.d/cis.ruleskermod.j2
+    dest: /etc/audit/rules.d/modules.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure the audit configuration is immutable"
+  template:
+    src: etc/audit/rules.d/cis.rulesaudtim.j2
+    dest: /etc/audit/rules.d/99-finalize.rules
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      
+- name: "Ensure auditing for processes that start prior to auditd is enabled"
+  replace:
+      dest: /etc/default/grub
+      regexp: '(^GRUB_CMDLINE_LINUX\s*\=\s*)(?:")(.+)(?<!audit=1)(?:")'
+      replace: '\1"\2 audit=1"'
+#      follow: yes
+  ignore_errors: yes
+  notify: generate new grub config
+  when:
+    - rhel7cis_level2 is defined and rhel7cis_level2
+  tags:
+      - level2
+      

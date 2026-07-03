@@ -1,0 +1,4 @@
+#!/bin/csh
+export ORACLE_HOME /oracle/{{ sap.observer.obs2.sid }}/{{ sap.db.software_version }}
+/oracle/{{ sap.observer.obs2.sid }}/{{ sap.db.software_version }}/bin/dgmgrl -logfile /home/oracle/observer_{{ sap.db.sid | upper }}.log /@{{ sap.db.sid | lower }}{{ primary_instance_ch | lower }} "start observer standby" &
+exit 0

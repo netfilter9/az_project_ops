@@ -1,0 +1,78 @@
+- name: aws dataprovider
+  block:
+
+    - name: rhel dataprovider package download for aws
+      command: aws s3 cp s3://{{ product.bucket_name }}/{{ item.url }} "{{ item.dest }}" --recursive
+      args:
+        chdir: "{{ root_dir }}"
+      with_items:
+        - "{{ product.downloads }}"
+      tags:
+        - download
+      when: connectivity == 'no'
+
+    - name: rhel dataprovider package download for aws
+      command: wget "{{ rhel_dataprovider_url }}"
+      args:
+        chdir: "{{ root_dir }}"
+      tags:
+        - download
+      when: connectivity == 'yes'
+
+    - name: install rhel aws-sap-dataprovider for aws
+      command: yum install -y '{{ dataprovider_rhel | default("aws-sap-dataprovider-rhel.x86_64.rpm") }}'
+      args:
+        chdir: "{{ root_dir }}"
+  
+  when: platform == 'aws'
+
+- name: gcp dataprovider
+  block:
+
+      - name: download host agent for gcp
+        command: gsutil -m cp -r gs://{{ item.url }}* {{ item.dest }}
+        args:
+          chdir: "{{ host_dir }}"
+        with_items:
+          - "{{ downloads }}"
+        tags:
+          - download
+        when: connectivity == 'no'
+
+      - name: download host agent for gcp
+        command: wget "{{ rhel_hostagent_url }}"
+        args:
+          chdir: "{{ host_dir }}"
+        tags:
+          - download
+        when: connectivity == 'yes'
+
+      - name: change permission
+        command: chmod -R 777 {{ host_dir }}
+
+      - name: extract host sgent files for gcp
+        command: ./'{{ hostagent_sar_rhel | default("SAPCAR_1010-70006178.EXE") }}' -xvf '{{ hostagent_rhel | default("SAPHOSTAGENT51_51-20009394.SAR") }}'
+        args:
+          chdir: "{{ host_dir }}"
+
+      - name: install hostagent for gcp
+        command: ./saphostexec -install
+        args:
+          chdir: "{{ host_dir }}"
+
+      - name: install rhel dataprovider for gcp
+        command: wget "{{ rhel_dataprovider_url }}" 
+        args:
+          chdir: "{{ root_dir }}"
+
+      - name: change permission
+        command: chmod 777 setupagent_linux.sh
+        args:
+          chdir: "{{ root_dir }}"
+
+      - name: install rhel dataprovider for gcp
+        command: ./setupagent_linux.sh
+        args:
+          chdir: "{{ root_dir }}"
+
+  when: platform == 'gcp'

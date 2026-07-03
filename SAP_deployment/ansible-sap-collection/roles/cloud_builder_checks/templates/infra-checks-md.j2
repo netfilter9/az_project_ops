@@ -1,0 +1,200 @@
+{# 
+    generate tag entries 
+#}
+# {{ ansible_hostname | upper }} {{ hostvars[ansible_hostname].group_names[0] | upper }}
+# Infra Checks 
+---
+{% if output_fs.stdout == '' %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if sapmnt mount is not local FS",
+  "Null",
+  "NFS"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+|HostName|SID|Category|Description|Current Value|Recommended Value|
+|-|-|-|-|-|-|
+{% if output_fs.stdout == 'nfs' %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if sapmnt mount is not local FS",
+    output_fs.stdout,
+    "NFS"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if sapmnt mount is not local FS",
+    "Local Storage",
+    "NFS"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endif %}
+{% if output_fs_trans.stdout == '' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if trans mount is not local FS",
+  "Null",
+  "NFS"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% if output_fs_trans.stdout == 'nfs' %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if trans mount is not local FS",
+    output_fs_trans.stdout,
+    "NFS"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if trans mount is not local FS",
+    "Local Storage",
+    "NFS"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endif %}
+{% if output_disksize.stdout == '' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if the disk size of the /usr/sap/" +  sid + "is less than 30G",
+  "Null",
+  ">30G"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% if output_disksize.stdout < '30' %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if the disk size of the /usr/sap/" +  sid + "is less than 30G",
+    output_disksize.stdout + "G",
+    ">30G"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if the disk size of the /usr/sap/" +  sid + "is less than 30G",
+    output_disksize.stdout + "G",
+    ">30G"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endif %}
+{% if output_hana.stdout == '' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+  "Null",
+  ">=512G"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% if output_hana.stdout < '30' %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+    output_hana.stdout + "G",
+    ">=512G"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+    ansible_hostname,
+    sid ,
+    "Infra",
+    "Checking if the disk size of the mount /hana/shared mount is less than 512G",
+    output_hana.stdout + "G",
+    ">=512G"
+    ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endif %}
+{% if output_diskutil.stdout == '' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking filesystem utilisation above 80%",
+  "None of the Disks are utilized above 80%",
+  "<80%"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking filesystem utilisation above 80%",
+  output_diskutil.stdout,
+  "<80%"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}
+{% if output_hostname.stdout > '13' %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if length of  hostname is more than 13",
+  output_hostname.stdout,
+  "hostname length shouble be <13"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% else %}
+{% set row = [ 
+  ansible_hostname,
+  sid ,
+  "Infra",
+  "Checking if length of  hostname is more than 13",
+  output_hostname.stdout,
+  "hostname length shouble be <13"
+  ] 
+%}
+|{{ row | join('|') }}|
+{% endif %}

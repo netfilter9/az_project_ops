@@ -1,0 +1,21 @@
+- name: corosync | tweaks corosync settings in /etc/corosync/corosync.conf
+  lineinfile:
+    path: /etc/corosync/corosync.conf
+    regexp: "{{ item.property | regex_escape() }}"
+    line: "\t{{ item.property }}  {{ item.value }}"
+  loop:
+  - { property: 'token:', value: '30000' }
+  - { property: 'token_retransmits_before_loss_const:', value: '10' }
+  - { property: 'join:', value: '60' }
+  - { property: 'consensus:', value: '36000' }
+  - { property: 'max_messages:', value: '20' }
+  - { property: 'expected_votes:', value: '2' }
+  - { property: 'two_node:', value: '1' }
+  register: result
+
+- name: corosync restart
+  service:
+    name: corosync
+    state: restarted
+    enabled: yes
+  when: result.changed

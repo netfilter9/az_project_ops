@@ -1,0 +1,25 @@
+---
+- name: main | create SYBHA_INST.PFL file
+  template:
+    src: "fault_manager.j2"
+    dest: "/sapmnt/{{ sap.db.sid | upper }}/profile/SYBHA_INST.PFL"
+    owner: "{{ sap.db.sid | lower}}adm"
+    group: "sapsys"
+
+- name: main | passing host agent id and password
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - su - {{ sap.sid|lower }}adm -c "rsecssfx put DB_CONNECT/SYB/SAPADM_USER sapadm -plain"
+    - su - {{ sap.sid|lower }}adm -c "rsecssfx put DB_CONNECT/SYB/SAPADM_PASSWORD {{ passwords.sapadm }} "
+
+- name: main | install sybdbfm
+  command:
+    cmd: su - {{ sap.sid|lower }}adm -c "/usr/sap/{{ sap.db.sid | upper }}/SYS/exe/run/sybdbfm install pf=/sapmnt/{{ sap.db.sid | upper }}/profile/SYBHA_INST.PFL"
+
+- name: main | restart ascs
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - su - {{ sap.sid|lower }}adm -c "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function StopSystem"
+    - su - {{ sap.sid|lower }}adm -c "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function StartSystem"

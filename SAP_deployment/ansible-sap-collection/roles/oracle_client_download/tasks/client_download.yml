@@ -1,0 +1,23 @@
+---
+- name: main | download folders for azure
+  become: yes
+  become_user: oracle
+  command: azcopy cp '{{ item.url }}{{ item.token }}' {{ item.dest }} --recursive=true --overwrite=ifSourceNewer
+  args:
+    chdir: "{{ root_dir }}"
+  loop: "{{ downloads }}"
+  tags:
+    - download
+  when: platform == 'azure'
+
+- name: main | download folders for aws
+  become: yes
+  become_user: oracle
+  command: aws s3 cp s3://{{ product.bucket_name }}/{{ item.url }} "{{ item.dest }}" --recursive
+  args:
+    chdir: "{{ root_dir }}"
+  with_items:
+    - "{{ product.downloads }}"
+  tags:
+    - download
+  when: platform == 'aws'  

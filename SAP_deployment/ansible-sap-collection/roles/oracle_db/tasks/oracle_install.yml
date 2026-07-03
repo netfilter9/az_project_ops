@@ -1,0 +1,12 @@
+---
+- name: oracle_install | oracle installation
+  command: "{{ root_dir | default ('/usr/sap')}}/sapinst/ORACLE/db_home/SAP/RUNINSTALLER -silent"
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  environment:
+    DB_SID: "{{ sap.db.sid|upper }}" 
+    ORACLE_SID: "{{ sap.db.sid|upper }}"
+    ORACLE_BASE: "/oracle/{{ sap.db.sid|upper }}" 
+    ORACLE_HOME: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+    CV_ASSUME_DISTID: "OEL7.6"
+  ignore_errors: true

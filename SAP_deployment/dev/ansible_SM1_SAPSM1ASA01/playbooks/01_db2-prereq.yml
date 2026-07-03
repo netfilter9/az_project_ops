@@ -1,0 +1,16 @@
+---
+# This forces a gather facts across all hosts
+- hosts: all  
+
+- hosts: std
+  vars:
+    root_dir: /installers
+  roles:
+       #     - filesystem_lvm    
+       #     - hostfile_generation    
+    - swapfile
+       #     - group_setup
+       #     - user_setup
+       #     - azcopy_install
+       #     - sap_download
+       #     - db2_prereq       # modified in roles for libstdc++.so.6 package in db2_azure in db2 prereqs role

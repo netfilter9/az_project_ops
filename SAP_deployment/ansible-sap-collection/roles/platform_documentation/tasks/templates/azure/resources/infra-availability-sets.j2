@@ -1,0 +1,36 @@
+{#
+    generate availability sets data
+#}
+{% if deployment.availability_sets is defined %}
+# Availability Sets
+---
+An availability set is...
+
+|Name|Location|Platform Fault Domain Count|Platform Update Domain Count|Proximity Placement Group|Sku|Virtual Machines References|
+|-|-|-|-|-|-|-|
+{% for as_k, as_v in deployment.availability_sets.items() %}
+  
+  {%- set vms = namespace(hosts=[]) -%}
+  {%- for group_k, group_v in deployment.server_groups.items() -%}
+    {%- if group_v.availability_set == as_k -%}
+      {%- for host in group_v.hosts -%}
+        {%- set vms.hosts = vms.hosts + [host] -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- set row = [
+    as_k,
+    deployment.resource_group.location,
+    as_v.platform_fault_domain_count|default("2",true),
+    as_v.platform_update_domain_count|default("2",true),
+    as_v.ppg_name,
+    'Aligned',
+    vms.hosts|sort|join("<br>"|safe)
+    ]
+  -%}
+
+|{{ row | join('|') }}|
+{% endfor %}
+
+{% endif %}

@@ -1,0 +1,5 @@
+{% if oelcis_level2 %}
+# Ensure events that modify the system's Mandatory Access Controls are collected
+-w /etc/selinux/ -p wa -k MAC-policy
+-w /usr/share/selinux/ -p wa -k MAC-policy
+{% endif %}

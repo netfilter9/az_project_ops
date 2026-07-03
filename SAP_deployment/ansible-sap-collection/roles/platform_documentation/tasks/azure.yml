@@ -1,0 +1,93 @@
+---
+- name: azure.yml | create folder to store outputs
+  file:
+    path: ../md-collection
+    mode: '0755'
+    recurse: yes
+    state: directory
+
+- name: azure.yml | create folder to store outputs
+  file:
+    path: ../input-files
+    mode: '0755'
+    recurse: yes
+    state: directory
+    
+- name: azure.yml | gather resource group data
+  command: az group list --query "[?name=='{{ rg }}']"
+  register: rg_data
+
+- name: azure.yml | convert stdout to a fact
+  set_fact:
+    rg_json: "{{rg_data.stdout}}"
+
+- debug: msg="{{ rg_json }}"
+
+- name: azure.yml | generating vmlist
+  template:
+    src: azure/resources/infra-vm-name.j2
+    dest: ../input-files/vm_list
+
+- name: azure.yml | read ./vm_list
+  command: cat ../input-files/vm_list
+  register: vm_row
+
+- name: azure.yml | convert stdout to a fact
+  set_fact:
+    vm_list: "{{vm_row.stdout_lines}}"
+
+- debug: msg="{{ item }}"
+  loop: "{{ vm_list }}"
+
+- name: azure.yml | gather data for resources in resource group
+  command: az graph query -q "Resources | where resourceGroup =~ '{{ rg }}' "
+  register: resource_data
+
+- debug: 
+    msg: "{{ resource_data }}"
+
+- name: azure.yml | convert resource stdout to a fact
+  set_fact:
+    resource_json_initial: "{{resource_data.stdout}}"
+
+- name: azure.yml | convert resource stdout to a fact
+  set_fact:
+    resource_json: "{{resource_json_initial.data}}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/resource_file.json
+    content: "{{ resource_json }}"
+
+- name: azure.yml | generating ./infra_lb_list
+  template:
+    src: azure/resources/infra-lb-name.j2
+    dest: ../input-files/infra_lb_list
+
+- name: azure.yml | read ../input-files/infra_lb_list
+  command: cat ../input-files/infra_lb_list
+  register: lblist  
+
+- name: azure.yml | convert resource stdout to a fact
+  set_fact:
+    lb_list: "{{ lblist.stdout_lines }}"
+
+- name: get lb list
+  debug: 
+    msg: "{{ item }}"
+  loop: "{{ lb_list }}"
+
+- name: azure.yml | dump json to file
+  copy: 
+    dest: ../md-collection/{{ ansible_date_time.iso8601_basic }}_platform_documentation.json
+    content: "{{ resource_json }}"
+  when: output == "json"  
+
+- name: azure.yml | generating markdown
+  template:
+    src: azure/az_environment.j2
+    dest: ../md-collection/01_{{ ansible_date_time.iso8601_basic }}_platform_documentation.{{ output }}
+    lstrip_blocks: yes
+
+- name: azure.yml | deleting ./vm_list
+  command: rm -rf ./vm_list

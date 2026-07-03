@@ -1,0 +1,28 @@
+sp_addlogin 'sapsa','{{passwords.systemdb}}','{{sap.db.sid}}CMS'
+Exec sp_adduser 'sapsa','sapsa'
+go
+grant all to sapsa
+go
+sp_addlogin '{{ cms_user }}','{{passwords.systemdb}}','{{ cms_dbserver }}'
+Exec sp_adduser '{{ cms_user }}','{{ cms_user }}'
+go
+sp_role 'grant', sso_role, '{{ cms_user }}'
+go
+sp_role 'grant', sa_role, '{{ cms_user }}'
+go
+grant all to {{ cms_user }}
+go
+sp_addlogin '{{ audit_user }}','{{passwords.systemdb}}','{{ audit_dbserver }}'
+Exec sp_adduser '{{ audit_user }}','{{ audit_user }}'
+go
+sp_role 'grant', sso_role, '{{ audit_user }}'
+go
+sp_role 'grant', sa_role, '{{ audit_user }}'
+go
+grant all to {{ audit_user }}
+go
+alter database master on master=3000
+go
+sp_configure 'user connections', 100
+go
+quit

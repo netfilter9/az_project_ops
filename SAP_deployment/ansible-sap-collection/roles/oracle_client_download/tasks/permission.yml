@@ -1,0 +1,12 @@
+- name: permission | owner group change
+  file:
+    path: /oracle
+    owner: "{{ oracle_installation_user }}"
+    group: "{{ oracle_installation_primary_group }}"
+    recurse: yes
+
+- name: permission | permission change
+  file:
+    path: /oracle/stage/
+    mode: "777"
+    recurse: yes

@@ -1,0 +1,108 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM63_DEL_OPERATIONMODES                  *
+* Title               :   Activate & Deactivate Operation Modes in SM63*
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   26/10/2020                                   *
+* Purpose             :   This report is for Activate & Deactivate     *
+*                         operational modes during Cloud Migration     *
+*----------------------------------------------------------------------*
+REPORT zcm_sm63_del_operationmodes.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c VALUE '|'              LENGTH 1,
+             lc_deactivate TYPE c VALUE 'DEACTIVATE'     LENGTH 10,
+             lc_title      TYPE c VALUE
+             'Operation Modes'                           LENGTH 20,
+             lc_deact_msg  TYPE c VALUE
+             'Operation modes deactivated in the system' LENGTH 50,
+             lc_act_msg    TYPE c VALUE
+             'Operation modes activated in the system'   LENGTH 50,
+             lc_deact_fail TYPE c VALUE
+             'Failed to deactivate operation modes'      LENGTH 50,
+             lc_act_fail   TYPE c VALUE
+             'Failed to activate operation modes'        LENGTH 50.
+
+  DATA: ls_input    TYPE tab512,
+        ls_output   TYPE tab512,
+        lv_action   TYPE char20,
+        lv_lines    TYPE i,
+        lt_btcomset TYPE TABLE OF btcomset,
+        ls_btcomset TYPE btcomset.
+
+  CLEAR: lv_lines, lv_action, ls_input, ls_output.
+
+*  DESCRIBE TABLE lt_input LINES lv_lines.
+
+*  IF lv_lines EQ 1.
+    READ TABLE lt_input INTO ls_input INDEX 1.
+    CHECK sy-subrc EQ 0.
+    lv_action = ls_input.
+
+   " Adding title to the output
+    ls_output = lc_title.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+
+    IF lv_action EQ lc_deactivate.
+
+      SELECT * FROM btcomset
+               INTO TABLE lt_btcomset.
+
+      DELETE btcomset FROM TABLE lt_btcomset.
+      IF sy-subrc EQ 0.
+        " Operation modes deactivated in the system
+        ls_output = lc_deact_msg.
+        APPEND ls_output TO lt_output.
+      ELSE.
+        " Failed to deactivate operation modes
+        ls_output = lc_deact_fail.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+    ENDIF.
+
+*  ELSE.
+*
+*   " To delete title and heading
+*    WHILE sy-index <= 2.
+*      DELETE lt_input INDEX 1.
+*    ENDWHILE.
+*
+*    LOOP AT lt_input INTO ls_input.
+*      SPLIT ls_input AT lc_sep INTO
+*        ls_btcomset-setname
+*        ls_btcomset-startdate
+*        ls_btcomset-starttime
+*        ls_btcomset-enddate
+*        ls_btcomset-endtime
+*        ls_btcomset-modename
+*        ls_btcomset-target
+*        ls_btcomset-settype.
+*
+*      APPEND ls_btcomset TO lt_btcomset.
+*      CLEAR ls_btcomset.
+*
+*    ENDLOOP.
+*
+*    IF lt_btcomset IS NOT INITIAL.
+*
+*      INSERT btcomset FROM TABLE lt_btcomset.
+*
+*      IF sy-subrc EQ 0.
+*        " Operation modes activated in the system
+*        ls_output = lc_act_msg.
+*        APPEND ls_output TO lt_output.
+*      ELSE.
+*        " Failed to activate operation modes
+*        ls_output = lc_act_fail.
+*        APPEND ls_output TO lt_output.
+*      ENDIF.
+*
+*    ENDIF.
+*  ENDIF.
+ENDFORM.

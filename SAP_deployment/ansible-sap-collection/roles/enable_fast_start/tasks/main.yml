@@ -1,0 +1,75 @@
+---
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+
+- name: start primary observer 
+  block: 
+    - name: template the sh file
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "start_primary.j2"
+        dest: /home/oracle/start_primary.sh
+
+    - name: start primary observer
+      command: sh /home/oracle/start_primary.sh
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args: 
+        chdir: $ORACLE_HOME/bin
+      environment:
+        ORACLE_HOME: "/oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}"
+        CV_ASSUME_DISTID: "OEL7.6"
+      register: Obs1
+      
+    - debug:
+        var: Obs1
+  when: ansible_hostname == obsnode1
+
+- name: start secondary observer 
+  block:    
+    - name: template the sh file
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "start_secondary.j2"
+        dest: /home/oracle/start_secondary.sh
+
+    - name: start primary observer
+      command: sh /home/oracle/start_secondary.sh
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args: 
+        chdir: $ORACLE_HOME/bin
+      environment:
+        ORACLE_HOME: "/oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}"
+        CV_ASSUME_DISTID: "OEL7.6"
+      register: Obs1
+    
+    - debug:
+        var: Obs1     
+  when: ansible_hostname == obsnode2
+
+- name: enable fast start failover
+  block: 
+        - name: start primary observer
+          shell:
+            cmd: |
+              ./dgmgrl sys/"{{ passwords.master }}"<<'EOF' 
+              enable FAST_START FAILOVER;
+              EOF
+          become_method: su
+          become_user: "{{ oracle_installation_user }}"
+          args:
+            chdir: $ORACLE_HOME/bin
+          environment:
+            path: /oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin
+            ORACLE_SID: "{{ sap.db.sid|upper }}"
+            ORACLE_BASE: "/oracle/{{ sap.db.sid|upper }}" 
+            ORACLE_HOME: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+          register: DB1
+          
+        - debug:
+            var: DB1
+  when: ansible_hostname == dbnode1

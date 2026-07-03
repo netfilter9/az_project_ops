@@ -1,0 +1,27 @@
+---
+
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name: Ensure backup directory exists.
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  file:
+    path: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup"
+    state: directory
+    mode: 0644
+
+- name: backing up tnsnames file
+  copy:
+    src: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora"
+    dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/backup/tnsnames.ora"
+    remote_src: yes
+
+- name: creating new tnsnames.ora file
+  become: yes
+  become_user: "{{ oracle_installation_user }}"
+  template:
+    src: "tnsnames.j2"
+    dest: "{{ root_dir }}/{{ sap.db.sid | upper }}/{{ sap.db.software_version }}/network/admin/tnsnames.ora"
+  

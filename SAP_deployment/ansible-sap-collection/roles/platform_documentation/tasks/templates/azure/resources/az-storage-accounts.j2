@@ -1,0 +1,34 @@
+{# 
+    generate storage account entries 
+#}
+{% for resource in resource_json if resource.type=="microsoft.storage/storageaccounts" %}
+# Storage Accounts
+---
+Azure storage accounts can contain data objects: blobs, files, queues, tables, and disks. The storage account provides a unique namespace for your Azure Storage data that is accessible from anywhere in the world over HTTP or HTTPS. Data in your Azure storage account is durable and highly available, secure, and massively scalable.
+
+Azure Storage offers several types of storage accounts. For most scenarios, a general-purpose v2 storage account is recommended by Microsoft. These can contain: 
+- Blobs (all types: Block, Append, Page)
+- Data Lake Gen2
+- Files
+- Disks
+- Queues
+- Tables
+
+
+The following storage accounts will be deployed within the resource group:
+|Storage Account Name|Location|Sku|Kind|Access Tier|Secure Transfer Enabled|Network Rule Set|
+|-|-|-|-|-|-|-|  
+  {% set row = [ 
+    resource.name,
+    resource.location,
+    resource.sku.name,
+    resource.kind,
+    resource.properties.accessTier,
+    resource.properties.supportsHttpsTrafficOnly,
+    "Bypass = "~resource.properties.networkAcls.bypass~"<br>DefaultAction = "~resource.properties.networkAcls.defaultAction~"<br>Allow (Subnets) = "~resource.properties.networkAcls.virtualNetworkRules | join(",") | default("None",true)
+    ] 
+  %}
+|{{ row | join('|') }}|
+
+{% endfor %}
+

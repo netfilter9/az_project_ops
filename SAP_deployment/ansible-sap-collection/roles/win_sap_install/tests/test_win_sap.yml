@@ -1,0 +1,162 @@
+---
+
+# Testing using a test double for the SAP SWPM installation program (sapinst.exe)
+# this is used for validating the win_sap_install module during development
+# to avoid the lengthy process of performing an actual SAP installation
+# this is not a replacment for actual integration testing but is an aid just for logic in development
+
+# supply the path to the win_sap_install library on the command line and run agains a test server:
+
+# ANSIBLE_LIBRARY=roles/win-sap-install/library ansible-playbook roles/win-sap-install/tests/test_win_sap.yml -e target=server03
+
+- name: test win_sap_install
+  hosts: "{{ target | default('windows') }}"
+  gather_facts: no
+
+  vars:
+    win_test_double_url: https://github.com/iacdemo/win_sapinst/raw/master/bin/win_sapinst.zip
+    silent_install_root: C:\SilentInstall
+    silent_install_path: C:\SilentInstall\SWPM
+    product_id: NW_ABAP_ASCS:NW750.MSS.CP
+    win_sap_install_sleep: 10
+    win_sap_install_delay: 10
+    win_sap_install_timeout: 120
+    win_sap_install_checks:
+      - type: file
+        action: stop_sapinst
+        regex: "AddPrivileges was executed with status ERROR"
+        path: sapinst.log
+
+  tasks:
+
+    - name: create temporary directory
+      win_tempfile:
+        state: directory
+      register: win_sap_install_tmp_dir
+
+    - name: download test double
+      win_get_url:
+        url: "{{ win_test_double_url }}"
+        dest: "{{ win_sap_install_tmp_dir.path }}\\win_sapinst.zip"
+        force: yes
+
+    - name: create silent install path
+      win_file:
+        path: "{{ silent_install_path }}"
+        state: directory
+
+    - name: unzip sapinst test double .zip file
+      win_unzip:
+        src: "{{ win_sap_install_tmp_dir.path }}\\win_sapinst.zip"
+        dest: "{{ silent_install_path }}"
+
+    - name: get test double and run tests
+      block:
+
+          # test 1: simulating known permissions issue where:
+          # "AddPrivileges was executed with status ERROR"
+          # is written to the sapinst.log, win_sap_inst module
+          # will pick this up and stop the sapinst.exe process
+          # allowing this to be catered for in ansible and continue
+        - name: install sap
+          win_sap_install:
+            path: "{{ silent_install_path }}\\sapinst.exe"
+            arguments: >-
+              SAPINST_INPUT_PARAMETERS_URL={{ silent_install_root }}\ASCSInifile.params
+              SAPINST_CWD={{ silent_install_root }}\ASCSLogs
+              SAPINST_EXECUTE_PRODUCT_ID={{ product_id }}
+              SAPINST_SKIP_DIALOGS=true
+              SAPINST_START_GUI=false
+              SAPINST_START_GUISERVER=false
+              TEST_SLEEP_MIN=5
+              TEST_SLEEP_MAX=10
+              TEST_PRIVILEGE_ERROR=yes
+            sleep: "{{ win_sap_install_sleep }}"
+            delay: "{{ win_sap_install_delay }}"
+            timeout: "{{ win_sap_install_timeout }}"
+            checks: "{{ win_sap_install_checks }}"
+          register: win_sap_inst
+          ignore_errors: yes
+
+        - name: debug win_sap_inst
+          debug:
+            var: win_sap_inst
+
+        - name: assert that the above task failed as expected
+          assert:
+            that:
+              - win_sap_inst is failed
+              - win_sap_inst.msg == 'The sapinst process was forcibly stopped'
+
+          # test 2: retry the installation if the "AddPrivileges" issue is detected
+          # which results in a msg of 'The sapinst process was forcibly stopped'
+        - name: retry sap installation
+          win_sap_install:
+            path: "{{ silent_install_path }}\\sapinst.exe"
+            arguments: >-
+              SAPINST_INPUT_PARAMETERS_URL={{ silent_install_root }}\ASCSInifile.params
+              SAPINST_CWD={{ silent_install_root }}\ASCSLogs
+              SAPINST_EXECUTE_PRODUCT_ID={{ product_id }}
+              SAPINST_SKIP_DIALOGS=true
+              SAPINST_START_GUI=false
+              SAPINST_START_GUISERVER=false
+              TEST_SLEEP_MIN=5
+              TEST_SLEEP_MAX=10
+            sleep: "{{ win_sap_install_sleep }}"
+            delay: "{{ win_sap_install_delay }}"
+            timeout: "{{ win_sap_install_timeout }}"
+            checks: "{{ win_sap_install_checks }}"
+          register: win_sap_inst_retry
+          when:
+            - win_sap_inst is failed
+            - win_sap_inst.msg == 'The sapinst process was forcibly stopped'
+
+        - name: debug win_sap_inst
+          debug:
+            var: win_sap_inst_retry
+
+        - name: assert that the above task worked as expected
+          assert:
+            that:
+              - win_sap_inst_retry is succeeded
+              - win_sap_inst_retry.result == 'SAP installation succeeded'
+
+          # test 3: negative test to check that the module behaves as expected if the installation
+          # has not been performed successfully i.e. the file
+          # 'installationSuccesfullyFinished.dat' has not been created
+        - name: test unsuccessful sap installation
+          win_sap_install:
+            path: "{{ silent_install_path }}\\sapinst.exe"
+            arguments: >-
+              SAPINST_INPUT_PARAMETERS_URL={{ silent_install_root }}\ASCSInifile.params
+              SAPINST_CWD={{ silent_install_root }}\ASCSLogs
+              SAPINST_EXECUTE_PRODUCT_ID={{ product_id }}
+              SAPINST_SKIP_DIALOGS=true
+              SAPINST_START_GUI=false
+              SAPINST_START_GUISERVER=false
+              TEST_SLEEP_MIN=5
+              TEST_SLEEP_MAX=10
+              TEST_NO_SUCCESS=yes
+            sleep: "{{ win_sap_install_sleep }}"
+            delay: "{{ win_sap_install_delay }}"
+            timeout: "{{ win_sap_install_timeout }}"
+            checks: "{{ win_sap_install_checks }}"
+          register: win_sap_no_success
+          ignore_errors: yes
+
+        - name: debug win_sap_no_success
+          debug:
+            var: win_sap_no_success
+
+        - name: assert that the above task failed in the expected way
+          assert:
+            that:
+              - win_sap_no_success is failed
+              - win_sap_no_success.msg == 'SAP installation failed'
+
+      always:
+
+        - name: remove temporary directory
+          win_file:
+            path: "{{ win_sap_install_tmp_dir.path }}"
+            state: absent

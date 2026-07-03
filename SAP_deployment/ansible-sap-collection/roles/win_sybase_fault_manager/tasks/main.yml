@@ -1,0 +1,22 @@
+---
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- name: main | install sydbfm
+  vars:
+    ansible_become_user: "{{ domainName }}\\{{ sap.sid | lower }}adm"
+    ansible_become_pass: "{{ passwords.sidadm }}"
+  win_command: "{{ item }}"
+  args:
+    chdir: "{{ sap.sapmnt_drive }}:\\usr\\sap\\{{ sap.sid }}\\SCS{{ sap.instance_numbers.ascs }}\\work"
+  loop:
+    - sybdbfm install
+  become: yes
+  become_method: runas
+
+- name: create SYBHA_INST.PFL file
+  template:
+    src: fault_manager.j2
+    dest: "\\\\{{ sap.global_hostname }}\\sapmnt\\{{ sap.sid }}\\SYS\\profile\\SYBHA.PFL"
+
+

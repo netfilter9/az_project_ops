@@ -1,0 +1,104 @@
+- name: sybase | permission on sybase instaler
+  file:
+    path: "{{ install_dir }}/sapinst/ASE"
+    mode: "+x"
+    recurse: yes
+    state: directory
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LANG'
+    line: export LANG=en_US.utf8
+    insertafter: '^#export LANG'
+    state: present
+    path: ~/.profile
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LC_LANG'
+    line: export LC_LANG=en_US.utf8
+    insertafter: '^#export LC_LANG'
+    state: present
+    path: ~/.profile
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LANG=us_english.utf8'
+    line: export LANG=us_english.utf8
+    insertafter: '^#export LANG=us_english.utf8'
+    state: present
+    path: ~/.profile
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^source /sybase/{{ sap.db.sid }}/SYBASE.sh'
+    line: source /sybase/{{ sap.db.sid }}/SYBASE.sh
+    insertafter: '^#source /sybase/{{ sap.db.sid }}/SYBASE.sh'
+    state: present
+    path: ~/.profile
+  register: profile
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: Update /etc/default/locale
+  lineinfile:
+    regexp: '^export LANG'
+    line: export LANG=en_US.utf8
+    insertafter: '^#export LANG'
+    create: yes
+    path: /etc/default/locale
+
+- name: Update /etc/default/locale
+  lineinfile:
+    regexp: '^export LC_LANG'
+    line: export LC_LANG=en_US.utf8
+    insertafter: '^#export LC_LANG'
+    create: yes
+    path: /etc/default/locale
+
+# - name: packages | install packages
+#   package:
+#     name:
+#       - libstdc++*
+#     state: present
+#   when: platform == 'azure' and ansible_os_family == 'Suse'
+
+- name: main | create ase.params
+  template:
+    src: "ase.params.j2"
+    dest: "{{ install_dir }}/sapinst/{{ansible_hostname}}_ase.params"
+
+- name: sybase | install sybase
+  command:  
+    cmd: ./setup.bin -f {{ install_dir }}/sapinst/{{ansible_hostname}}_ase.params -i silent -DRUN_SILENT=true -DAGREE_TO_SYBASE_LICENSE=true
+    creates: /var/tmp/aseinst_output*.log
+  args:
+    chdir: "{{ install_dir }}/sapinst/ASE/"
+  register: aseinstresult
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: sybase | write log file
+  copy:
+    dest: /var/tmp/aseinst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ aseinstresult.stdout }}"
+
+- name: Update locale
+  lineinfile:
+    line: '        locale = en_US.utf8, us_english, utf8 '
+    insertafter: '^\[linux\]'
+    state: present
+    path: /sybase/{{ sap.db.sid }}/locales/locales.dat
+  become: yes
+  become_user: "{{admin_user}}"
+
+- name: main | tidy up params
+  file:
+    path: "{{ install_dir }}/sapinst/{{ansible_hostname}}_ase.params"
+    state: absent

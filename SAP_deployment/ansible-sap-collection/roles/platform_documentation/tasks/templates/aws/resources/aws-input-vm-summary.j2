@@ -1,0 +1,5 @@
+{% for vm in jsoninputdata.deployment.server_groups %}
+{%- for host in jsoninputdata.deployment.server_groups[vm].hosts -%}
+    {{ host }}
+{% endfor %}
+{% endfor %}

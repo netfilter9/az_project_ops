@@ -1,0 +1,47 @@
+---
+- name: Vinci Create Linux User
+  remote_user: root
+  become: true
+  hosts: ecc_uat
+  vars_files:
+  - /workspaces/vault.yml
+
+  tasks:
+
+  - name: Ensure ansb_admin user exists
+    user:
+      name: ansb_admin
+      comment: "Ansible Admin User"
+      shell: /bin/bash
+      password: "{{ vault_password | password_hash('sha512') }}"
+      create_home: yes
+
+  - name: Ensure adt_accenture user exists
+    user:
+      name: adt_accenture
+      comment: "Admin User"
+      shell: /bin/bash
+      password: "{{ vault_password | password_hash('sha512') }}"
+      create_home: yes
+  - name: Add ansb_admin to sudoers
+    copy:
+      dest: /etc/sudoers.d/ansb_admin
+      content: |
+        ansb_admin ALL=(ALL) NOPASSWD: ALL
+      mode: '0440'
+
+  - name: Add adminuser to sudoers
+    copy:
+      dest: /etc/sudoers.d/adminuser
+      content: |
+        adminuser ALL=(ALL) NOPASSWD: ALL
+      mode: '0440'
+
+  - name: Add users to wheel group
+    user:
+      name: "{{ item }}"
+      groups: wheel
+      append: yes
+    loop:
+    - ansb_admin
+    - adminuser

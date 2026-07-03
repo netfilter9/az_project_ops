@@ -1,0 +1,176 @@
+### Choose to integrate Introscope Enterprise Manager: integrate or nointegrate
+chooseintroscopeintegration=nointegrate
+
+### Choose to integrate Solution Manager Diagnostics (SMD) Agent: integrate or nointegrate
+choosesmdintegration=nointegrate
+
+### CMS cluster key
+clusterkey={{ passwords.cluster_key | default(passwords.master) }}
+
+### CMS administrator password
+cmspassword={{ passwords.cmsadmin | default(passwords.master) }}
+
+### CMS connection port
+cmsport={{ bods.ips.ports.cmsport |default('6400') }}
+
+### Existing auditing DB database
+existingauditingdbdatabase={{ bods.ips.audit.dbname }}
+
+### #property.ExistingAuditingDBDSN.description#
+existingauditingdbdsn={{ bods.ips.audit.dsnname }}
+
+### Existing auditing DB password
+existingauditingdbpassword={{ passwords.master }}
+
+### Existing auditing DB server
+existingauditingdbserver={{ sap.logical_hosts.db | default (ansible_hostname) }}
+
+### #property.existingauditingdbshowsysdb.description#
+existingauditingdbshowsysdb=0
+
+### Existing auditing DB user name
+existingauditingdbuser={{ bods.ips.audit.dbuser | default('DUMMYTRUSTEDUSER') }}
+
+### #property.ExistingAuditingDBUseTrustedConnection.description#
+existingauditingdbusetrustedconnection=0
+
+### Existing CMS DB database
+existingcmsdbdatabase={{ bods.ips.cms.dbname }}
+
+### #property.ExistingCMSDBDSN.description#
+existingcmsdbdsn={{ bods.ips.cms.dsnname }}
+
+### Existing CMS DB password
+existingcmsdbpassword={{ passwords.systemdb | default(passwords.master) }}
+
+### Existing CMS DB reset flag: 0 or 1
+existingcmsdbreset=0
+
+### Existing CMS DB server
+existingcmsdbserver={{ sap.logical_hosts.db | default (ansible_hostname) }}
+
+### #property.existingcmsdbshowsysdb.description#
+existingcmsdbshowsysdb=0
+
+### Existing CMS DB user name
+existingcmsdbuser={{ bods.ips.cms.dbuser | default('DUMMYTRUSTEDUSER') }}
+
+### #property.ExistingCMSDBUseTrustedConnection.description#
+existingcmsdbusetrustedconnection=0
+
+### Choose install type: default, custom, webtier
+installtype=default
+
+### LCM server name
+lcmname=LCM_repository
+
+### LCM password
+lcmpassword={{ passwords.lcm | default(passwords.master) }}
+
+### LCM port
+lcmport={{ bods.ips.ports.lcmport |default('3690') }}
+
+### LCM user name
+lcmusername=LCM
+
+### Install new or use existing LCM: new or existing
+neworexistinglcm=new
+
+### Product Keycode
+productkey={{ passwords.ipsproductkey | default('DZ30E-UCDW30S-C0YWP0A-9DKUSBW-UW') }}
+
+### Language Packs Selected to Install
+selectedlanguagepacks=en
+
+### Choose to install integrated database: 0 or 1 
+selectintegrateddatabase=0
+
+### Setup UI Language
+setupuilanguage=en
+
+### SIA node name
+sianame={{ sia_name | default(ansible_hostname) }}
+
+### SIA connector port
+siaport={{ bods.ips.ports.siaport | default('6410') }}
+
+### Tomcat connection port
+tomcatconnectionport={{ bods.ips.ports.tomcatconnectionport |default('8080') }}
+
+### Tomcat redirect port
+tomcatredirectport={{ bods.ips.ports.tomcatredirectport |default('8443') }}
+
+### Tomcat shutdown port
+tomcatshutdownport={{ bods.ips.ports.tomcatshutdownport |default('8005') }}
+
+### Auditing Database Type
+usingauditdbtype=mssql
+
+### CMS Database Type
+usingcmsdbtype=mssql
+
+### Web application server type: tomcat, manual or wacs
+webappservertype=tomcat
+
+### WACS port
+wacsport={{ bods.ips.ports.wacsport |default('6405') }}
+
+### Installation Directory
+installdir= {{ sap.install_drive }}:\{{ IPS_dir | default('SAPBusinessObjects') }}\
+
+### Available features
+### ------------------
+### root
+###   WebTier
+###     JavaWebApps1
+###     PlatformServers.WebAppContainerService
+###     CMC.Monitoring
+###     LCM
+###     IntegratedTomcat
+###     CMC.AccessLevels
+###     CMC.Applications
+###     CMC.Audit
+###     CMC.Authentication
+###     CMC.Calendars
+###     CMC.Categories
+###     CMC.CryptographicKey
+###     CMC.Events
+###     CMC.Folders
+###     CMC.Inboxes
+###     CMC.Licenses
+###     CMC.PersonalCategories
+###     CMC.PersonalFolders
+###     CMC.Servers
+###     CMC.Sessions
+###     CMC.Settings
+###     CMC.TemporaryStorage
+###     CMC.UsersAndGroups
+###     CMC.QueryResults
+###     CMC.InstanceManager
+###   PlatformServers
+###     CMS
+###     FRS
+###     PlatformServers.IntegratedDB.SQLAnywhere
+###     PlatformServers.AdaptiveProcessingServer
+###     PlatformServers.AdaptiveJobServer
+###     ClientAuditingProxyProcessingService
+###     LCMProcessingServices
+###     MonitoringProcessingService
+###     SecurityTokenService
+###     DestinationSchedulingService
+###     ProgramSchedulingService
+###     Subversion
+###   AdminTools
+###     UpgradeManager
+###   DataAccess
+###     DataAccess.SAP
+###     DataAccess.Peoplesoft
+###     DataAccess.JDEdwards
+###     DataAccess.Siebel
+###     DataAccess.OracleEBS
+
+{% if sap.feature == "bods" %}
+features={{ required_features | default('JavaWebApps1,CMC.Monitoring,LCM,IntegratedTomcat,CMC.AccessLevels,CMC.Applications,CMC.Audit,CMC.Authentication,CMC.Calendars,CMC.Categories,CMC.CryptographicKey,CMC.Events,CMC.Folders,CMC.Inboxes,CMC.Licenses,CMC.PersonalCategories,CMC.PersonalFolders,CMC.Servers,CMC.Sessions,CMC.Settings,CMC.TemporaryStorage,CMC.UsersAndGroups,CMC.QueryResults,CMC.InstanceManager,CMS,FRS,PlatformServers.AdaptiveProcessingServer,PlatformServers.AdaptiveJobServer,ClientAuditingProxyProcessingService,LCMProcessingServices,MonitoringProcessingService,SecurityTokenService,DestinationSchedulingService,ProgramSchedulingService,Subversion,UpgradeManager,AdminTools,DataAccess.SAP,DataAccess.Peoplesoft,DataAccess.JDEdwards,DataAccess.Siebel,DataAccess.OracleEBS,DataAccess') }}
+{% elif sap.feature == "bobj" %}
+features={{ required_features | default('JavaWebApps1,MobileServers,MobileAddon,MobileServices,IntegratedTomcat,WebTier,CMS,FRS,PlatformServers.EventServer,AdaptiveProcessingServer,AdaptiveJobServer,Platform.RestWebService,Platform.Action.Framework.backend,Subversion,ConnectionProcService,ConnectionServices,DataFederatorQueryService,DataFederatorServices,MultidimensionalAnalysisServices,BExWebApplicationsService,AdvancedAnalysisServices,CrystalReportsProcServices,CrystalReportSchedulingServices,CrystalReport2011ProcServices,CrystalReport2011SchedulingServices,CrystalReportsServers,WebIProcServer,WebISchedulingServices,WebIServers,XcelsiusServers,BWPublisherServer,IntegrationServers,UpgradeManager,Automation.Framework,PromotionManagementWizard,MultitenancyManager,AdministratorTools,BOE64bitNETSDK,SL_SDK_java,SL_SDKSamples,SL_SDK,DataAccess.DataFederator,DataAccess.HPVertica,DataAccess.MySQL,DataAccess.GenericJDBC,DataAccess.GenericOLEDB,DataAccess.OptionalDataDirectODBC.DataDirect7.1,DataAccess.MaxDB,DataAccess.SAPHANA,DataAccess.Salesforce,DataAccess.Netezza,DataAccess.Microsoft_AnalyticalServices,DataAccess.MicrosoftExchange,DataAccess.MicrosoftOutlook,DataAccess.Microsoft_SQLServer,DataAccess.Microsoft_Access,DataAccess.Ingres,DataAccess.Greenplum,DataAccess.PostgreSQL,DataAccess.Progress,DataAccess.IBMDB2,DataAccess.Informix,DataAccess.Oracle,DataAccess.Sybase,DataAccess.Teradata,DataAccess.SAPBW,DataAccess.SAPBW64,DataAccess.SAPERP,DataAccess.XMLWebServices,DataAccess.OData,DataAccess.SAP,DataAccess.PersonalFiles,DataAccess.JavaBean,DataAccess.OpenConnectivity,DataAccess.HadoopHive,DataAccess.Amazon,DataAccess.Spark,DataAccess.Hortonworks,DataAccess.Essbase,DataAccess.Peoplesoft,DataAccess.JDEdwards,DataAccess.Siebel,DataAccess.OracleEBS,DataAccess.Universe,DataAccess.MyCube,DataAccess.XML,DataAccess.ADO.NET,DataAccess.COMData,DataAccess.DataSet,DataAccess.SymantecACT,DataAccess.BDE,DataAccess.CDO,DataAccess.FieldDefinitions,DataAccess.FileSystem,DataAccess.NTEventLog,DataAccess.WebActivityLog,DataAccess.Btrieve,DataAccess.dBase.DataDirect7.1,DataAccess.UWSC,DataAccess.CMSDBDriver,Samples') }}
+{% endif %}

@@ -1,0 +1,24 @@
+- name: Update DHCP
+  lineinfile:
+    regexp: '^DHCLIENT_SET_HOSTNAME="yes"'
+    line: DHCLIENT_SET_HOSTNAME="no"
+    path: /etc/sysconfig/network/dhcp
+  
+- name: Create ifroute-eth1
+  blockinfile:
+    path: /etc/sysconfig/network/ifroute-eth1
+    create: yes
+    marker: "# {mark} ANF Configuration"
+    block: |
+      {{ hana_scale_out.storage_routerip }} - - -
+      {{ hana_scale_out.anf_subnet }} {{ hana_scale_out.storage_routerip }} -
+
+
+- name: Update ifcfg-eth1
+  lineinfile:
+    regexp: '^CLOUD_NETCONFIG_MANAGE="yes"'
+    line: CLOUD_NETCONFIG_MANAGE="no"
+    path: /etc/sysconfig/network/ifcfg-eth1
+
+- name: Reboot Systems
+  reboot:

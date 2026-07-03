@@ -1,0 +1,10 @@
+---
+
+- name: main |sap download for azure
+  include_role: 
+    name: win_azcopy
+  when: platform == 'azure'
+  
+- name: main |sap download for gcp
+  include_tasks: gcp_sap_download.yml
+  when: platform == 'gcp'

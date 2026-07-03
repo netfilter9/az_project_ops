@@ -1,0 +1,13 @@
+{# 
+    generate key vault entries 
+#}
+{% for keyvault_k, keyvault_v in deployment.key_vault.items() %}
+    {% if loop.first %}
+# Key vault
+---
+The environment level key vault will be used to store secrets which specific to this environment only:
+|Name|Location|Sku|
+|-|-|-|
+    {% endif %}
+|{{ keyvault_k }}|{{ deployment.resource_group.location }}|standard|
+{% endfor %}

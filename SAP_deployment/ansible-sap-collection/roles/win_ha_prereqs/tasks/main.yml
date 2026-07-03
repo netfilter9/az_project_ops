@@ -1,0 +1,17 @@
+---
+
+- name: Add a domain user to a administrator group
+  win_group_membership:
+    name: Administrators
+    members:
+      - "{{ domain.fqdn }}\\{{ domain.username }}"
+    state: present
+
+- name: Disable Domain firewall
+  win_firewall:
+    state: disabled
+    profiles:
+      - Private
+      - Domain
+      - public
+  tags: disable_firewall

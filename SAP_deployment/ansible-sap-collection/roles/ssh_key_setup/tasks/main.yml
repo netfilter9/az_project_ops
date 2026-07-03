@@ -1,0 +1,22 @@
+#create ssh key
+- name: ssh-key-setup | create directory for ssh key
+  file:
+    path: /root/.ssh
+    state: directory
+
+- name: ssh-key-setup | ssh key generation
+  openssh_keypair:
+    path: /root/.ssh/id_rsa
+    state: present
+  register: keypair_output
+
+# add ssh key to the nodes
+- name: ssh-key-setup | share keys with other nodes
+  delegate_to: "{{ item }}"
+  lineinfile:
+    line: "{{ keypair_output.public_key }}"
+    path: /root/.ssh/authorized_keys
+    state: present
+    create: yes
+  loop: "{{ ssh_key_setup_nodes | sum(start = []) }}"
+  #sum(start = []) used to create flattened list of array of nodes

@@ -1,0 +1,14 @@
+---
+- name: create ds.params
+  template:
+    src: ds.params.j2
+    dest: "{{ sap.install_drive }}:\\SilentInstall\\{{ ansible_hostname }}_ds.params"
+
+- name: install DS
+  win_shell: setup.exe -r "{{ sap.install_drive }}:\\SilentInstall\\{{ ansible_hostname }}_ds.params"
+  args:
+    executable: cmd
+    chdir: "{{ sap.install_drive }}:\\SilentInstall\\DS\\"
+
+- name: rebooting after installation
+  win_reboot:

@@ -1,0 +1,15 @@
+---
+- name: set output format
+  set_fact:
+    output: "{{ output | default('md') }}"
+
+- name: azure.yml | create folder to store outputs
+  file:
+    path: ../md-collection
+    mode: '0755'
+    recurse: yes
+    state: directory
+  delegate_to: localhost
+
+- name: importing tasks to perform
+  include_tasks: "{{ check | default('all')}}_checks.yml"

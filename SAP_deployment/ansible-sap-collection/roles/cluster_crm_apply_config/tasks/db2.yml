@@ -1,0 +1,24 @@
+---
+- name: run configuration prereqs
+  import_tasks: db2_config_prereqs_rhel.yml
+
+- name: cluster configuration
+  block:
+  - name: pcs configuration 
+    command: sudo pcs property set maintenance-mode="true"
+
+  - name: pcs cluster configuration for RHEL version < 8
+    import_tasks: db2_rhel7_pcs.yml
+    when: 
+      - platform == 'azure'
+      - ansible_distribution_major_version < '8'
+      
+  - name: pcs cluster configuration for RHEL version >= 8
+    import_tasks: db2_rhel8_pcs.yml
+    when: 
+      - platform == 'azure'
+      - ansible_distribution_major_version >= '8'
+
+  - name: main | set cluster maintenace mode
+    command: sudo pcs property set maintenance-mode="false"
+  when: ansible_hostname == node1

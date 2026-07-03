@@ -1,0 +1,68 @@
+---
+- name: hana-srhook | myhooks folder creation
+  file:
+    path: /hana/shared/myHooks
+    state: directory
+
+- name: hana-srhook | Copy SAPHanaSR.py file
+  copy:
+    src: /usr/share/SAPHanaSR/srHook/SAPHanaSR.py
+    dest: /hana/shared/myHooks
+    remote_src: yes
+    
+- name: hana-srhook | myhooks folder owner group change
+  file:
+    path: /hana/shared/myHooks
+    state: directory
+    owner: "{{ sap.db.sid|lower }}adm"
+    group: sapsys
+    recurse: yes
+
+- debug: 
+    msg: "{{ sap.db.sid|lower }}adm"
+
+- name: hana-srhook | stop hana
+  command: "sapcontrol -nr {{ sap.instance_numbers.db }} -function StopWait 600 10"
+  become_user: "{{ sap.db.sid|lower}}adm"
+  become: yes      
+  environment:
+    PATH: "{{ root_dir }}/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe"
+
+- name: hana-srhook | sleep 20
+  command: sleep 20
+
+- name: hana-srhook | modify globai.ini file
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/hdb/custom/config/global.ini 
+    marker: "# {mark} added to ansible"
+    block: |
+      [ha_dr_provider_SAPHanaSR]
+      provider = SAPHanaSR
+      path = /hana/shared/myHooks
+      execution_order = 1
+
+      [trace]
+      ha_dr_saphanasr = info
+
+- name: hana-srhook | modify sudoers file
+  blockinfile:
+    path: /etc/sudoers.d/20-saphana 
+    marker: "# {mark} added via ansible"
+    create: yes
+    block: |
+      Cmnd_Alias SITE1_SOK   = /usr/sbin/crm_attribute -n hana_{{ sap.db.sid|lower }}_site_srHook_SITE1 -v SOK -t crm_config -s SAPHanaSR
+      Cmnd_Alias SITE1_SFAIL = /usr/sbin/crm_attribute -n hana_{{ sap.db.sid|lower }}_site_srHook_SITE1 -v SFAIL -t crm_config -s SAPHanaSR
+      Cmnd_Alias SITE2_SOK   = /usr/sbin/crm_attribute -n hana_{{ sap.db.sid|lower }}_site_srHook_SITE2 -v SOK -t crm_config -s SAPHanaSR
+      Cmnd_Alias SITE2_SFAIL = /usr/sbin/crm_attribute -n hana_{{ sap.db.sid|lower }}_site_srHook_SITE2 -v SFAIL -t crm_config -s SAPHanaSR
+      {{ sap.db.sid|lower }}adm ALL=(ALL) NOPASSWD: SITE1_SOK, SITE1_SFAIL, SITE2_SOK, SITE2_SFAIL
+      Defaults!SITE1_SOK, SITE1_SFAIL, SITE2_SOK, SITE2_SFAIL !requiretty
+
+- name: hana-srhook | start hana
+  command: "sapcontrol -nr {{ sap.instance_numbers.db }} -function StartWait 600 10"
+  become_user: "{{ sap.db.sid|lower}}adm"
+  become: yes     
+  environment:
+    PATH: "{{ root_dir }}/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe"
+
+- name: hana-srhook | sleep 20
+  command: sleep 20

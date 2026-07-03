@@ -1,0 +1,18 @@
+- name: main | generate hostfile 
+  template:
+    src: hosts.j2
+    dest: /tmp/hosts
+  
+- name: main | slurp generated hostfile content
+  slurp:
+    src: /tmp/hosts
+  register: slurpfile
+
+- name: main | add to hostfile
+  blockinfile: 
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    marker_begin: "{{ 'BEGIN ' + new_marker | default('') }}"
+    marker_end: "{{ 'END ' + new_marker | default('') }}"
+    dest: /etc/hosts
+    block: "{{ slurpfile['content'] | b64decode }}"
+    state: present

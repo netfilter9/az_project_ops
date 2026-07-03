@@ -1,0 +1,19 @@
+---
+
+- name: copy sql code
+  template:
+    src: probe.ascs.j2
+    dest: C:\ascs_probe.ps1
+
+- name: copy sql code
+  template:
+    src: probe.ers.j2
+    dest: C:\ers_probe.ps1
+
+- name: set probe ports for ascs
+  win_shell: C:\ascs_probe.ps1
+  when: inventory_hostname == node1
+
+- name: set probe ports for ers
+  win_shell: C:\ers_probe.ps1
+  when: inventory_hostname == node2 

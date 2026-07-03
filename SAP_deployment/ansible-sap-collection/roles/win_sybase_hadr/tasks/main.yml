@@ -1,0 +1,56 @@
+---
+
+- name: check for additional install items
+  win_shell: (Get-Childitem –Path {{ sap.install_drive }}:\SilentInstall\sybase -Include "*.ZIP" -Recurse | Select-Object -Property FullName).FullName
+  register: sybase_software_path
+
+- debug:
+    var: sybase_software_path
+
+- name: unzip sybase software
+  win_unzip:
+    src: "{{ sybase_software_path.stdout_lines[0]}}"
+    dest: "{{ sap.install_drive }}:\\SilentInstall\\sybase\\syb_software"
+
+- name: copy HADR response file
+  template:
+    src: response.j2
+    dest: "{{ sap.install_drive }}:\\response.rs"
+
+- name: execute setupconsole utility
+  win_command: .\setupConsole -f {{ sap.install_drive }}:\response.rs -i silent 
+  args:
+    chdir: E:\SilentInstall\sybase\syb_software\BD_SYBASE_ASE_16.0.03.08_HF1_RDBMSforBS_\SYBASE_WINDOWS_X86_64
+
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- name: copy user unlock response file
+  template:
+    src: user_unlock.j2
+    dest: "{{ sap.install_drive }}:\\user_unlock.rs"
+
+- name: execute sybase commands
+  vars:
+    ansible_become_user: "{{ domainName }}\\syb{{ sap.sid | lower }}"
+    ansible_become_pass: "{{ sybsid_password }}"
+  win_shell: isql -Usapsso -P {{ sybase_db_password }} -S {{ sap.sid }} -X -i "{{ sap.install_drive }}:\\user_unlock.rs"
+  become: yes
+  become_method: runas
+
+- name: copy HADR response file
+  template:
+    src: "{{ server_type }}_response.j2"
+    dest: "{{ sap.install_drive }}:\\{{ server_type }}_response.rs"
+
+- name: execute HADR script
+  vars:
+    ansible_become_user: "{{ domainName }}\\syb{{ sap.sid | lower }}"
+    ansible_become_pass: "{{ sybsid_password }}"
+  win_shell: setuphadr.bat {{ sap.install_drive }}:\\{{ server_type }}_response.rs >> {{ sap.install_drive }}:\\{{ server_type }}_response.log
+  args:
+    chdir: "{{ sap.install_drive }}:\\sybase\\{{ sap.sid }}\\ASE-16_0\\bin\\"
+  become: yes
+  become_method: runas
+
+

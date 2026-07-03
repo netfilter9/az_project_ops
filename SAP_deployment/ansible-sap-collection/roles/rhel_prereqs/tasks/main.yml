@@ -1,0 +1,21 @@
+---
+
+- name: set fact dbtype
+  set_fact:
+    dbtype: "{{ sap.db.type | lower }}"
+    
+- name: main | packages installation
+  import_tasks: packages.yml
+
+- name: main | disable selinux
+  import_tasks: disable_selinux.yml
+  when: ansible_distribution_major_version >= '8'
+
+- name: main | service start/stop
+  import_tasks: service.yml
+
+- name: main | sysctl configuration
+  import_tasks: sysctl.yml
+
+- name: main | limits configuration
+  import_tasks: limits.yml

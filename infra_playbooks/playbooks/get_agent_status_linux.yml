@@ -1,0 +1,25 @@
+- name: Check if Zabbix 2, VMware Tools, and NetBackup services are running
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become: true
+  gather_facts: false
+  vars:
+    ansible_connection: ssh
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Check NetBackup with systemctl
+      ansible.builtin.command: systemctl status netbackup.service
+      register: netbackup_status
+      changed_when: false
+      failed_when: false
+
+    - name: Show service status
+      ansible.builtin.debug:
+        msg:
+          - "Zabbix Agent 2: {{ ansible_facts.services['zabbix-agent2.service'].state if 'zabbix-agent2.service' in ansible_facts.services else 'not installed' }}"
+          - "VMware Tools: {{ ansible_facts.services['vmtoolsd.service'].state if 'vmtoolsd.service' in ansible_facts.services else 'not installed' }}"
+          - "NetBackup Client Service: {{ 'not installed' if ('Loaded: not-found' in netbackup_status.stdout) else (ansible_facts.services['netbackup.service'].state if 'netbackup.service' in ansible_facts.services else 'not installed') }}"
+

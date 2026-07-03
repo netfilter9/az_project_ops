@@ -1,0 +1,33 @@
+#SUSE SLES 12 
+- name: Update NTP Servers
+  lineinfile:
+    line: "{{ item }}"
+    dest: /etc/ntp.conf
+  with_items:
+    - server {{ ntpserver1 }} iburst
+    - server {{ ntpserver2 }} iburst
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "12"
+
+- name: Enable and restart NTP Service
+  service:
+    name: ntpd
+    enabled: yes  
+    state: restarted  
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "12"
+
+#SUSE SLES 15 and RHEL
+- name: Configure Time Servers
+  lineinfile:
+    line: "{{ item }}"
+    dest: /etc/chrony.conf
+  with_items:
+    - server {{ ntpserver1 }} iburst
+    - server {{ ntpserver2 }} iburst
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "15" or ansible_facts['distribution'] == "RedHat"
+
+- name: Enable and restart NTP Service
+  service:
+    name: chronyd.service
+    enabled: yes  
+    state: restarted  
+  when: ansible_facts['distribution_file_variety'] == "SUSE" and ansible_facts['distribution_major_version'] == "15" or ansible_facts['distribution'] == "RedHat"

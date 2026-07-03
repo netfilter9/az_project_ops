@@ -1,0 +1,19 @@
+- name: iscsiadm | check for existing session
+  shell: iscsiadm -m discovery -o show | grep -c {{ hostvars[item]['ansible_default_ipv4']['address'] }}
+  register: result
+  failed_when: 
+    - result.failed
+    - result.stdout | int != 0
+
+- name: iscsiadm | perform iscsiadm setup
+  block:
+    - name: main | perform iscsiadm discovery
+      command: iscsiadm -m discovery --type=st --portal={{ hostvars[item]['ansible_default_ipv4']['address'] }}:3260
+
+    - name: main | perform iscsiadm login
+      command: iscsiadm -m node -T iqn.2006-04.{{ cluster_ref }}.local:{{ cluster_ref }} --login --portal={{ hostvars[item]['ansible_default_ipv4']['address'] }}:3260
+
+    - name: main | set iscsiadm startup
+      command: iscsiadm -m node -p {{ hostvars[item]['ansible_default_ipv4']['address'] }}:3260 --op=update --name=node.conn[0].startup --value=automatic
+  
+  when: result.stdout | int < 1

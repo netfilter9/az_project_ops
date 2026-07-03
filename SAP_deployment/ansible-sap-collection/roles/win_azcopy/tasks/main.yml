@@ -1,0 +1,12 @@
+---
+
+- name: install azcopy
+  include_tasks: 01-install.yml
+  tags:
+    - azcopy-install
+
+- name: azcopy download
+  include_tasks: 02-download.yml
+  when: downloads is defined
+  tags:
+    - azcopy-download

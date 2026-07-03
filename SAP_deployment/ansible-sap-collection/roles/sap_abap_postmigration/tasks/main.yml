@@ -1,0 +1,95 @@
+---
+# tasks file for sap-abap-postmigration
+    
+- name: copy abap post-migration script files
+  copy:
+    src: "../files/"
+    dest: "{{ abap_scripts_path }}"
+    mode: '0755'
+
+- name: establish connection and getting outputs from target SAP installed System
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_pyrfc: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript={{ item.export_script }} outputspath={{ abap_export_path }} inputparams={{ item.input_params }}
+  with_items:
+     - "{{ abap_post_migration_rz21 }}"
+
+
+- name: Validating source & target data, establish connection and updating target SAP system with updated data.
+  vars:
+      ansible_python_interpreter: /usr/bin/python3
+  sap_align_configuration: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} updatecols=[] uniquecols={{ item.unique_columns }} sourcevalues=/home/sivajyothi_araveti/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_list }}"
+  register: output
+
+- debug: var=output
+
+- name: Validating source & target SPAD data, establish connection and updating target SAP system with updated data.
+  vars:
+      ansible_python_interpreter: /usr/bin/python3
+  sap_spad: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} instancename="['{{ hostname }}_{{ target.sap.sid }}_{{ target.sap.instance_number.ascs }}']" sourcevalues={{ outputs_path }}/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_spad }}"
+  register: output_spad
+
+- debug: var=output_spad
+
+- name: certificates
+  sap_certificates_export: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} sourcevalues={{ outputs_path }}/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_ssl }}"
+  register: output_ssl
+
+- debug: var=output_ssl
+
+- name: Validating source & target httpurlloc data, establish connection and updating target SAP system with updated data.
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_httpurlloc: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ target.sap.instance_number.ascs }} client={{ target.sap.client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} updatecols="[{'HOST':'{{ hostname }}','APPLICATN':'{{ hostvars[groups['target'][0]].ansible_host }}'}]" uniquecols={{ item.unique_columns }} sourcevalues={{ outputs_path }}/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_httpurlloc }}"
+  register: output_httpurlloc
+
+- debug: var=output_httpurlloc
+
+
+- name: Validating source & target RFC groups data, establish connection and updating target SAP system with updated data.
+  vars:
+      ansible_python_interpreter: /usr/bin/python3
+  sap_rfc_groups: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} sourcevalues={{ outputs_path }}/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json instancename={{ item.instance_list }} targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_rfc }}"
+  register: output_rfc
+
+- debug: var=output_rfc
+
+- name: Validating source & target RZ21 data, establish connection and updating target SAP system with updated data.
+  vars:
+      ansible_python_interpreter: /usr/bin/python3
+  sap_rz21_segment: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} sourcevalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json instancename=['{{ hostname }}_{{ target.sap.sid }}_{{target.sap.instance_number.ascs }}']
+  with_items:
+      - "{{ abap_post_migration_rz21 }}"
+  register: output_rz21
+
+- debug: var=output_rz21
+
+- name: testing smlg
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_logon_group_smlg: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ instance_number }} client={{ client }} group=_NULL abappath={{ abap_scripts_path }} abapscript={{ item.restore_script }} instancename={{ item.instance_list }} sourcevalues={{ outputs_path }}/Migrate_{{ source.sap.sid }}_{{ target.sap.sid }}/source/abap_export/{{ (item.export_script | splitext)[0] }}.json targetvalues={{ abap_export_path }}{{ (item.export_script | splitext)[0] }}.json
+  with_items:
+      - "{{ abap_post_migration_smlg | default([]) }}"
+  register: output_smlg   
+
+- debug: var=output_smlg
+
+- name: establish connection and getting outputs from target SAP installed System after post validation
+  vars:
+     ansible_python_interpreter: /usr/bin/python3
+  sap_pyrfc: hostname={{ hostname }} username={{ user }} password={{ password }} instance={{ target.sap.instance_number.ascs }} client={{ target.sap.client }} group={{ group }} abappath={{ abap_scripts_path }} abapscript={{ item.export_script }} outputspath={{ abap_export_path }} inputparams={{ item.input_params }}
+  with_items:
+      - "{{ abap_post_validation_list }}"
+  register: output_abap_post
+
+- debug: var=output_abap_post 

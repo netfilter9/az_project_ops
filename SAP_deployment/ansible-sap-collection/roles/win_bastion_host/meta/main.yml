@@ -1,0 +1,15 @@
+---
+
+dependencies: []
+
+galaxy_info:
+  author: anthony.skidmore@accenture.com
+  description: Configures the bastion host
+  company: "Accenture"
+  license: internal
+  min_ansible_version: 2.9
+  platforms:
+    - name: EL
+      versions:
+        - 7
+

@@ -1,0 +1,175 @@
+---
+- name: azure.yml | create folder to store input files
+  file:
+    path: ../input-files
+    mode: '0755'
+    recurse: yes
+    state: directory
+
+- name: azure.yml | create folder to store input files
+  file:
+    path: ../md-collection
+    mode: '0755'
+    recurse: yes
+    state: directory
+
+- name: gather data for resources in resource group
+  shell: aws ec2 describe-instances 
+  register: resource_data   #This collects all the information about instances available in aws console.
+
+- name: convert resource stdout to a fact
+  set_fact:
+    resource_json: "{{resource_data.stdout}}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/ec2details.json
+    content: "{{ resource_json }}"
+
+- name: gather information about volumes available in aws console.
+  shell: aws ec2 describe-volumes 
+  register: volume_data     #This collects all the information about volumes available in aws console.
+
+- name: convert resource stdout to a fact
+  set_fact:
+    volume_json: "{{volume_data.stdout}}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/volumedetails.json
+    content: "{{ volume_json }}"
+
+- name: gather information about network interface available in aws console.
+  shell: aws ec2 describe-network-interfaces 
+  register: network_data   #This collects all the information about network interface available in aws console.
+
+- name: convert resource stdout to a fact
+  set_fact:
+    network_json: "{{network_data.stdout}}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/networkdetails.json
+    content: "{{ network_json }}"
+
+- block:
+  - name: file copy
+    shell: aws s3 cp s3://{{ bucketpath }}/{{ bucketname }} .
+    
+  - name: Move foo to bar
+    command: mv ./{{ bucketname }} ../input-files/terraform.tfstate
+  when: bucketpath is defined
+
+- name: Move foo to bar
+  command: cp {{ tfstate_file_path }} ../input-files/terraform.tfstate
+  when: bucketpath is not defined
+
+- name: Display the input JSON file content
+  shell: cat ../input-files/terraform.tfstate
+  register: tfstate_inputresult   
+
+- name: save the input Json data to a Variable as a Fact
+  set_fact:
+    tfstate_inputdata: "{{ tfstate_inputresult.stdout }}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/tfstate_input.json
+    content: "{{ tfstate_inputdata }}"
+
+- name: aws.yml | gather all instance ids available in aws console
+  template:
+    src: aws/resources/aws-all-vms-summary.j2
+    dest: ../input-files/allvm_list
+
+- name: aws.yml | read ./allvm_list
+  command: cat ../input-files/allvm_list
+  register: allvm_row     #This collects all the instance ids available in aws console
+
+- name: aws.yml | convert stdout to a fact
+  set_fact:
+    allvm_list: "{{allvm_row.stdout_lines}}"
+
+- name: aws.yml | gather instance names of vms available in tfstate as well as aws console
+  template:
+    src: aws/resources/infra-vm-name.j2
+    dest: ../input-files/tfstate_vm_list
+
+- name: aws.yml | read ./tfstate_vm_list
+  command: cat ../input-files/tfstate_vm_list
+  register: vm_row
+
+- name: aws.yml | convert stdout to a fact
+  set_fact:
+    tfstate_vm_list: "{{vm_row.stdout_lines}}"
+
+- debug: msg="{{ item }}"
+  loop: "{{ tfstate_vm_list }}"
+
+- name: Display the input JSON file content
+  shell: cat {{ tfvars_file }}
+  register: inputresult
+
+- name: save the input Json data to a Variable as a Fact
+  set_fact:
+    jsoninputdata: "{{ inputresult.stdout | from_json }}"
+
+- name: dump json to file
+  copy: 
+    dest: ../input-files/input_tfvars.json
+    content: "{{ jsoninputdata }}"
+
+- name: aws.yml | generate status of vms either present or absent in both tfstate and aws console
+  template:
+    src: aws/resources/aws-vm-state.j2
+    dest: ../input-files/vm_status
+ 
+- name: aws.yml | read ./vm_status
+  command: cat ../input-files/vm_status
+  register: status_vm_row
+
+- name: Print return information from the previous task
+  debug:
+    var: status_vm_row.stdout_lines
+
+- name: azure.yml | convert status_vm_row stdout to a fact
+  set_fact:
+    status_vm: "{{ status_vm_row.stdout_lines }}"
+
+- debug: msg="{{ item }}"
+  loop: "{{ status_vm }}"
+
+- name: aws.yml | generating vmlist from tfstate
+  template:
+    src: aws/resources/aws-input-vm-summary.j2
+    dest: ../input-files/vm_list
+
+- name: aws.yml | read ./vm_list
+  command: cat ../input-files/vm_list
+  register: json_vm_list
+
+- name: aws.yml | convert stdout to a fact
+  set_fact:
+    vm_list: "{{ json_vm_list.stdout_lines }}"
+
+- name: aws.yml | list vm ids of vms available in tfvars.json
+  template:
+    src: aws/resources/aws-vm-id.j2
+    dest: ../input-files/vm_id_list
+
+- name: azure.yml | read ./vm_id_list
+  command: cat ../input-files/vm_id_list
+  register: vm_id_list
+
+- name: azure.yml | convert resource stdout to a fact
+  set_fact:
+    vm_id: "{{ vm_id_list.stdout_lines }}"
+
+- debug: msg="{{ item }}"
+  loop: "{{ vm_id }}"
+
+- name: generating markdown
+  template:
+    src: aws/aws_environment.j2
+    dest: ../md-collection/01_{{ ansible_date_time.iso8601_micro }}_platform_documentation.{{ output }}
+    lstrip_blocks: yes

@@ -1,0 +1,27 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+
+- name: set fast start failover property 
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  shell: 
+    cmd: |
+      ./dgmgrl sys/{{ sap.db.software_version }}<<'EOF'
+      EDIT DATABASE "{{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}" SET PROPERTY FastStartFailoverTarget = '{{ sap.db.sid | lower }}{{ primary_instance_ch | lower }}';
+      EDIT DATABASE "{{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }} "SET PROPERTY FastStartFailoverTarget = '{{ sap.db.sid | lower }}{{ secondary_instance_ch | lower }}';
+      ENABLE FAST_START FAILOVER CONDITION 'Inaccessible Logfile';
+      enable FAST_START FAILOVER;
+      EOF
+  args: 
+    chdir: $ORACLE_HOME/bin
+  environment:
+    ORACLE_SID: "{{ sap.db.sid|upper }}"
+    ORACLE_BASE: "/oracle/{{ sap.db.sid|upper }}" 
+    ORACLE_HOME: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+    CV_ASSUME_DISTID: "OEL7.6"
+  register: fastStartOut
+
+- debug:
+    var: fastStartOut
+

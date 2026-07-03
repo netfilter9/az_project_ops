@@ -1,0 +1,13 @@
+create spfile from pfile='/tmp/init{{ sap.db.sid | upper }}.ora';
+shutdown immediate;
+startup mount;
+alter system set db_unique_name = '{{ sap.db.sid | lower }}{{ secondary_instance_ch | lower }}' scope=spfile;
+alter system set log_archive_max_processes=4 scope = both;
+alter system set local_listener='(ADDRESS=(PROTOCOL=TCP)(HOST={{ db_secondary_hostname | default(dbnode2) }})(PORT={{ port | default('1521') }}))' scope=both;
+ALTER SYSTEM SET DB_RECOVERY_FILE_DEST_SIZE = {{ recovery_file_dest_size | default('2G') }};   
+alter system set db_recovery_file_dest = '{{ root_dir }}/{{ sap.db.sid | upper }}/oraflash';
+alter system set open_cursors=2000 scope=both;
+shutdown immediate;
+startup mount;
+create pfile from spfile;
+exit 0;

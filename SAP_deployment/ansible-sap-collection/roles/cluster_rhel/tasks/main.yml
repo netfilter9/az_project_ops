@@ -1,0 +1,42 @@
+- name: ha_cluster | enable repos
+  command: "{{ item }}"
+  with_items: 
+    - subscription-manager repos --disable "*"
+    - subscription-manager repos --enable=rhel-7-server-rpms
+    - subscription-manager repos --enable=rhel-ha-for-rhel-7-server-rpms
+    - subscription-manager repos --enable=rhel-sap-for-rhel-7-server-rpms
+    - subscription-manager repos --enable=rhel-ha-for-rhel-7-server-eus-rpms    
+
+- name: main | ensure required cluster agent packages are installed
+  package:
+    name: 
+      - pcs 
+      - pacemaker 
+      - fence-agents-azure-arm 
+      - nmap-ncat
+    state: present
+
+- name: main | Set FireWall
+  import_tasks: firewall.yml
+  tags:
+    - firewall
+
+- name: main | setup PCS Service
+  import_tasks: service.yml
+  tags:
+    - service
+
+- name: main | setup ssh keys
+  import_tasks: ssh_key_setup.yml
+  tags:
+    - ssh
+
+- name: main | run base ha cluster commands
+  import_tasks: ha_cluster.yml
+  tags:
+    - ha_cluster
+
+- name: main | run stonith commands
+  import_tasks: stonith.yml
+  tags:
+    - stonith

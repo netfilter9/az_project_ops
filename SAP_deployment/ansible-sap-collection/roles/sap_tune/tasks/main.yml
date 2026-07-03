@@ -1,0 +1,6 @@
+---
+
+- name: sap-tune configurations
+  include_tasks: "{{ ansible_os_family }}.yml"
+  tags:
+    - sap_tune

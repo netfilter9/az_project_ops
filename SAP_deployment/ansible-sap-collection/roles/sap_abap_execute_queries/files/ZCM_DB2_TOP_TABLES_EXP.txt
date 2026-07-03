@@ -1,0 +1,143 @@
+*&********************************************************************&*
+* Report              :   ZCM_DB2_TOP_TABLES_EXP                       *
+* Title               :   Top Tables for DB2 Database                  *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   04/12/2020                                   *
+* Purpose             :   This report is used to fetch top 100 tables  *
+*                     :   in the system                                *
+*----------------------------------------------------------------------*
+REPORT zcm_db2_top_tables_exp.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'                   LENGTH 1,
+           lc_top        TYPE c VALUE 'Top'                 LENGTH 3,
+           lc_fetch      TYPE c VALUE 'FETCH'               LENGTH 5,
+           lc_table_name TYPE c VALUE 'Table name'          LENGTH 10,
+           lc_phys_size  TYPE c VALUE 'Physical size in KB' LENGTH 20
+           ##no_text,
+           lc_logi_size  TYPE c VALUE 'Logical size in KB'  LENGTH 20
+           ##no_text,
+           lc_err_msg    TYPE c VALUE 'No Records found'    LENGTH 20
+           ##no_text,
+           lc_title      TYPE c VALUE 'Large Tables'        LENGTH 15
+           ##no_text.
+
+DATA: ls_input      TYPE tab512,
+      ls_output     TYPE tab512,
+      lv_action     TYPE char10,
+      lv_num_tab    TYPE char10,
+      lv_sysid      TYPE sy-sysid,
+      lv_sql_stmt   TYPE string,
+      lv_con_name   TYPE dbcon_name,
+      lt_table      TYPE db6_editor_list,
+      lo_result_ref TYPE REF TO data,
+      lo_db6_clp    TYPE REF TO cl_db6_clp,
+      lo_db6_sys    TYPE REF TO cl_db6_sys.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                   ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  " Read input file from Python
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  SPLIT ls_input AT lc_sep INTO
+  lv_action       " Action
+  lv_num_tab.     " Number of tables to be fetched
+  CASE lv_action.
+
+    WHEN lc_fetch.
+
+      " Building query to fetch n large tables
+      CONCATENATE
+      'select tabname as table,'
+      ' decimal(data_object_p_size + index_object_p_size + '
+      ' long_object_p_size + lob_object_p_size + '
+      ' xml_object_p_size) as physical_space,'
+      ' decimal(data_object_l_size + index_object_l_size + '
+      ' long_object_l_size + lob_object_l_size + '
+      ' xml_object_l_size) as logical_space '
+      'from sysibmadm.admintabinfo where tabschema not like '
+      ''''
+      'SYS%'
+      ''''
+      ' order by physical_space desc limit '
+      lv_num_tab
+      INTO lv_sql_stmt RESPECTING BLANKS.
+
+      " Fm to get system id
+      CALL FUNCTION 'MSS_GET_SY_SYSID'
+        IMPORTING
+          sapsysid = lv_sysid.
+
+      TRY.
+        " To get the reference of class cl_db6_sys
+          cl_db6_sys=>get_sys_ref(
+           EXPORTING
+            system_id     = lv_sysid
+           RECEIVING
+            sys_ref       = lo_db6_sys ).
+        CATCH cx_db6_sys.
+      ENDTRY.
+
+      " Creating object of class cl_db6_clp
+      CREATE OBJECT lo_db6_clp
+        EXPORTING
+          sys_ref = lo_db6_sys.
+
+     " Here we execute the query and get the output
+      lt_table = cl_db6_clp=>execute( sys_ref = lo_db6_sys
+                                      command = lv_sql_stmt ).
+
+        " Adding title to the output
+        CONCATENATE lc_top lv_num_tab lc_title
+                    INTO ls_output SEPARATED BY space.
+        APPEND ls_output TO lt_output.
+
+      IF lt_table IS NOT INITIAL.
+
+        " Adding heading to the output
+        CONCATENATE lc_table_name lc_sep
+                    lc_phys_size lc_sep
+                    lc_logi_size
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        " To delete headings from the output
+        DELETE lt_table FROM 1 TO 2.
+
+        " To delete empty space lines from the output
+        DELETE lt_table WHERE TABLE_LINE IS INITIAL.
+
+        " To get the count of the output
+        DESCRIBE TABLE lt_table LINES DATA(lv_lines).
+
+        " To delete last line from the output
+        DELETE lt_table INDEX lv_lines.
+
+        LOOP AT lt_table ASSIGNING FIELD-SYMBOL(<fs_table>).
+
+          CONDENSE <fs_table>.
+
+          SPLIT <fs_table> AT space
+          INTO DATA(lv_tabname)
+               DATA(lv_phys_size)
+               DATA(lv_logi_size).
+
+          CONCATENATE lv_tabname    lc_sep
+                      lv_phys_size  lc_sep
+                      lv_logi_size
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+      ELSE.
+        " No records found
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+    WHEN OTHERS.
+
+  ENDCASE.
+ENDFORM.

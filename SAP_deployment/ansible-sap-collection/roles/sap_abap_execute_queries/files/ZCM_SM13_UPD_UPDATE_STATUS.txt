@@ -1,0 +1,158 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM13_UPD_UPDATE_STATUS                   *
+* Title               :   Restore Update Status in SM13                *
+* Created by          :   SOUMYA RAY                                   *
+* Created on          :   22/10/2020                                   *
+* Purpose             :   This report is for restore Update Status     *
+*                         in SM13 during Cloud Migration.              *
+*                         Action:                                      *
+*                        Update-if source and target are in same status*
+*                        Insert-status is changed as per input         *
+*                        delete-target is not in same status as source *
+*----------------------------------------------------------------------*
+REPORT zcm_sm13_upd_update_status.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+               TABLES lt_input  STRUCTURE tab512
+                      lt_output STRUCTURE tab512.
+
+  CONSTANTS : lc_sep        TYPE c      VALUE '|',
+              lc_activate   TYPE char10 VALUE 'Activate',
+              lc_deactivate TYPE char10 VALUE 'Deactivate',
+              lc_msg        TYPE string VALUE 'Incorrect command',
+              lc_head       TYPE string
+              VALUE 'Update Program Administration Status',
+              lc_txt01      TYPE char20 VALUE 'Update is active',
+              lc_txt02      TYPE char40
+                              VALUE 'Update deactivated by system',
+              lc_txt03      TYPE char40
+                              VALUE 'Updating by user deactivated',
+              lc_unchanged  TYPE string VALUE 'Settings unchanged',
+              lc_txt30      TYPE char12 VALUE 'Deactivate',
+              lc_txt31      TYPE char10 VALUE 'Activate',
+              lc_err_msg    TYPE char45
+                              VALUE 'UnabletoreadUpdateStatus',
+              lc_status     TYPE char10 VALUE 'Status',
+              lc_statusmsg  TYPE char10 VALUE 'Message',
+              lc_update     TYPE c      VALUE  'U',
+              lc_insert     TYPE c      VALUE  'I',
+              lc_delete     TYPE c      VALUE  'D'.
+
+  DATA: ls_output    TYPE tab512,
+        th_opcode(1) TYPE x,
+        lv_flag      TYPE c.
+
+  DATA: lv_activate    LIKE th_opcode VALUE 15,
+        lv_adminstatus TYPE string,
+        lv_deactivate  LIKE th_opcode VALUE 16,
+        lv_get_info    LIKE th_opcode VALUE 17.
+
+  DATA:  BEGIN OF info.
+      INCLUDE STRUCTURE vbinfo.
+  DATA:   END OF info.
+
+  DATA: BEGIN OF infoline.
+      INCLUDE STRUCTURE vbinfo.
+  DATA: infotext(50) TYPE c.
+  DATA: END OF infoline.
+
+*  Heading of the script is inserted in output
+  ls_output = lc_head.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  DESCRIBE TABLE lt_input LINES DATA(lv_lines).
+  IF lv_lines > 1. " To check if the imported file has data
+    DELETE lt_input INDEX 1." To delete the Data header line
+  ELSE. " If input has no data
+    ls_output = lc_unchanged. " No change in settings
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    EXIT.
+  ENDIF.
+
+  LOOP AT lt_input INTO DATA(ls_input).
+    SPLIT ls_input AT lc_sep INTO"Split the data into fields
+    DATA(lv_status)  " Status of SM13
+    DATA(lv_msg)     " Status msg for SM13
+    DATA(lv_action). " Action for insert, delete or update
+    IF lv_action EQ lc_delete.    " Delete code
+      CONTINUE.
+    ELSEIF lv_action EQ lc_insert.  " Insert code
+*  The status of SM13 is changed as per the input.
+      CASE lv_status.
+
+        WHEN lc_activate.      " If action is Activate
+          CALL 'ThVBCall' ID 'OPCODE' FIELD lv_activate.
+
+        WHEN lc_deactivate.      " If action is Deactivate
+          CALL 'ThVBCall' ID 'OPCODE' FIELD lv_deactivate.
+
+        WHEN OTHERS.
+          ls_output = lc_msg. " Incorrect command
+          lv_flag  = 'X'.
+      ENDCASE.
+
+      IF lv_flag EQ 'X'.
+        APPEND ls_output TO lt_output.
+        EXIT.
+      ELSE.
+* //Logic to read current status in SM13.
+*  To get the current status of the system after the change
+        CALL 'ThVBCall'
+        ID 'OPCODE' FIELD lv_get_info
+        ID 'VBINFO' FIELD info.
+
+        IF sy-subrc = 0.
+          MOVE-CORRESPONDING info TO infoline.
+
+          IF infoline-vb_active = 1. " SM13 administration is active
+            infoline-infotext = lc_txt01.
+            lv_adminstatus = lc_txt31.
+          ELSE.
+            IF infoline-autostop = 1."SM13 administration is deactive
+              infoline-infotext = lc_txt02.
+            ELSE.
+              infoline-infotext = lc_txt03.
+            ENDIF.
+            lv_adminstatus = lc_txt30.
+          ENDIF.
+        ENDIF.
+*// Current Status read end
+        IF infoline-infotext IS NOT INITIAL.
+          CONCATENATE lc_status lc_sep
+                      lc_statusmsg INTO ls_output. " Heading of table
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+          CONCATENATE lv_adminstatus lc_sep
+                      infoline-infotext INTO ls_output. "Status data
+          APPEND ls_output TO lt_output.
+        ELSE.
+          " Unable to read Update Status
+          ls_output = lc_err_msg.
+          APPEND ls_output TO lt_output.
+        ENDIF.
+      ENDIF.
+
+    ELSEIF lv_action EQ lc_update. " Update code
+      CONCATENATE lc_status lc_sep
+                  lc_statusmsg INTO ls_output. " Heading of table
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      CONCATENATE lv_status lc_sep
+                  lv_msg INTO ls_output. "Status data
+      APPEND ls_output TO lt_output.
+    ELSE. " If input has no action sent with data
+      ls_output = lc_unchanged. " No change in settings
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+    ENDIF.
+    CLEAR: ls_input, lv_action, lv_msg, lv_status.
+  ENDLOOP.
+  DELETE ADJACENT DUPLICATES FROM lt_output.
+  CLEAR: ls_output, lv_action, ls_input,lv_adminstatus,
+  lv_get_info.
+  FREE: infoline, info.
+ENDFORM.

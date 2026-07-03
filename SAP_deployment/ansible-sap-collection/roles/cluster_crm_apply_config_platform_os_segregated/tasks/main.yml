@@ -1,0 +1,53 @@
+---
+- name: main | azure cluster primitives
+  block:
+    - name: suse | azure  
+      import_tasks: suse_azure_primitives.yml
+      tags:
+        - suse_azure_primitives
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | azure  
+      import_tasks: rhel_azure_primitives.yml
+      tags:
+        - rhel_azure_primitives
+      when: ansible_os_family == 'RedHat'
+    
+    - name: main | tweak sysctl entries
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+      loop:
+        - { name: net.ipv4.tcp_keepalive_time, value: 300}
+  when: platform == 'azure'
+
+- name: main | aws cluster primitives
+  block:
+    - name: suse | aws
+      import_tasks: suse_aws_primitives.yml
+      tags:
+        - suse_aws_primitives
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | aws
+      import_tasks: rhel_aws_primitives.yml
+      tags:
+        - rhel_aws_primitives
+      when: ansible_os_family == 'RedHat'
+  when: platform == 'aws'
+
+- name: main | gcp cluster primitives 
+  block: 
+    - name: suse | gcp
+      import_tasks: suse_gcp_primitives.yml
+      tags:
+        - suse_gcp_primitives
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | gcp
+      import_tasks: rhel_gcp_primitives.yml
+      tags:
+        - rhel_gcp_primitives
+      when: ansible_os_family == 'RedHat'
+  when: platform == 'gcp'

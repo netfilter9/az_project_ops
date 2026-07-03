@@ -1,0 +1,15 @@
+*.pyc
+!roles_ext/*
+roles_ext/*/
+archive/
+workspace/
+/hosts.yml
+__pycache__/
+env.json
+inventory_common/
+inventory_source/
+inventory/
+inventory_ajs/
+ansible.log
+roles/test
+roles/sap-install/templates/test

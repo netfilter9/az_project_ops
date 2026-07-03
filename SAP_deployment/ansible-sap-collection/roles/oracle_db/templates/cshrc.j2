@@ -1,0 +1,9 @@
+setenv DB_SID {{ sap.db.sid|upper }} 
+setenv ORACLE_SID {{ sap.db.sid|upper }}
+setenv ORACLE_BASE /oracle/{{ sap.db.sid|upper }}
+setenv ORACLE_HOME /oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}
+{% for host in groups['db'] %}
+{% if 'ansible_env' in hostvars[host] %}
+setenv PATH {{ hostvars[host]['ansible_env']['PATH'] }}:/home/{{ oracle_installation_user }}/.local/bin:/bin/home/{{ oracle_installation_user }}:/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin
+{% endif %}
+{% endfor %}

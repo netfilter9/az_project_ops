@@ -1,0 +1,42 @@
+---
+- name: packages | ensure required cluster agent packages are installed
+  package:
+    name:
+      - fence-agents-gce
+      - resource-agents-gcp
+      - resource-agents-sap-hana
+      - socat
+      - nfs-utils
+    state: present
+
+- name: rhel | Set FireWall for gcp and rhel
+  import_tasks: firewall.yml
+  tags:
+    - firewall
+
+- name: Start PCS Service
+  command: "{{ item }}"
+  with_items: 
+    - systemctl start pcsd.service
+    - systemctl enable pcsd.service
+
+- name: rhel | setup ssh keys for gcp and rhel
+  import_tasks: ssh_key_setup.yml
+  tags:
+    - ssh
+
+- name: sshd-config | disable root login from ssh config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "PermitRootLogin no"
+    line: "PermitRootLogin yes"
+
+- name: rhel | run base ha cluster commands for gcp and rhel
+  import_tasks: rhel_ha_cluster.yml
+  tags:
+    - rhel_ha_cluster
+    
+- name: rhel | stonith configuration for gcp and rhel
+  import_tasks: gcp_stonith.yml
+  tags:
+    - gcp_stonith

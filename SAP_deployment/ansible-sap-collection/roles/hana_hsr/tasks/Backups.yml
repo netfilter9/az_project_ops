@@ -1,0 +1,14 @@
+- name: cluster | Ensure backups exist for SYSTEMDB
+  command: su - {{ sap.db.sid|lower }}adm -c "hdbsql -i {{ sap.instance_numbers.db }} -d SYSTEMDB -u SYSTEM -p '{{ passwords.system }}' BACKUP DATA USING FILE \(\'initialbackupSYS\'\)"
+  when: ansible_hostname == node1
+
+- name: cluster | Ensure backups exist for dbsid
+  command: su - {{ sap.db.sid|lower }}adm -c "hdbsql -i {{ sap.instance_numbers.db }} -d {{ sap.db.sid }} -u SYSTEM -p '{{ passwords.system }}' BACKUP DATA USING FILE \(\'initialbackup{{ sap.db.sid|upper }}\'\)"
+  when: 
+    - ansible_hostname == node1
+    - sap.db.create_initial_tenant is not defined or sap.db.create_initial_tenant == true
+
+- name: cluster | Ensure backups exist for tenant db
+  command: su - {{ sap.db.sid|lower }}adm -c "hdbsql -i {{ sap.instance_numbers.db }} -d {{ item|upper }} -u SYSTEM -p '{{ passwords.system }}' BACKUP DATA USING FILE \(\'initialbackup{{ item|upper }}\'\)"
+  loop: "{{ sap.db.tenants }}"
+  when: ansible_hostname == node1 and sap.db.tenants is defined

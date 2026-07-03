@@ -1,0 +1,12 @@
+- name: drbd | install drbd pacakages
+  package:
+    name: 
+      - drbd
+      - drbd-kmp-default
+      - drbd-utils
+    state: present
+
+- name: drbd | generate global_common.conf.j2 file
+  template:
+    src: global_common.conf.j2
+    dest: /etc/drbd.d/global_common.conf

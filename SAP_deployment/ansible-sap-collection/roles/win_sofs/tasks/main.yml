@@ -1,0 +1,34 @@
+---
+    
+- name: enable s2d
+  include_tasks: 01-enable-s2d.yml
+  tags:
+    - win-sofs-enable-s2d
+  when: inventory_hostname == node1
+
+- name: add fileserver feature
+  include_tasks: 02-add-fileserver-feature.yml
+  tags:
+    - win-sofs-add-fileserver-feature
+
+- name: add sofs role
+  include_tasks: 03-add-sofs-role.yml
+  vars:
+    global_hostname: "{{ sap.global_hostname }}"
+  tags:
+    - win-sofs-add-sofs-role
+  when: inventory_hostname == node1
+
+- name: adjust cluster timeout settings
+  include_tasks: 04-cluster-timeout-settings.yml
+  tags:
+    - win-sofs-adjust-cluster-timeout
+  when: inventory_hostname == node1
+
+- name: Create sapmnt share
+  include_tasks: 05-sapmnt_share.yml
+  tags:
+    - win-sofs-sapmnt-share
+  when: inventory_hostname == node1
+
+

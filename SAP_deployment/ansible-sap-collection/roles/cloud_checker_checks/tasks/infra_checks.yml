@@ -1,0 +1,228 @@
+---
+######################################################################
+#                       INFRA CHECKS                                 #
+######################################################################
+
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Th | grep /sapmnt | awk '{print $2}'
+  become: yes
+  register: output_fs
+  tags: infra_checks
+
+- name: get file system output
+  debug: 
+    var: output_fs
+
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Th | grep /trans | awk '{print $2}'
+  become: yes
+  register: output_fs_trans
+  tags: infra_checks
+
+- name: get trans output
+  debug: 
+    var: output_fs_trans
+
+- name: Command to check the filesystem type of a sapmnt mountpoint
+  shell: df -Ph |awk '+$5>=80 || $1==Filesystem' | awk '{print $1}'
+  become: yes
+  register: output_diskutil
+  tags: infra_checks
+
+- name: get disk util
+  debug:
+     var: output_diskutil
+
+- name: command to check the size of /usr/sap/sid
+  shell: df -h | grep  /usr/sap | awk '{print $2}' | cut -d 'G' -f1
+  become: yes
+  register: output_disksize
+  tags: infra_checks
+
+- name: disk size output
+  debug: 
+    var: output_disksize
+
+- name: command to check the size of /usr/sap/sid
+  shell: df -h | grep /hana/shared | awk '{print $2}' | cut -d 'G' -f1
+  become: yes
+  register: output_hana
+  tags: infra_checks
+
+- name: hana shared size
+  debug: 
+    var: output_hana
+
+- name: checking the length of hostname
+  shell: hostname | awk '{printf $0}' | wc -m
+  become: yes
+  register: output_hostname
+  tags: infra_checks
+
+- name: length of hostname output
+  debug: 
+    var: output_hostname
+
+- name: Command to get the user id of users
+  shell: id -u {{ sid | lower }}adm
+  become: yes
+  register: output_uid
+
+- name: get output uid
+  debug: 
+    var: output_uid
+
+- name: Command to get the user id of users
+  shell: id -u sapadm
+  become: yes
+  register: output_sapadmuid
+
+- name: get output sapadmuid
+  debug: 
+    var: output_sapadmuid
+
+- name: Command to get the gid of sapsys
+  shell: groups {{ item }} | cut -d ':' -f2
+  become: yes
+  register: output_groups
+  loop:
+    - "{{sid|lower}}adm"
+    - sapadm
+
+- name: get output groups
+  debug: 
+    var: output_groups
+
+- name: Command to get the gid of sapsys
+  shell: getent group sapsys | cut -d 'x' -f2 | cut -d ':' -f2 | cut -d ':' -f1
+  become: yes
+  register: output_gid
+
+- name: get output gid
+  debug: 
+    var: output_gid
+
+- name: Getting the required value of net.core.somaxconn
+  shell: /usr/sbin/sysctl -a | grep net.core.somaxconn  | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_somaxconn
+
+- name: get output somaxconn
+  debug: 
+    var: output_somaxconn
+
+- name: Fetching the value of net.ipv4.tcp_max_syn_backlog
+  shell: /usr/sbin/sysctl -a | grep net.ipv4.tcp_max_syn_backlog | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_systembacklog
+
+- name: get output systembacklog
+  debug: 
+    var: output_systembacklog
+
+- name: Fetching the value of net.ipv4.ip_local_port_range
+  shell: /usr/sbin/sysctl -a | grep net.ipv4.ip_local_port_range  | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_portrange
+
+- name: get output port range
+  debug: 
+    var: output_portrange
+
+- name: Fetching the value of net.ipv4.tcp_slow_start_after_idle
+  shell: /usr/sbin/sysctl -a | grep net.ipv4.tcp_slow_start_after_idle | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_slowstart
+
+- name: get output slowstar
+  debug: 
+    var: output_slowstart
+
+- name: Displaying the values of net.ipv4.tcp_wmem
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_wmem | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_tcpwmem
+
+- name: get output tcpwmem
+  debug: 
+    var: output_tcpwmem
+
+- name: Displaying the values of net.ipv4.tcp_rmem
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_rmem | cut -d '=' -f2 | tr -d " \t\n\r"
+  become: yes
+  register: output_tcprmem
+
+- name: get output of tcprmem
+  debug: 
+    var: output_tcprmem
+
+- name: Displaying the values of net.core.wmem_max
+  shell: /usr/sbin/sysctl -a  | grep net.core.wmem_max | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_wmemmax
+
+- name: get output wmemmax
+  debug: 
+    var: output_wmemmax
+
+- name: Displaying the values of net.core.rmem_max
+  shell: /usr/sbin/sysctl -a  | grep net.core.rmem_max | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_rmemmax
+
+- name: get output of rmemmax
+  debug: 
+    var: output_rmemmax
+
+- name: Fetching the value of net.ipv4.tcp_window_scaling
+  shell: /usr/sbin/sysctl -a  | grep net.ipv4.tcp_window_scaling | cut -d '=' -f2 | tr -d " \t\n\r" 
+  become: yes
+  register: output_windowscaling
+
+- name: get output windowscaling
+  debug: 
+    var: output_windowscaling
+
+- name: Command to check the Swappiness Value
+  shell: cat /proc/sys/vm/swappiness
+  become: yes
+  register: output_Swappiness
+  ignore_errors: true
+
+- name: output of swap
+  debug: 
+    var: output_Swappiness
+
+- name: Fetching the value of UserTasksMax
+  shell: cat /etc/systemd/logind.conf.d/sap.conf |grep UserTasksMax | cut -d "=" -f2
+  become: yes
+  register: output_usertasksmax 
+
+- name: get output UserTasksMax
+  debug: 
+    var: output_usertasksmax
+
+- name: Checking if transparent hugepages disabled
+  shell: cat /sys/kernel/mm/transparent_hugepage/enabled
+  become: yes
+  register: output_hugepage
+
+- name: get output huge page
+  debug: 
+    var: output_hugepage
+
+- name: Checking for Kernel samepage merging (KSM) value
+  shell: cat /sys/kernel/mm/ksm/run
+  become: yes
+  register: output_ksm
+
+- name: get output ksm
+  debug: 
+    var: output_ksm
+
+- name: Infra checks
+  template:
+    src: "infra-checks.j2"
+    dest: "{{ input_path }}/Infra-checks/{{ ansible_hostname }}_infra-sap-checks.{{ output }}"
+  delegate_to: localhost  
+  tags: infra_checks

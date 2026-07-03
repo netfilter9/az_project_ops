@@ -1,0 +1,49 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SGEN_EXP_COMPOENTS                      *
+* Title               :   Logical Systems                             *
+* Created by          :   Soumya Ray                                  *
+* Created on          :   07/12/2020                                  *
+* Purpose             : This report is used to export all components  *
+*                       for SGEN run                                  *
+*---------------------------------------------------------------------*
+REPORT zcm_sgen_exp_components.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                             ##CALLED
+               TABLES lt_input  STRUCTURE tab512 " Input from PYTHON
+                      lt_output STRUCTURE tab512. " Output to PYTHON
+  CONSTANTS : lc_sep       TYPE c       VALUE '|',
+              lc_export    TYPE char10 VALUE 'EXPORT',
+              lc_head      TYPE string VALUE 'Sap Load Generator',
+              lc_component TYPE string VALUE 'Softwarecomponents'.
+  DATA: ls_output TYPE tab512.
+
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1. " Input read
+  CHECK sy-subrc EQ 0.
+  DATA(lv_action) = ls_input.
+
+  CASE  lv_action. " Action
+    WHEN lc_export.  " EXPORT as input
+* Selecting all components available in table CVERS.
+      SELECT component FROM cvers INTO TABLE @DATA(lt_components).
+      APPEND 'LOCAL' TO lt_components.
+      APPEND 'HOME'  TO lt_components.
+      APPEND 'ALL'   TO lt_components.
+
+      ls_output = lc_head. " Header of the script.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+      ls_output = lc_component. " Subheading of the components
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+* Adding the component name to output table.
+      LOOP AT lt_components INTO DATA(ls_components).
+        ls_output = ls_components.
+        APPEND ls_output TO lt_output.
+        CLEAR: ls_output, ls_components.
+      ENDLOOP.
+  ENDCASE.
+  CLEAR: ls_output, ls_components, ls_input, lv_action.
+  FREE: lt_components.
+ENDFORM.

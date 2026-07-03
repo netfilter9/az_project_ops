@@ -1,0 +1,17 @@
+{#
+  Select STONITH strategy
+#}
+{# AWS STONITH #}
+primitive res_AWS_STONITH stonith:external/ec2 \
+	op start interval=0 timeout=180 \
+	op stop interval=0 timeout=180 {% if cluster_type == 'hana' %} \
+  op monitor interval=120 timeout=60 \
+  meta target-role=Started \
+  params tag={{ key_name }} profile=cluster pcmk_delay_max=45	
+  {% elif cluster_type == 'db2' %} \
+  op monitor interval=180s timeout=60s \
+  params tag={{ key_name }} profile=cluster pcmk_delay_max=30
+  {% else %} \
+  op monitor interval=180 timeout=60 \
+  params tag={{ key_name }} profile=cluster pcmk_delay_max=10
+	{% endif %} 

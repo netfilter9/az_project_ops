@@ -1,0 +1,2 @@
+default_ips_cms_dsnname: "CMS_{{sap.db.sid}}"
+default_ips_audit_dsnname: "CMS_AUD_{{sap.db.sid}}"

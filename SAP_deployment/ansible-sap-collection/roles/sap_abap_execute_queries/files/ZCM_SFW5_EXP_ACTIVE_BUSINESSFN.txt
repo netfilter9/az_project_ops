@@ -1,0 +1,121 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SFW5_EXP_ACTIVE_BUSINESSFN              *
+* Title               :   Logical Systems                             *
+* Created by          :   Soumya Ray                                  *
+* Created on          :   28/09/2020                                  *
+* Purpose             :  This report is used to export Business       *
+*                        function and status from sfw5 tcode          *
+*---------------------------------------------------------------------*
+REPORT zcm_sfw5_exp_active_businessfn.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                             ##CALLED
+              TABLES ft_input  STRUCTURE tab512
+                     ft_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep         TYPE c       VALUE '|',
+             lc_export      TYPE char20  VALUE 'EXPORT',
+             lc_busfunc     TYPE char20  VALUE 'Bfunction',
+             lc_type        TYPE char4   VALUE 'Type',
+             lc_reverse     TYPE char20  VALUE 'Reversible',
+             lc_obselete    TYPE char20  VALUE 'Obselete',
+             lc_component   TYPE char20  VALUE 'Component',
+             lc_release     TYPE char20  VALUE 'Release',
+             lc_description TYPE char20  VALUE 'Description',
+             lc_active      TYPE char20  VALUE 'Active',
+             lc_head        TYPE char20  VALUE 'Businessfunctions'.
+
+
+
+  DATA:ls_output   TYPE tab512,
+       lv_action   TYPE char8,
+       ls_prefinal TYPE string.
+
+  READ TABLE ft_input INTO DATA(ls_input) INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  DATA(lv_langu) = sy-langu.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+      SELECT * FROM sfw_active_b2
+        INTO TABLE @DATA(lt_activeb2).
+
+      SELECT * FROM sfw_bft
+        INTO TABLE @DATA(lt_sfwbft)
+        WHERE spras = @lv_langu.
+
+      SELECT * FROM sfw_bf
+        INTO TABLE @DATA(lt_bf).
+
+      ls_output = lc_head.
+      APPEND ls_output TO ft_output.
+      CLEAR: ls_output.
+
+      CONCATENATE lc_busfunc     lc_sep
+                  lc_description lc_sep
+                  lc_component   lc_sep
+                  lc_type        lc_sep
+                  lc_reverse     lc_sep
+                  lc_obselete    lc_sep
+                  lc_active INTO ls_output.
+      APPEND ls_output TO ft_output.
+      CLEAR: ls_output.
+
+      LOOP AT lt_bf INTO DATA(ls_bf).
+        READ TABLE lt_activeb2 INTO DATA(ls_activeb2) WITH KEY
+                                  version = 'A'
+                                  bfunction = ls_bf-bfunction.
+        IF sy-subrc EQ 0.
+          DATA(lv_active) = 'X'.
+        ENDIF.
+        READ TABLE lt_sfwbft INTO DATA(ls_swfbft) WITH KEY
+                                 bfunction = ls_bf-bfunction.
+
+        CONCATENATE ls_bf-bfunction     lc_sep
+                    ls_swfbft-name80    lc_sep
+                    ls_bf-component     lc_sep
+                    ls_bf-type          lc_sep
+                    ls_bf-reversible    lc_sep
+                    ls_bf-obsolete      lc_sep
+                    lv_active INTO ls_prefinal.
+        CONDENSE ls_prefinal.
+        PERFORM end_null_check CHANGING ls_prefinal.
+        ls_output = ls_prefinal.
+        APPEND ls_output TO ft_output.
+        CLEAR: ls_output, ls_bf, ls_activeb2, lv_active,ls_prefinal.
+      ENDLOOP.
+  ENDCASE.
+  PERFORM null_check TABLES  ft_output.
+ENDFORM.
+
+FORM end_null_check  CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+FORM null_check  TABLES   lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

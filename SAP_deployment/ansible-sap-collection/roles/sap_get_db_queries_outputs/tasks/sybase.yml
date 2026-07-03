@@ -1,0 +1,68 @@
+#isql -U sapsa -P Codev@123 -S SAS -X -i "C:\Users\sasadm\Desktop\sybase-version.txt"
+
+- name: copy sybase scripts from local to target nodes
+  win_copy:
+    src: "../files/run_update_index_stats_win.sql"
+    dest: "c:/temp/"
+    mode: '0777'
+  # with_items:
+  #     - run_update_index_stats_win
+  #     - run_update_index_stats_unix
+
+- name: create empty file
+  win_file:
+     path: c:/temp/{{ item.name }}.txt
+     state: touch
+     mode: 0777
+  with_items:
+    - "{{ sybase_queries }}"    
+
+- name: line insert
+  win_lineinfile:
+     path: c:/temp/{{ item.name }}.txt
+     line: "{{ item.query }}"
+  with_items:
+    - "{{ sybase_queries }}"
+
+- name: line insert
+  win_lineinfile:
+     path: c:/temp/{{ item.name }}.txt
+     line: go
+  with_items:
+    - "{{ sybase_queries }}"  
+
+-  name: Execute sybase queries
+   win_command: 'isql -U {{ db_user }} -P {{ password }} -S {{ db_sid }} -D {{ db_sid }} -X -i "C:\temp\{{ item.name }}.txt"'
+   #win_command: 'isql -U {{ username }} -P {{ password }} -S {{ sap.source.sid }} -D {{ sap.source.sid }} -X -i "C:\temp\{{ item.name }}.txt"'
+   register: db_outputs
+   with_items:
+    - "{{ sybase_queries }}" 
+
+- debug: var=db_outputs
+
+
+- name: Write ouptut
+  template:
+    src: "{{ item.name }}.j2"
+    dest: '{{ db_export_path }}{{ db_type }}/{{ item.name }}_outputs.json'
+  become: yes
+  delegate_to: localhost
+  with_items:
+       - "{{ sybase_queries }}"
+  loop_control:
+       index_var: index
+
+
+- name: copy sybase consistency check scripts from local to target nodes
+  win_copy:
+    src: "../files/gen_dbcc_checktab.sql"
+    dest: "c:/temp/"
+    mode: '0777'
+    
+-  name: Execute sybase queries for consistency check
+   win_command: 'isql -U {{ db_user }} -P {{ password }} -S {{ db_sid }} -D {{ db_sid }} -X -i "C:\temp\gen_dbcc_checktab.sql.txt"'
+   register: db_cosi_outputs
+   with_items:
+    - "{{ sybase_queries }}" 
+
+- debug: var=db_outputs

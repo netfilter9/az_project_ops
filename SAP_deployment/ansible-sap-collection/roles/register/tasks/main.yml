@@ -1,0 +1,66 @@
+#Registration for SUSE Manager
+- name: Download SUSE Manager Script 12 SP4
+  get_url:
+    url: "https://{{ mgmtserver }}{{ fqdn }}/pub/bootstrap/bootstrap-12sp4.sh"
+    dest: /tmp/suman.sh
+    validate_certs: no
+    mode: '0777'
+  when: ansible_facts['distribution'] == "SLES" and ansible_facts['distribution_major_version'] == "12"
+
+- name: Download SUSE Manager Script 12 SAP SP4
+  get_url:
+    url: "https://{{ mgmtserver }}{{ fqdn }}/pub/bootstrap/bootstrap-12sp4sap.sh"
+    dest: /tmp/suman.sh
+    validate_certs: no
+    mode: '0777'
+  when: ansible_facts['distribution'] == "SLES_SAP" and ansible_facts['distribution_major_version'] == "12"
+
+- name: Download SUSE Manager Script 15 SP1
+  get_url:
+    url: "https://{{ mgmtserver }}{{ fqdn }}/pub/bootstrap/bootstrap-15sp1.sh"
+    dest: /tmp/suman.sh
+    validate_certs: no
+    mode: '0777'
+  when: ansible_facts['distribution'] == "SLES" and ansible_facts['distribution_major_version'] == "15"
+
+- name: Download SUSE Manager Script 15 SAP SP1
+  get_url:
+    url: "https://{{ mgmtserver }}{{ fqdn }}/pub/bootstrap/bootstrap-15sp1sap.sh"
+    dest: /tmp/suman.sh
+    validate_certs: no
+    mode: '0777'
+  when: ansible_facts['distribution'] == "SLES_SAP" and ansible_facts['distribution_major_version'] == "15"
+
+- name: Run Shell Script
+  command: /tmp/suman.sh >> /tmp/suman.log
+  args:
+    creates: /tmp/suman.log
+  when: ansible_facts['distribution'] == "SLES" or ansible_facts['distribution'] == "SLES_SAP"
+
+#Registration for RedHat Satellite
+
+- name: Download RedHat Satellite RPM
+  get_url:
+    url: "http://{{ mgmtserver }}{{ fqdn }}/pub/katello-ca-consumer-latest.noarch.rpm"
+    dest: /tmp/satellite.rpm
+    validate_certs: no
+    mode: '0777'
+  when: ansible_facts['distribution'] == "RedHat" and ansible_facts['distribution_major_version'] == "7"
+
+- name: Install Satellite RPM
+  yum:
+    name: /tmp/satellite.rpm
+    state: present
+  when: ansible_facts['distribution'] == "RedHat" and ansible_facts['distribution_major_version'] == "7"
+
+- name: Connect to Satellite
+  command: "{{ item }}"
+  with_items:
+    - "subscription-manager clean"
+    - "subscription-manager register --org=AMBGforSAP --activationkey=rhel7"
+  when: ansible_facts['distribution'] == "RedHat" and ansible_facts['distribution_major_version'] == "7"
+  ignore_errors: true
+
+- name: Pause for Repos to Show Up
+  pause:
+    seconds: 60

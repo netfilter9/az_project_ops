@@ -1,0 +1,5 @@
+- name: autofs-config | Start service httpd, if not started
+  service:
+    name: autofs
+    state: stopped
+    enabled: no

@@ -1,0 +1,87 @@
+*&********************************************************************&*
+* Report              :   ZCM_T_HTTPURLLOC_EXPORT                      *
+* Title               :   Capture HTTPURLLOC entries                   *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   07/09/2020                                   *
+* Purpose             :   This report is to capture HTTPURLLOC entries *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+REPORT zcm_t_httpurlloc_export.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'            LENGTH 1,
+           lc_export     TYPE c VALUE 'EXPORT'       LENGTH 6,
+           lc_mandt      TYPE c VALUE 'MANDT'        LENGTH 5,
+           lc_sort_key   TYPE c VALUE 'SORT_KEY'     LENGTH 8,
+           lc_protocol   TYPE c VALUE 'PROTOCOL'     LENGTH 8,
+           lc_applicatn  TYPE c VALUE 'APPLICATN'    LENGTH 12,
+           lc_for_domain TYPE c VALUE 'FOR_DOMAIN'   LENGTH 15,
+           lc_host       TYPE c VALUE 'HOST'         LENGTH 4,
+           lc_port       TYPE c VALUE 'PORT'         LENGTH 4,
+           lc_title      TYPE c VALUE
+           'List of HTTPURLLOC entries'              LENGTH 50,
+           lc_err_msg    TYPE c VALUE
+           'No entries found in table HTTPURLLOC'    LENGTH 50
+           ##NO_TEXT.
+
+DATA: ls_input  TYPE tab512,
+      ls_output TYPE tab512,
+      lv_action TYPE char10,
+      lt_http   TYPE TABLE OF httpurlloc,
+      ls_http   TYPE httpurlloc.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      SELECT * FROM httpurlloc
+               INTO TABLE lt_http.
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      IF lt_http IS NOT INITIAL.
+
+        " Adding headings to the output
+        CONCATENATE lc_mandt        lc_sep
+                    lc_sort_key     lc_sep
+                    lc_protocol     lc_sep
+                    lc_applicatn    lc_sep
+                    lc_for_domain   lc_sep
+                    lc_host         lc_sep
+                    lc_port
+                   INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_http INTO ls_http.
+
+          CONCATENATE ls_http-mandt       lc_sep
+                      ls_http-sort_key    lc_sep
+                      ls_http-protocol    lc_sep
+                      ls_http-applicatn   lc_sep
+                      ls_http-for_domain  lc_sep
+                      ls_http-host        lc_sep
+                      ls_http-port
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+  ENDCASE.
+ENDFORM.

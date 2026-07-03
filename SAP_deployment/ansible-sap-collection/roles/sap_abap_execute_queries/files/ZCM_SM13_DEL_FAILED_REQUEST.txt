@@ -1,0 +1,179 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SM13_DEL_FAILED_REQUEST                 *
+* Title               :   Logical Systems                             *
+* Created by          :   Soumya Ray                                  *
+* Created on          :   22/09/2020                                  *
+* Purpose             :   This report is used to delete failed update *
+*                         request in SM13 and check data in VBDATA    *
+*---------------------------------------------------------------------*
+REPORT zcm_sm13_del_failed_request.
+
+FORM get_config                             ##CALLED
+               TABLES lt_input  STRUCTURE tab512
+                      lt_output STRUCTURE tab512.
+
+  DATA: th_vb_state TYPE x,
+        th_vb_rc    LIKE sy-index,
+        ls_output   TYPE tab512,
+        lv_rec      TYPE int4,
+        lv_vbmodcnt TYPE char10,
+        lv_vbblkno  TYPE char10,
+        lv_vblen    TYPE char5,
+        lv_count    TYPE char4,
+        lv_bstatefr LIKE vbhdr-vbstate,
+        lv_bstateto LIKE vbhdr-vbstate,
+        lv_vbrcfr   LIKE vbhdr-vbrc VALUE 0,
+        lv_vbrcto   LIKE vbhdr-vbrc VALUE 255,
+        lv_flag     TYPE c,
+        lv_head     TYPE string.
+
+  CONSTANTS: lc_sep         TYPE c       VALUE '|',
+             lc_cancel      TYPE char20   VALUE 'CANCEL',
+             lc_init        TYPE char20   VALUE 'INITIAL',
+             lc_v1          TYPE  char20  VALUE 'V1',
+             lc_v2          TYPE  char20  VALUE 'V2',
+             lc_all         TYPE  char20  VALUE 'ALL',
+             lc_msg_nodata  TYPE string
+              VALUE 'No data',
+             lc_del_msg     TYPE string VALUE 'No.deleted',
+             lc_tabname     TYPE string VALUE 'VBDATA',
+             lc_vbkey       TYPE char10 VALUE 'Vbkey',
+             lc_vbmodcnt    TYPE char10 VALUE 'Vbmodcnt',
+             lc_vbblkno     TYPE char10 VALUE 'Vbblkno',
+             lc_vblen       TYPE char10 VALUE 'Vblen',
+             lc_initial     LIKE th_vb_state VALUE 255,
+             lc_processed   LIKE th_vb_state VALUE 1,
+             lc_prepared    LIKE th_vb_state VALUE 254,
+             lc_insert      LIKE th_vb_state VALUE 2,
+             lc_autodiaexec LIKE th_vb_rc VALUE 253,
+             lc_error       LIKE th_vb_rc VALUE 201,
+             lc_notexecuted LIKE th_vb_rc VALUE 255,
+             lc_hdrinsert   LIKE th_vb_rc VALUE 2.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  CHECK sy-subrc EQ 0.
+  DATA(lv_action) = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_cancel. " Action code "CANCEL"
+      lv_bstatefr = lc_processed.
+      lv_bstateto  = lc_initial.
+      lv_vbrcfr = lc_hdrinsert.
+      lv_vbrcto = lc_error.
+      lv_flag = 'X'.
+      lv_head = 'Cancelledupdaterequest'.
+    WHEN lc_init. " Action code "INITIAL"
+      lv_bstatefr = lc_prepared.
+      lv_bstateto  = lc_initial.
+      lv_vbrcfr = lc_autodiaexec.
+      lv_vbrcto = lc_notexecuted.
+      lv_flag = 'X'.
+      lv_head = 'Initialupdaterequest'.
+    WHEN lc_v1. " Action code "V1"
+      lv_bstatefr = lc_processed.
+      lv_bstateto  = lc_processed.
+      lv_flag = 'X'.
+      lv_head = 'V1updaterequest'.
+    WHEN lc_v2.   " Action code "V2"
+      lv_bstatefr = lc_insert.
+      lv_bstateto  = lc_insert.
+      lv_flag = 'X'.
+      lv_head = 'V2updaterequest'.
+    WHEN lc_all. " Action code "ALL"
+      lv_bstatefr = lc_processed.
+      lv_bstateto  = lc_initial.
+      lv_flag = 'X'.
+      lv_head = 'Allupdaterequest'.
+    WHEN OTHERS.
+      EXIT.
+  ENDCASE.
+  IF lv_flag EQ 'X'.
+    SELECT * FROM vbhdr
+    INTO TABLE  @DATA(lt_vbhdr)
+          WHERE vbstate BETWEEN @lv_bstatefr AND @lv_bstateto
+          AND vbrc BETWEEN @lv_vbrcfr AND @lv_vbrcto.
+    IF sy-subrc EQ 0.
+      LOOP AT lt_vbhdr INTO DATA(ls_vbhdr).
+        DELETE FROM vbhdr WHERE vbkey = ls_vbhdr-vbkey.
+        DELETE FROM vbmod WHERE vbkey = ls_vbhdr-vbkey.
+        DELETE FROM vbdata WHERE vbkey = ls_vbhdr-vbkey.
+        lv_rec = lv_rec + 1.
+      ENDLOOP.
+      COMMIT WORK.
+    ENDIF.
+
+    ls_output = lv_head.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    ls_output = lc_del_msg. "Sub heading
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+    lv_count = lv_rec.
+    ls_output = lv_count.  " No of records deleted
+    CONDENSE ls_output.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+    APPEND ls_output TO lt_output.
+
+    ls_output = lc_tabname.   "Name of the table
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+
+    IF NOT lt_vbhdr IS INITIAL.
+      SELECT vbkey,
+             vbmodcnt,
+             vbblkno,
+             vblen
+      FROM vbdata
+      FOR ALL ENTRIES IN @lt_vbhdr
+      WHERE vbkey = @lt_vbhdr-vbkey
+      ORDER BY PRIMARY KEY
+      INTO TABLE @DATA(lt_vbdata). " Data in VBDATA is checked
+
+      IF sy-subrc EQ 0.
+        CONCATENATE lc_vbkey lc_sep
+        lc_vbmodcnt lc_sep
+        lc_vbblkno   lc_sep
+        lc_vblen INTO ls_output.  "Table heading
+        APPEND ls_output TO lt_output.
+        LOOP AT lt_vbdata INTO DATA(ls_vbdata).
+          lv_vbmodcnt = ls_vbdata-vbmodcnt.
+          lv_vbblkno = ls_vbdata-vbblkno.
+          lv_vblen = ls_vbdata-vblen.
+          CONCATENATE ls_vbdata-vbkey lc_sep
+          lv_vbmodcnt lc_sep
+          lv_vbblkno   lc_sep
+          lv_vblen INTO ls_output.  "Table data
+          CONDENSE ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output, lv_vblen, lv_vbblkno, lv_vbmodcnt.
+        ENDLOOP.
+      ELSE.
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+    ELSE.
+      CONCATENATE lc_msg_nodata ':'
+      'as vbhdr has no data for critera.' INTO ls_output.
+      APPEND ls_output TO lt_output.
+    ENDIF.
+    PERFORM null_check TABLES  lt_output.
+    CLEAR: lv_rec, lv_count.
+  ENDIF.
+
+ENDFORM.
+FORM null_check  TABLES   lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

@@ -1,0 +1,25 @@
+---
+# for use when uploading to storage as a service solution such as ANF or GCP filestore
+
+- name: Ensure directories exist for gcp
+  file:
+    path: "{{ root_dir }}/{{ item.dest }}"
+    state: directory
+    mode: "777"
+  with_items:
+    - "{{ downloads }}"
+
+- name: main | download folders for gcp
+  command: gsutil -m cp -r gs://{{ item.url }}* {{ item.dest }}
+  args:
+    chdir: "{{ root_dir }}"
+  with_items:
+    - "{{ downloads }}"
+  tags:
+    - download
+    
+- name: sap_download | expand SWPM sar file
+  command: ./sapcar.exe -xvf SWPM*.SAR
+  args:
+    chdir: /{{ root_dir }}/sapinst/SWPM
+    creates: ./sapinst

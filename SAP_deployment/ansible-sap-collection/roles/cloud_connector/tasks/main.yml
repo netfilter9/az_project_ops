@@ -1,0 +1,79 @@
+- name: cloudconnector | permission on cloudconnector instaler
+  file:
+    path: "/{{ root_dir }}/sapinst/CLOUDCONNECTOR"
+    mode: "+x"
+    recurse: yes
+    state: directory
+
+- name: main | install JDK
+  command: 
+    cmd: "rpm -ivh jdk-8u271-linux-x64.rpm"
+    creates: /{{ root_dir }}/sapinst/LOGS/jdklog_{{ ansible_hostname }}*.zip
+  args:
+    chdir: "{{ root_dir }}/sapinst/CLOUDCONNECTOR"
+  register: installjdk
+  when: platform == 'azure'
+
+- name: cloudconnector | write log file
+  copy:
+    dest: /var/tmp/jdkinst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ installjdk.stdout }}"
+  when: platform == 'azure'
+
+- name: main | install JVM
+  command:
+    cmd: "rpm -ivh sapjvm-8.1.062-linux-x64.rpm"
+    creates: /{{ root_dir }}/sapinst/LOGS/jvmlog_{{ ansible_hostname }}*.zip
+  args:
+   chdir: "/{{ root_dir }}/sapinst/CLOUDCONNECTOR"
+  register: installjvm
+  when: platform == 'gcp' 
+
+- name: cloudconnector | write log file
+  copy:
+    dest: /var/tmp/jvminst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ installjvm.stdout }}"
+  when: platform == 'gcp'
+
+- name: Update /etc/profile
+  lineinfile:
+    regexp: '^JAVA_HOME='
+    line: JAVA_HOME={{ root_dir }}/sapinst/CLOUDCONNECTOR/sapjvm_8
+    insertafter: '^#JAVA_HOME'
+    create: yes
+    path: /etc/profile
+
+- name: Update /etc/profile
+  lineinfile:
+    line: PATH={{ root_dir }}/sapinst/CLOUDCONNECTOR/sapjvm_8/bin:{{ ansible_env.PATH }}
+    create: yes
+    path: /etc/profile
+
+- name: main | install CLOUDCONNECTOR
+  command: 
+    cmd: "zypper --non-interactive --no-gpg-checks install com.sap.scc-ui-2.12.5-4.x86_64.rpm"
+    creates: "{{ root_dir }}/sapinst/LOGS/cclog_{{ ansible_hostname }}*.zip"
+  args:
+    chdir: "{{ root_dir }}/sapinst/CLOUDCONNECTOR/"
+  register: installcc
+  environment:
+    PATH: "{{ root_dir }}/sapinst/CLOUDCONNECTOR/sapjvm_8/bin:{{ ansible_env.PATH }}"
+    SOURCE: /etc/profile
+  when: ansible_os_family == 'Suse'
+
+- name: main | install CLOUDCONNECTOR
+  command: 
+    cmd: "yum install com.sap.scc-ui-2.12.4-4.x86_64.rpm -y"
+    creates: "{{ root_dir }}/sapinst/LOGS/cclog_{{ ansible_hostname }}*.zip"
+  args:
+    chdir: "{{ root_dir }}/sapinst/CLOUDCONNECTOR/"
+  register: installcc
+  environment:
+    PATH: "{{ root_dir }}/sapinst/CLOUDCONNECTOR/sapjvm_8/bin:{{ ansible_env.PATH }}"
+    SOURCE: /etc/profile
+  when: ansible_os_family == 'RedHat'
+
+- name: cloudconnector | write log file
+  copy:
+    dest: /var/tmp/jdkinst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ installcc.stdout }}"

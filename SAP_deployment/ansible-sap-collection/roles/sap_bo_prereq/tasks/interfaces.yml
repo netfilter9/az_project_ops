@@ -1,0 +1,34 @@
+- name: interfaces | adding database to interface file
+  blockinfile:
+    path: /sybase/{{ sap.db.sid | upper }}/interfaces
+    block: |
+      {{ audit_dbserver }}
+        {{ audit_dbserver }} tcp ether {{ sap.logical_hosts.db.hostname }} 5000
+        query tcp ether {{ sap.logical_hosts.db.hostname }} 5000
+
+      {{ cms_dbserver }}
+        {{ cms_dbserver }} tcp ether {{ sap.logical_hosts.db.hostname }} 5000
+        query tcp ether {{ sap.logical_hosts.db.hostname }} 5000
+  when: ('db' in group_names) or ('std' in group_names)
+
+- name: interfaces | copy interfaces file in tmp
+  fetch:
+    src: /sybase/{{ sap.db.sid | upper }}/interfaces
+    dest: /tmp/interfaces
+    flat: yes
+  when: ('db' in group_names) or ('std' in group_names)
+
+- name: interfaces | Copy interfaces file to target
+  copy:
+    src: /tmp/interfaces
+    dest: /sybase/SDK/interfaces
+    owner: "{{ admin_user }}"
+    group: sapsys
+    mode: '0644'
+  when: group_names != 'db'
+
+- name: interfaces | tidy up /tmp/interfaces 
+  file:
+    path: /tmp/interfaces
+    state: absent
+  delegate_to: localhost

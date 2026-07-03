@@ -1,0 +1,81 @@
+- name: disable selinux | Update /etc/selinux/config
+  lineinfile:
+    regexp: '^SELINUX=enforcing'
+    line: SELINUX=disabled
+    insertafter: '^#SELINUX'
+    path: /etc/selinux/config
+  register: selinux_disable
+
+- name: reboot server
+  reboot:
+  when: selinux_disable.changed
+
+- name: packages | install packages
+  package:
+    name: libstdc++6
+    state: present
+  when: ansible_os_family == 'Suse'
+
+- name: packages | install packages
+  package:
+    name: 
+    - libstdc++*
+    - libnsl
+    - ksh
+    - gcc
+    - binutils
+    - cpp
+    - gcc-c++
+    - kernel-devel
+    - file
+    - libgomp
+    - m4
+    - perl 
+    - make
+    - libgcc 
+    - patch 
+    - python2 
+    - resource-agents
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: comment 5912 ports(/etc/services)
+  shell: sed -e '/5912/s/^/#/g' -i /etc/services
+
+- name: get zip file Client name 
+  command: find "{{ root_dir }}/sapinst/EXPORTS/db2/DB2Client/" -name "*.ZIP"
+  register: Client_file
+
+- name: print name
+  debug:
+    var: Client_file.stdout_lines[0]
+
+- name: Unarchive client file
+  unarchive:
+    remote_src: true
+    src: "{{ Client_file.stdout_lines[0] }}"
+    dest: "{{ root_dir }}/sapinst/EXPORTS/db2"
+    mode: 0755
+
+- name: get zip file software name 
+  command: find "{{ root_dir }}/sapinst/EXPORTS/DBRDBMS/DB2_software" -name "*.ZIP"
+  register: Software_file
+
+- name: print name
+  debug:
+    var: Software_file.stdout_lines[0]
+
+- name: Unarchive Software file
+  unarchive:
+    remote_src: true
+    src: "Software_file.stdout_lines[0] }}"
+    dest: "{{ root_dir }}/sapinst/EXPORTS/DBRDBMS"
+    mode: 0755
+    
+- name: permission 
+  file:
+    path: "{{ root_dir }}/sapinst/EXPORTS/"
+    owner: root
+    group: root
+    mode: '777'
+    recurse: yes

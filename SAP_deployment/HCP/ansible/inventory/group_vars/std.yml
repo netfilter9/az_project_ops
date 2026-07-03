@@ -1,0 +1,179 @@
+node1: "{{ groups['std'][0] }}"
+swapfile_size: 640000000 #65536
+tune: "{{ sap.tune }}"
+product_id: "{{ sap.product_ids.std }}"
+
+
+users:
+  bin:
+    uid: 1010
+  bingroup:
+    gid: 82
+  sidadm:
+    uid: 1003
+  dbsidadm:
+    uid: 1012
+  sapinst:
+    gid: 1101
+  sapsys:
+    gid: 1100
+  db2sid:
+    uid: 1014
+  sapsid:
+    uid: 1016
+  dbsidadmgroup:
+    gid: 1120
+  dbsidctl:
+    gid: 1121
+  dbsidmon:
+    gid: 1122
+  dbsidmnt:
+    gid: 1123
+
+groupsetup:
+  - name: sapsys
+    gid: "{{ users.sapsys.gid }}"
+  - name: sapinst
+    gid: "{{ users.sapinst.gid }}"
+  - name: bin
+    gid: "{{ users.bingroup.gid }}"
+  - name: "db{{ sap.db.sid|lower }}adm"
+    gid: "{{ users.dbsidadmgroup.gid }}"
+  - name: "db{{ sap.db.sid|lower }}ctl"
+    gid: "{{ users.dbsidctl.gid }}"
+  - name: "db{{ sap.db.sid|lower }}mon"
+    gid: "{{ users.dbsidmon.gid }}"
+  - name: "db{{ sap.db.sid|lower }}mnt"
+    gid: "{{ users.dbsidmnt.gid }}"
+
+usersetup:
+  - name: bin
+    uid: "{{ users.bin.uid }}"
+    group: bin
+    shell: /bin/sh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "{{ sap.sid|lower }}adm"
+    uid: "{{ users.sidadm.uid }}"
+    group: sapsys
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "db2{{ sap.db.sid|lower }}"
+    uid: "{{ users.db2sid.uid }}"
+    group: "db{{ sap.db.sid|lower }}adm"
+    groups: sapinst
+    home: /db2/db2{{ sap.db.sid|lower }}
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "sap{{ sap.sid|lower }}"
+    uid: "{{ users.sapsid.uid }}"
+    group: "db{{ sap.db.sid|lower }}mon"
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+
+volume_groups:
+# - ref: sapdata
+  #   pvs: /dev/disk/azure/data/by-lun/0
+  #   vg: VGDATA1
+  #   lv: lv_db2D01data1
+  #   size: 850g
+  #   mount: /db2/D01/sapdata1
+  # - ref: db2log-log_dir
+  #   pvs: /dev/disk/azure/data/by-lun/1
+  #   vg: VGLOG
+  #   lv: lv_db2D01log
+  #   size: 50g
+  #   mount: /db2/D01/log_dir
+  # - ref: db2log-saptmp1
+  #   pvs: /dev/disk/azure/data/by-lun/1
+  #   vg: VGLOG
+  #   lv: lv_db2D01tmp
+  #   size: 50g
+  #   mount: /db2/D01/saptmp1
+  # - ref: db2archive-archive
+  #   pvs: /dev/disk/azure/data/by-lun/2
+  #   vg: VGARCH
+  #   lv: lv_db2D01archive
+  #   size: 20g
+  #   mount: /db2/D01/log_archive
+  # - ref: db2archive-retrieve
+  #   pvs: /dev/disk/azure/data/by-lun/2
+  #   vg: VGARCH
+  #   lv: lv_db2D01retrieve
+  #   size: 10g
+  #   mount: /db2/D01/log_retrieve
+  # - ref: usrsaptrans
+  #   pvs: /dev/disk/azure/data/by-lun/3
+  #   vg: VGTRANS
+  #   lv: lv_usrsaptrans
+  #   size: 20g
+   - ref: hdbshared
+     pvs: /dev/disk/azure/data/by-lun/0
+     vg: VGSAP
+     lv: lv_hdbshared
+     size: 130g
+     mount: /hana/shared
+  # - ref: usrsap-sapmnt
+  #   pvs: /dev/disk/azure/data/by-lun/4
+  #   vg: VGSAP
+  #   lv: lv_sapmnt
+  #   size: 20g
+  #   mount: /sapmnt
+  # - ref: db2-d01
+  #   pvs: /dev/disk/azure/data/by-lun/5
+  #   vg: VGDB2BIN
+  #   lv: lv_db2D01
+  #   size: 10g
+  #   mount: /db2/D01
+  # - ref: db2-db2dump
+  #   pvs: /dev/disk/azure/data/by-lun/5
+  #   vg: VGDB2BIN
+  #   lv: lv_db2D01dump
+  #   size: 10g
+  #   mount: /db2/D01/db2dump
+  # - ref: db2-db2do1
+  #   pvs: /dev/disk/azure/data/by-lun/5
+  #   vg: VGDB2BIN
+  #   lv: lv_db2D01inst
+  #   size: 10g
+  #   mount: /db2/db2d01
+  # - ref: db2-db2install
+  #   pvs: /dev/disk/azure/data/by-lun/5
+  #   vg: VGDB2BIN
+  #   lv: lv_upgradeDB2
+  #   size: 10g
+  #   mount: /mnt/db2install
+  # - ref: sapmnt-archlink
+  #   pvs: /dev/disk/azure/data/by-lun/6
+  #   vg: VGMISC
+  #   lv: lv_archlink
+  #   size: 1g
+  #   mount: /sapmnt/D01/archivelink
+  # - ref: sapmnt-interface
+  #   pvs: /dev/disk/azure/data/by-lun/6
+  #   vg: VGMISC
+  #   lv: lv_interface
+  #   size: 11g
+  #   mount: /interfaces
+  # - ref: sapmnt-ilmt
+  #   pvs: /dev/disk/azure/data/by-lun/6
+  #   vg: VGMISC
+  #   lv: lv_ilmt
+  #   size: 1g
+  #   mount: /ilmt
+   - ref: opttraps
+     pvs: /dev/disk/azure/data/by-lun/1
+     vg: VG_CORTEX
+     lv: lv_cortex
+     size: 10g
+     mount: /opt/traps
+  #- ref: transfer
+  #  pvs: /dev/disk/azure/data/by-lun/8
+  #  vg: FILETRANSFER
+  #  lv: lv_filetransfer 
+  #  size: 1020g
+  #  mount: /db_dump
+

@@ -1,0 +1,5 @@
+---
+
+domain_join_packages:
+  - krb5-client
+  - samba-winbind

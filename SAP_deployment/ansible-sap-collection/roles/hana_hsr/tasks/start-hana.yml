@@ -1,0 +1,5 @@
+- name: cluster | start hana
+  command: "{{ item }}"
+  loop:
+    - su - {{ sap.db.sid|lower }}adm -c "sapcontrol -nr {{ sap.instance_numbers.db }} -function StartWait 600 10"
+    - sleep 20

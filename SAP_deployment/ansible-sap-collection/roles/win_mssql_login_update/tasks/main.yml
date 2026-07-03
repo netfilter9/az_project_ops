@@ -1,0 +1,51 @@
+---
+- name: spliting domain name
+  set_fact:
+    domainName:  "{{ domain.fqdn.split('.')[0] }}"
+    
+- debug:
+    msg: "{{ domainName }}"
+
+- name: Check whether collation ID exists
+  win_shell: Sqlcmd -S {{ ansible_hostname }} -Q "SELECT CONVERT (varchar, SERVERPROPERTY('collation'))"
+  register: collationid
+  ignore_errors: yes
+
+- debug:
+    var: collationid
+  
+- name: ensure Change the collation ID
+  win_command: "Setup /QUIET /ACTION=REBUILDDATABASE /INSTANCENAME=MSSQLSERVER /SQLSYSADMINACCOUNTS={{ local_admin.username }} /SAPWD= {{ local_admin.password }} /SQLCOLLATION=SQL_Latin1_General_CP850_BIN2"
+  args:
+    chdir: C:\SQLServerFull
+  when: not (collationid.stdout is search('SQL_Latin1_General_CP850_BIN2'))
+
+- name: Add the domain user in the SQL Logins
+  win_shell: Sqlcmd -S {{ ansible_hostname }} -Q "CREATE LOGIN [{{ domainName | upper }}\{{ domain_ansible_username }}] FROM WINDOWS WITH DEFAULT_DATABASE=[master], DEFAULT_LANGUAGE=[us_english]"
+  become: yes
+  become_user: "{{ local_admin.username }}"
+  become_method: runas
+
+- name: Selecting the server role(sysadmin)
+  win_shell: Sqlcmd -S {{ ansible_hostname }} -Q "ALTER SERVER ROLE [sysadmin] ADD MEMBER [{{ domainName | upper }}\{{ domain_ansible_username }}]"
+  become: yes
+  become_user: "{{ local_admin.username }}"
+  become_method: runas
+
+- name: Change the log on for MSSQLSERVER Service on windows with domain user
+  win_shell: sc.exe config "MSSQLSERVER" obj= {{ domainName }}\{{ domain_ansible_username }} password= {{ domain_ansible_password }} type= own
+
+- name: Set service startup mode to auto and ensure it is started
+  win_service:
+    name: MSSQLSERVER
+    start_mode: auto
+    state: started
+
+- name: Change the log on for SQLSERVERAGENT Service on windows with domain user
+  win_shell: sc.exe config "SQLSERVERAGENT" obj= {{ domainName }}\{{ domain_ansible_username }} password= {{ domain_ansible_password }} type= own
+
+- name: Set service startup mode to auto and ensure it is started
+  win_service:
+    name: SQLSERVERAGENT
+    start_mode: auto
+    state: started

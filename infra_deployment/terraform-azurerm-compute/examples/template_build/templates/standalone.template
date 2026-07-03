@@ -1,0 +1,60 @@
+{
+    "foundation": {
+        "network": {
+            "resource_group_name": "example-rg-sc01",
+            "name": "vnet-prod"
+        }
+    },
+    "deployment": {
+        "resource_group": {
+            "name": "example-rg-sc${scenario_number}-app",
+            "location": "westus2"
+        },
+        "tags": {
+            "owner": "steven.t.urwin@accenture.com",
+            "autoshutdown": "20:00BST"
+        },
+        "os_account": {
+            "admin_username": "admin_accenture",
+            "ssh_key_file": "~/.ssh/id_rsa.pub"
+        },
+        "server_groups": {
+            "ascs": {
+                "os_type": "linux",
+                "sku": "Standard_E2s_v3",
+                "_backup_policy": "app",
+                "os_disk_size": 64,
+                "enable_accelerated_networking": false,
+                "hosts": {
+                    "sc${scenario_number}ascs01": {
+                        "nics": [
+                            {
+                                "ips": [
+                                    "10.2.${scenario_number}.32"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "subnet": "app",
+                "image_details": {
+                    "_resource_id": "/subscriptions/911df94d-12e9-4695-a90f-943a1bef518d/resourceGroups/stu-rg-images/providers/Microsoft.Compute/galleries/stuimages/images/suse15/versions/1.0.0",
+                    "marketplace_reference": {
+                       "offer": "RHEL",
+                        "publisher": "RedHat",
+                        "sku": "7lvm-gen2",
+                        "version": "7.6.2020082423"
+                    }
+                },
+                "disks": [
+                    {
+                        "name": "usrsap",
+                        "disk_size": 128,
+                        "number_of_disks": 1,
+                        "storage_account_type": "StandardSSD_LRS"
+                    }
+                ]
+            }
+        }
+    }
+}

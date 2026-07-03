@@ -1,0 +1,17 @@
+{ 
+"PROCESSOR_IDENTIFIER": "{{  ansible_facts.env.PROCESSOR_IDENTIFIER }}",
+"architecture": "{{ ansible_facts.architecture }}",
+"OS_version": "{{  ansible_facts.distribution_version }}",
+"distribution": "{{  ansible_facts.distribution }}",
+"bios_version": "{{ ansible_facts.bios_version }}",
+"NUMBER_OF_PROCESSORS": "{{ ansible_facts.env.NUMBER_OF_PROCESSORS }}",
+"OS": "{{ ansible_facts.env.OS }}",
+"PROCESSOR_LEVEL": "{{ ansible_facts.env.PROCESSOR_LEVEL }}",
+"processor": "{{ ansible_facts.processor[1] }}",
+"processor_cores": "{{ ansible_facts.processor_cores }}",
+"processor_count": "{{ ansible_facts.processor_count }}",
+"processor_threads_per_core": "{{ ansible_facts.processor_threads_per_core }}",
+"processor_vcpus": "{{ ansible_facts.processor_vcpus }}",
+"uptime_seconds": "{{ ansible_facts.uptime_seconds }}"
+}
+

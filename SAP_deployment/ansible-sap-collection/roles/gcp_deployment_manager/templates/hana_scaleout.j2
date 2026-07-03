@@ -1,0 +1,23 @@
+---
+
+imports:
+- path: https://storage.googleapis.com/cloudsapdeploy/deploymentmanager/latest/dm-templates/sap_hana_scaleout/sap_hana_scaleout.py
+resources:
+- name: sap_hana
+  type: https://storage.googleapis.com/cloudsapdeploy/deploymentmanager/latest/dm-templates/sap_hana_scaleout/sap_hana_scaleout.py
+  properties:
+    instanceName: {{ deployment_manager.instance_name }}
+    instanceType: {{ deployment_manager.instance_type }}
+    zone: {{ deployment_manager.zone }}
+    subnetwork: {{ deployment_manager.subnetwork }}
+    linuxImage: {{ deployment_manager.linux_images }}
+    linuxImageProject: {{ deployment_manager.linux_image_project }}
+    sap_hana_deployment_bucket: {{ deployment_manager.bucket_name }}
+    sap_hana_sid: {{ sap.db.sid }} 
+    sap_hana_instance_number: {{ sap.instance_numbers.db }}
+    sap_hana_sidadm_password: {{ passwords.sidadm }}
+    sap_hana_system_password: {{ passwords.sidadm }}
+    sap_hana_worker_nodes: {{ deployment_manager.worker_nodes }}
+    sap_hana_standby_nodes: {{ deployment_manager.standby_nodes}}
+    sap_hana_shared_nfs: {{ sap.nfs.server }}:/hana/shared 
+    sap_hana_backup_nfs: {{ sap.nfs.server }}:/hana/backup 

@@ -1,0 +1,148 @@
+- name: environmental variable
+  block:
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LANG=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.profile
+      become: yes
+      become_user: "{{ admin_user }}"
+
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LC_LANG=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.profile
+      become: yes
+      become_user: "{{ admin_user }}"
+
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LC_ALL=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.profile
+      become: yes
+      become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'Suse'
+
+- name: environmental variable
+  block:
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LANG=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.bash_profile
+      become: yes
+      become_user: "{{ admin_user }}"
+
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LC_LANG=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.bash_profile
+      become: yes
+      become_user: "{{ admin_user }}"
+
+    - name: ipsinstall | Update .profile
+      lineinfile:
+        line: export LC_ALL=en_US.utf8
+        insertafter: '^#export LANG'
+        state: present
+        path: ~/.bash_profile
+      become: yes
+      become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: ipsinstall | Update .profile
+  lineinfile:
+    line: export ODBCINI={{ install_dir }}/{{ sap.db.sid | upper }}/sap_bobj/enterprise_xi40/odbc.ini
+    insertafter: '^export LC_LANG'
+    state: present
+    path: ~/.profile
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'Suse' and dbtype == "hana"
+
+- name: ipsinstall | Update .profile 
+  lineinfile:
+    line: export ODBCINI={{ install_dir }}/{{ sap.db.sid | upper }}/sap_bobj/enterprise_xi40/odbc.ini
+    insertafter: '^export LC_LANG'
+    state: present
+    path: ~/.bash_profile
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: ansible_os_family == 'RedHat' and dbtype == "hana"
+
+
+
+- name: ipsinstall | Update .profile
+  lineinfile:
+    regexp: '^export LANG=us_english.utf8'
+    line: export SYBASE=/sybase/SDK
+    insertafter: '^#export LANG=us_english.utf8'
+    state: present
+    path: ~/.profile
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: dbtype == "sybase"
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LANG=us_english.utf8'
+    line: export PATH=$PATH:/sybase/SDK/{{ sap.db.sybase_ocs | default("OCS-16_0") }}/bin
+    insertafter: '^#export LANG=us_english.utf8'
+    state: present
+    path: ~/.profile
+  register: profile
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: dbtype == "sybase"
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LANG=us_english.utf8'
+    line: source /sybase/SDK/SYBASE.sh
+    insertafter: '^#export LANG=us_english.utf8'
+    state: present
+    path: ~/.profile
+  register: profile
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: dbtype == "sybase"
+
+- name: Update locale
+  lineinfile:
+    line: '        locale = en_US.utf8, us_english, utf8 '
+    insertafter: '^\[linux\]'
+    state: present
+    path: /sybase/SDK/locales/locales.dat
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: dbtype == "sybase"
+
+- name: Update locale
+  lineinfile:
+    line: '        locale = C.UTF-8 '
+    insertafter: '^\[linux\]'
+    state: present
+    path: /sybase/SDK/locales/locales.dat
+  become: yes
+  become_user: "{{ admin_user }}"
+  when: dbtype == "sybase"
+
+- name: main | install package
+  command: 
+    cmd:  zypper --non-interactive --no-gpg-checks install libstdc++33-32bit-3.3.3-42.1.x86_64.rpm
+    creates: "{{ install_dir }}/sapinst/LOGS/packagelog_{{ ansible_hostname }}*.zip"
+  args:
+    chdir: "{{ install_dir }}/sapinst/IPSPACKAGE/"
+  become: yes
+  become_user: root
+  when: ansible_os_family == 'Suse' and dbtype == "hana"
+
+

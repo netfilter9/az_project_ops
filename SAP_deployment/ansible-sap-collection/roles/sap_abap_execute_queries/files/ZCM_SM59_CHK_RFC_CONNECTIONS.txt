@@ -1,0 +1,200 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM59_CHK_RFC_CONNECTIONS                 *
+* Title               :   Export RFC Connections                       *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   24/08/2020                                   *
+* Purpose             :   This report is used to Export RFC            *
+*                         Connections during Cloud Migration           *
+*----------------------------------------------------------------------*
+
+REPORT zcm_sm59_chk_rfc_connections.
+
+TYPES:BEGIN OF lty_list,
+        rfctype        TYPE rfctype_d,
+        rfctytext      TYPE rfctytext,
+        rfcdest        TYPE rfcdest,
+        rfcdoc1        TYPE rfcdoc_d,
+        muname         TYPE modusrname,
+        mudate         TYPE rdir_udate,
+        mutime         TYPE syuzeit,
+        muclient       TYPE symandt,
+        cuname         TYPE creusrname,
+        cudate         TYPE rdir_cdate,
+        cutime         TYPE syuzeit,
+        cuclient       TYPE symandt,
+        rfchost        TYPE rfchost,
+        rfcservice     TYPE rfcservice,
+        rfcclient      TYPE rfcclient,
+        rfcsameusr     TYPE rfcsameusr,
+        rfcuser        TYPE rfcalias,
+        rfclang        TYPE rfclang,
+        rfcauth        TYPE rfcauth,
+        rfclogon       TYPE rfclogon,
+        rfctsysopt     TYPE rfctsysopt,
+        rfcsnc         TYPE rfcsnc,
+        authority      TYPE destauth,
+        tst_con_passed TYPE boole_d,
+        tst_log_passed TYPE boole_d,
+        rfc_conn_tst_i TYPE icon_text,
+        rfc_conn_tst_t TYPE c LENGTH 132,
+        rfc_msgid      TYPE sy-msgid,
+        rfc_msgno      TYPE sy-msgno,
+        rfc_msgv1      TYPE sy-msgv1,
+        color          TYPE lvc_t_scol,
+      END OF lty_list.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'                  LENGTH 1,
+           lc_x          TYPE c VALUE 'X'                  LENGTH 1,
+           lc_null       TYPE c VALUE 'NULL'               LENGTH 4,
+           lc_rfc        TYPE c VALUE 'RFCConnection'      LENGTH 16,
+           lc_export     TYPE c VALUE 'EXPORT'             LENGTH 6,
+           lc_conn_type  TYPE c VALUE 'Connectiontype'     LENGTH 20,
+           lc_rfc_dest   TYPE c VALUE 'RFCDestination'     LENGTH 20,
+           lc_desc       TYPE c VALUE 'Description'        LENGTH 20,
+           lc_changed_by TYPE c VALUE 'LastChangedby'      LENGTH 25,
+           lc_changed_on TYPE c VALUE 'Changedon'          LENGTH 20,
+           lc_host       TYPE c VALUE 'Targethost'         LENGTH 20,
+           lc_service    TYPE c VALUE 'Service'            LENGTH 10,
+           lc_client     TYPE c VALUE 'Client'             LENGTH 6,
+           lc_curr_user  TYPE c VALUE 'CurrentUser'        LENGTH 15,
+           lc_alias      TYPE c VALUE 'UserIdorAliasName'  LENGTH 25,
+           lc_language   TYPE c VALUE 'Language'           LENGTH 10,
+           lc_password   TYPE c VALUE 'Password'           LENGTH 10,
+           lc_logon      TYPE c VALUE 'LogonScreen'        LENGTH 20,
+           lc_trustedsys TYPE c VALUE 'TrustedSystem'      LENGTH 25,
+           lc_rfc_snc    TYPE c VALUE 'RFCSNC'             LENGTH 6,
+           lc_destn_auth TYPE c VALUE 'DestnAuthorization' LENGTH 30,
+           lc_statistics TYPE c VALUE
+           'DisplayedRFCConnections'                       LENGTH 40,
+           lc_title      TYPE c VALUE
+           'Overview of RFC Connections with Logon Data'   LENGTH 70,
+           lc_err_msg    TYPE c VALUE
+           'No RFC Connections found in the system'        LENGTH 40
+           ##NO_TEXT.
+
+DATA: ls_input   TYPE tab512,
+      ls_output  TYPE tab512,
+      lv_action  TYPE char20,
+      lv_cnt     TYPE sy-tabix,
+      lv_count   TYPE char5,
+      lr_rfc_chk TYPE REF TO cl_sais_rfcchk,
+      lt_list    TYPE STANDARD TABLE OF lty_list,
+      ls_list    TYPE lty_list.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.       " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.      " If action is Export
+
+
+  CREATE OBJECT lr_rfc_chk
+    EXPORTING
+      id_repid = sy-repid.
+
+ " To check RFC Destinations
+  CALL METHOD lr_rfc_chk->check_rfc_destinations
+    EXPORTING
+      id_wo_passw = lc_x
+      id_excl_loc = lc_x
+      id_conn_test = lc_x
+    RECEIVING
+      ed_cnt      = lv_cnt.
+
+ " To get results of RFC destination
+  CALL METHOD lr_rfc_chk->get_result_list
+    IMPORTING
+      et_list = lt_list.
+
+      " Adding title to the output
+        ls_output = lc_title.
+       APPEND ls_output TO lt_output.
+
+      IF lt_list IS NOT INITIAL.
+
+      " Constructing number of RFC Connections to the output
+       lv_count = lv_cnt.
+       CONCATENATE lc_statistics lv_count
+                   INTO ls_output.
+                APPEND ls_output TO lt_output.
+
+        ls_output = space.
+       APPEND ls_output TO lt_output.
+
+        ls_output = lc_rfc.
+       APPEND ls_output TO lt_output.
+
+      " Adding headings to the output
+        CONCATENATE  lc_conn_type  lc_sep
+                     lc_rfc_dest   lc_sep
+                     lc_desc       lc_sep
+                     lc_changed_by lc_sep
+                     lc_changed_on lc_sep
+                     lc_host       lc_sep
+                     lc_service    lc_sep
+                     lc_client     lc_sep
+                     lc_curr_user  lc_sep
+                     lc_alias      lc_sep
+                     lc_language   lc_sep
+                     lc_password   lc_sep
+                     lc_logon      lc_sep
+                     lc_trustedsys lc_sep
+                     lc_rfc_snc    lc_sep
+                     lc_destn_auth
+                     INTO ls_output.
+            APPEND ls_output TO lt_output.
+
+        LOOP AT lt_list INTO ls_list.
+
+          CONCATENATE ls_list-rfctytext       lc_sep
+                      ls_list-rfcdest         lc_sep
+                      ls_list-rfcdoc1         lc_sep
+                      ls_list-muname          lc_sep
+                      ls_list-mudate          lc_sep
+                      ls_list-rfchost         lc_sep
+                      ls_list-rfcservice      lc_sep
+                      ls_list-rfcclient       lc_sep
+                      ls_list-rfcsameusr      lc_sep
+                      ls_list-rfcuser         lc_sep
+                      ls_list-rfclang         lc_sep
+                      ls_list-rfcauth         lc_sep
+                      ls_list-rfclogon        lc_sep
+                      ls_list-rfctsysopt      lc_sep
+                      ls_list-rfcsnc          lc_sep
+                      ls_list-authority       lc_sep
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ENDLOOP.
+
+        PERFORM null_check TABLES lt_output.
+
+      ELSE.
+        " No RFC Connections found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+ENDFORM.
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

@@ -1,0 +1,12 @@
+- name: cluster | copy files over
+  command: scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ node1 }}:{{ item }} {{ item }}
+  loop:
+    - /usr/sap/{{ sap.db.sid|upper }}/SYS/global/security/rsecssfs/data/SSFS_{{ sap.db.sid|upper }}.DAT 
+    - /usr/sap/{{ sap.db.sid|upper }}/SYS/global/security/rsecssfs/key/SSFS_{{ sap.db.sid|upper }}.KEY
+  when: ansible_hostname == node2
+
+- name: cluster | change permissions for /usr/sap/{{ sap.db.sid }}/SYS/global/security/rsecssfs/
+  file:
+    path: /usr/sap/{{ sap.db.sid|upper }}/SYS/global/security/rsecssfs
+    state: directory
+    mode: '777'  

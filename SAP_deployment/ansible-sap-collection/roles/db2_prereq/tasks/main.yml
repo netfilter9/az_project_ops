@@ -1,0 +1,4 @@
+---
+
+- name: run db2 pre-reqs
+  include_tasks: "db2_{{ platform }}.yml"

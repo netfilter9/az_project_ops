@@ -1,0 +1,18 @@
+{# 
+    generate resource group entries 
+#}
+{% if deployment.resource_group is defined %}
+# Resource group
+---
+All new resources for this environment will be deployed to this resource group unless explicitly stated otherwise:
+|Resource Group Name|Location|
+|-|-|
+{% set row = [ 
+  deployment.resource_group.name,
+  deployment.resource_group.location 
+  ] 
+%}
+{{ row | join('|') }}
+
+{% endif %}
+

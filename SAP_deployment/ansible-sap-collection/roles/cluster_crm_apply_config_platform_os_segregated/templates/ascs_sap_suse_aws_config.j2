@@ -1,0 +1,154 @@
+{# 
+  create a local variables for the SAP instance references 
+  e.g. A4H_ASCS00, A4H_ERS01
+#}
+{% set ascs_instance = sap.sid + "_" + sap.ascs_type + sap.instance_numbers.ascs %}
+{% set ers_instance = sap.sid + "_ERS" + sap.instance_numbers.ers %}
+
+{#
+  Select STONITH strategy
+#}
+{# AWS STONITH #}
+primitive res_AWS_STONITH stonith:external/ec2 \
+	op start interval=0 timeout=180 \
+	op stop interval=0 timeout=180 {% if cluster_type == 'hana' %} \
+  op monitor interval=120 timeout=60 \
+  meta target-role=Started \
+  params tag={{ key_name }} profile=cluster pcmk_delay_max=45	
+  {% elif cluster_type == 'db2' %} \
+  op monitor interval=180s timeout=60s \
+  params tag={{ key_name }} profile=cluster pcmk_delay_max=30
+  {% else %} \
+    {% if sap.enq_architecture == 'ENSA1'%}
+    op monitor interval=180 timeout=60 \
+    params tag={{ key_name }} profile=cluster pcmk_delay_max=30
+    {%else%}
+    op monitor interval=180 timeout=60 \
+    params tag={{ key_name }} profile=cluster pcmk_delay_max=10
+	{% endif %}
+
+primitive rsc_ip_{{ ascs_instance }} ocf:heartbeat:aws-vpc-move-ip \
+  params ip={{ ascs_overlay_ip }} routing_table={{ route_table_id }} \
+  interface=eth0 profile=cluster \
+  {% if vpc_type is defined and vpc_type == "shared" %}
+  routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" \
+  lookup_type=NetworkInterfaceId \
+  {% endif %}
+  op start interval=0 timeout=180 \
+  op stop interval=0 timeout=180 \
+  op monitor interval=20 timeout=40
+
+primitive rsc_ip_{{ ers_instance }} ocf:heartbeat:aws-vpc-move-ip \
+  params ip={{ ers_overlay_ip }} routing_table={{ route_table_id }} \
+  interface=eth0 profile=cluster \
+  {% if vpc_type is defined and vpc_type == "shared" %}
+  routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" \
+  lookup_type=NetworkInterfaceId \
+  {% endif %}
+  op start interval=0 timeout=180 \
+  op stop interval=0 timeout=180 \
+  op monitor interval=20 timeout=40
+
+{#
+    set up file system failover if using traditional NFS or ANF
+#}
+
+{% set ascs_device = sap.nfs.ascs_device %}
+{% set ers_device = sap.nfs.ers_device %}
+
+{#
+    set up file system failover using EFS
+#}
+primitive rsc_fs_{{ ascs_instance }} ocf:heartbeat:Filesystem \
+params device="{{ ascs_device }}" \
+directory="/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}" \
+fstype="nfs4" \
+options="rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2" \
+op start timeout=60s interval=0 \
+op stop timeout=60s interval=0 \
+op monitor interval=20s timeout=40s
+
+
+primitive rsc_fs_{{ ers_instance }} ocf:heartbeat:Filesystem \
+params device="{{ ers_device }}" \
+directory="/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }}" \
+fstype=nfs4 \
+options="rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2" \
+op start timeout=60s interval=0 \
+op stop timeout=60s interval=0 \
+op monitor interval=20s timeout=40s
+
+{#
+    Add standard primitives for SAP component
+#}
+primitive rsc_sap_{{ ascs_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ascs_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ascs_instance }}_{{ sap.logical_hosts.ascs.hostname }}" \
+  AUTOMATIC_RECOVER=false \
+  meta resource-stickiness=5000 \
+  {% if sap.enq_architecture == "ENSA1" %}
+  failure-timeout=60 migration-threshold=1 priority=10
+  {% else %}
+  priority=1000
+{% endif %}
+
+primitive rsc_sap_{{ ers_instance }} ocf:heartbeat:SAPInstance \
+  operations $id=rsc_sap_{{ ers_instance }}-operations \
+  op monitor interval=11 timeout=60 on-fail=restart \
+  op stop interval=0s timeout=240s \
+  params InstanceName={{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }} \
+  START_PROFILE="/sapmnt/{{ sap.sid }}/profile/{{ ers_instance }}_{{ sap.logical_hosts.ers.hostname }}" \
+  AUTOMATIC_RECOVER=false IS_ERS=true {% if sap.enq_architecture == "ENSA1" %}\ 
+  meta priority=1000
+{% endif %}
+
+{# 
+    set up groups
+#}
+group grp_{{ ascs_instance }} \
+rsc_ip_{{ ascs_instance }} \
+rsc_fs_{{ ascs_instance }} \
+rsc_sap_{{ ascs_instance }} \
+meta resource-stickiness=3000
+
+group grp_{{ ers_instance }} \
+rsc_ip_{{ ers_instance }} \
+rsc_fs_{{ ers_instance }} \
+rsc_sap_{{ ers_instance }}
+
+{#
+    set rules for coloaction
+#}
+colocation col_sap_{{ sap.sid |upper}}_no_both -5000: grp_{{ ers_instance }} grp_{{ ascs_instance }} 
+{% if sap.enq_architecture == "ENSA1" %}
+
+location loc_sap_{{ sap.sid }}_failover_to_ers \
+  rsc_sap_{{ ascs_instance }} \
+  rule 2000: runs_ers_{{ sap.sid }} eq 1
+{% endif %}
+
+order ord_sap_{{ sap.sid }}_first_start_ascs Optional: \
+  rsc_sap_{{ ascs_instance }}:start \
+  rsc_sap_{{ ers_instance }}:stop symmetrical=false
+  
+{#
+    Set general properties
+#}
+property cib-bootstrap-options: \
+  cluster-infrastructure=corosync \  
+  stonith-enabled=true \
+  stonith-action=off \   
+  stonith-timeout=300s \
+  maintenance-mode=false \
+  last-lrm-refresh=1632815429 {% if sap.enq_architecture == "ENSA2" %}\
+  priority-fencing-delay=30s 
+{% endif %} \
+rsc_defaults rsc-options: \
+  resource-stickiness=1 \
+  migration-threshold=3
+op_defaults op-options: \
+  timeout=300 \
+  record-pending=true

@@ -1,0 +1,9 @@
+- name: firwall-config | disable firewalld services
+  service:
+    name: firewalld
+    state: stopped
+    enabled: no
+    masked: yes
+  register: result
+  until: result is not failed
+  retries: 5

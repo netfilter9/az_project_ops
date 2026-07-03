@@ -1,0 +1,8 @@
+- name: db checks performing
+  include_tasks: "db_checks.yml"
+
+- name: os checks performing
+  include_tasks: "os_checks.yml"
+
+- name: infra checks performing
+  include_tasks: "infra_checks.yml"

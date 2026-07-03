@@ -1,0 +1,13 @@
+---
+- name: main | tasks for aws
+  include_tasks: aws.yml
+  when: platform == 'aws' 
+
+- name: main | tasks for azure and gcp
+  include_tasks: azure_gcp.yml
+  when: (platform == 'azure' and ansible_os_family == 'Suse') or (platform == 'gcp' and ansible_os_family == 'Suse')
+
+- name: main | tasks for RHEL
+  include_tasks: rhel.yml
+  when: ansible_os_family == 'RedHat'
+

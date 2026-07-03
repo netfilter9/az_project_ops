@@ -1,0 +1,29 @@
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+
+- name: stop listener with oracle user
+  become: yes
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  command: "lsnrctl stop LISTENER_{{ sap.db.sid | upper }}"
+  args:
+    chdir: $ORACLE_HOME/bin
+  environment:
+    path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+    ORACLE_SID: "{{ sap.db.sid|upper }}"
+    ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+    ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+
+- name: start listener with oracle user
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  command: "lsnrctl start LISTENER_{{ sap.db.sid | upper }}"
+  args:
+    chdir: $ORACLE_HOME/bin
+  environment:
+    path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+    ORACLE_SID: "{{ sap.db.sid|upper }}"
+    ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+    ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+

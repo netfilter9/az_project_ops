@@ -1,0 +1,136 @@
+*&*******************************************************************&*
+* Report              :   ZCM_UNICODE_EXP_STATUS                      *
+* Title               :   Unicode information                         *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   04/09/2020                                  *
+* Purpose             :   This report is used to export if the system *
+*                     :   is unicode or not                           *
+*---------------------------------------------------------------------*
+REPORT ZCM_UNICODE_EXP_STATUS.
+
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        ls_prefinal TYPE string,
+        lv_action TYPE char8,
+        lv_cpkind TYPE cpkind.
+
+  CLEAR: ls_input, lv_action.
+
+  " Read the action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+*      Table Name
+      ls_output = 'Unicode'.
+      APPEND ls_output TO lt_output.
+
+      CALL FUNCTION 'SCP_GET_CODEPAGE_KIND'
+        IMPORTING
+          cpkind    = lv_cpkind
+        EXCEPTIONS
+          not_found = 1
+          OTHERS    = 2.
+      IF sy-subrc <> 0.
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      " Field Name
+      ls_output = 'CPKIND'.
+      APPEND ls_output TO lt_output.
+
+      " Table Data
+      IF lv_cpkind(1) = 'U'.
+        ls_output = 'Yes'.
+        APPEND ls_output TO lt_output.
+
+      ELSE.
+        ls_output = 'No'.
+        APPEND ls_output TO lt_output.
+
+*Blank line between tables
+        CLEAR ls_output.
+        APPEND ls_output TO lt_output.
+
+
+*      Table Name
+        ls_output = 'TCPDB'.
+        APPEND ls_output TO lt_output.
+
+        SELECT * FROM tcpdb
+          INTO TABLE @DATA(lt_tcpdb).
+        IF sy-subrc <> 0.
+          ls_output = lc_msg_nodata.
+          APPEND ls_output TO lt_output.
+          RETURN.
+        ENDIF.
+
+        " Titles
+        CONCATENATE 'CPTRANSFLD' lc_sep
+                     'CPPOOLCLUS'
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        "Table data
+        LOOP AT lt_tcpdb INTO DATA(ls_tcpdb).
+          CONCATENATE ls_tcpdb-cptransfld lc_sep
+                      ls_tcpdb-cppoolclus
+                     INTO ls_prefinal.
+          PERFORM end_null_check CHANGING ls_prefinal.
+          ls_output = ls_prefinal.
+          APPEND ls_output TO lt_output.
+        ENDLOOP.
+
+      PERFORM null_check TABLES  lt_output.
+
+      ENDIF.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM end_null_check CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

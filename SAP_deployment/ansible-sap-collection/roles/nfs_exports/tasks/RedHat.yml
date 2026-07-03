@@ -1,0 +1,33 @@
+---
+- name: main | install nfs-server
+  package:
+    name: nfs-utils
+    state: present
+
+- name: main | populating exports entries
+  lineinfile:
+    path: /etc/exports
+    line: "{{ item }}"
+  loop: "{{ nfs_exports }}" 
+
+- name: run exportfs command
+  command: exportfs -arv
+
+- name: main | stop unwanted services
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+    state: stopped
+  loop:
+    - rpc-statd
+    - rpcbind
+    - rpcbind.socket
+
+- name: main | nfs service restarted
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: restarted
+  loop:
+    - nfs-server
+    - nfs-idmapd

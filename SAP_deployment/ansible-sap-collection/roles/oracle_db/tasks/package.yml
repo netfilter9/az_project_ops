@@ -1,0 +1,20 @@
+---
+- name: packages | install packages
+  package:
+    name:
+      - libaio
+      - libaio-devel
+      - gcc-c++
+      - glibc
+      - glibc-devel
+      - libgcc
+      - compat-libcap1
+      - sysstat-10.1.5
+      - ksh
+      - compat-libstdc++-33-3.2.3
+      - smartmontools
+      - tcsh
+      - wget
+      - unzip
+      - oracle-database-preinstall-19c
+    state: present

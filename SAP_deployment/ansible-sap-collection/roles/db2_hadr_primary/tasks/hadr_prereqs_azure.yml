@@ -1,0 +1,13 @@
+- name: Set FireWall Rules
+  command: "{{ item }}"
+  with_items: 
+    - sudo firewall-cmd --add-port={{ sap.firewall.primary_port | default('51012') }}/tcp --permanent
+    - sudo firewall-cmd --reload
+  when: ansible_hostname == node1 and ansible_os_family == 'RedHat'
+
+- name: Set FireWall Rules
+  command: "{{ item }}"
+  with_items: 
+    - sudo firewall-cmd --add-port={{ sap.firewall.secondary_port | default('51013') }}/tcp --permanent
+    - sudo firewall-cmd --reload
+  when: ansible_hostname == node2 and ansible_os_family == 'RedHat'

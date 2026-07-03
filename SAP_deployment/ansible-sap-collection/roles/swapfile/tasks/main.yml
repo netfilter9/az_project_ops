@@ -1,0 +1,19 @@
+---
+- name: main | swapfile for azure cloud provider
+  include_tasks: swapfile.{{ platform }}.yml
+  when: platform == 'azure'
+
+- block:
+
+    - name: main | swap file check
+      command: cat /proc/swaps
+      register: swapcheck
+    
+    - debug:
+        var: swapcheck.stdout_lines[1]
+
+    - name: main | swapfile for aws and gcp cloud providers
+      include_tasks: swapfile_gcp_aws.yml
+      when: swapcheck.stdout_lines[1] is not defined
+
+  when:  platform == 'gcp' or platform == 'aws'

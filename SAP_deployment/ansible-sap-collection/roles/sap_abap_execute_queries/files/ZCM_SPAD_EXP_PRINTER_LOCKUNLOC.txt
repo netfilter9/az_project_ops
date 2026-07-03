@@ -1,0 +1,114 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SPAD_EXP_PRINTER_LOCKUNLOC              *
+* Title               :   SPAD Printer lock/unlock                    *
+* Created by          :   Yasaswini Kandukuri                         *
+* Created on          :   01/11/2020                                  *
+* Purpose             :   This report is used to read lock and unlock *
+*                         printer                                     *
+*---------------------------------------------------------------------*
+REPORT zcm_spad_exp_printer_lockunloc.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  TYPES: BEGIN OF ty_tsp03d,
+           name       TYPE rspolname,
+           patype     TYPE rspoptype,
+           padisabled TYPE rspodisabl,
+         END OF ty_tsp03d.
+
+  DATA: lt_tsp03d   TYPE STANDARD TABLE OF ty_tsp03d,
+        ls_output   TYPE tab512,
+        ls_prefinal TYPE string,
+        ls_input    TYPE tab512,
+        lv_action   TYPE char8,
+        ls_tsp03d   TYPE ty_tsp03d.
+
+  CONSTANTS: lc_sep         TYPE c VALUE '|',
+             lc_nodata      TYPE char80 VALUE
+             'No data found in SPAD',
+             lc_heading     TYPE char80 VALUE
+             'List of output devices with lock and unlock parameters',
+             lc_act_exp     TYPE char6  VALUE 'EXPORT',
+             lc_device      TYPE char20 VALUE 'LongDeviceName',
+             lc_lock_unlock TYPE char20 VALUE 'Lock'.
+
+  FREE: lt_tsp03d[].
+  CLEAR: ls_tsp03d.
+
+  " Read input values from Python
+  READ TABLE lt_input INTO ls_input INDEX 1.
+
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_act_exp. "EXPORT
+
+      ls_output = lc_heading.
+      APPEND ls_output TO lt_output.
+      CLEAR: ls_output.
+
+      SELECT name patype padisabled
+        FROM tsp03d
+        INTO TABLE lt_tsp03d.
+
+      IF sy-subrc = 0.
+        CONCATENATE lc_device
+                    lc_lock_unlock
+        INTO ls_output SEPARATED BY lc_sep.
+        APPEND ls_output TO lt_output.
+        CLEAR: ls_output.
+
+        LOOP AT lt_tsp03d INTO ls_tsp03d.
+
+          CONCATENATE ls_tsp03d-name
+                      ls_tsp03d-padisabled
+          INTO ls_prefinal SEPARATED BY lc_sep.
+
+          PERFORM end_null_check CHANGING ls_prefinal.
+          ls_output = ls_prefinal.
+          APPEND ls_output TO lt_output.
+
+          CLEAR: ls_output,
+                 ls_prefinal,
+                 ls_tsp03d.
+        ENDLOOP.
+
+        PERFORM null_check TABLES lt_output.
+      ELSE.
+        ls_output = lc_nodata.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+FORM end_null_check CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF..
+
+ENDFORM.
+FORM null_check  TABLES   lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

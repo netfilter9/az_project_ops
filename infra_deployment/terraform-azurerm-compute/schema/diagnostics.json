@@ -1,0 +1,38 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "diagnostics": {
+            "title": "Diagnostics",
+            "description": "A diagnostics block as defined below",
+            "type": "object",
+            "examples": [
+                {
+                    "storage_account_name": "",
+                    "resource_group_name": ""
+                }
+            ],
+            "properties": {
+                "storage_account_name": {
+                    "$ref": "fields.json#/definitions/storage_account_name",
+                    "examples": [
+                        "examplevmdiagsasc02"
+                    ]
+                },
+                "resource_group_name": {
+                    "$ref": "fields.json#/definitions/resource_group_name",
+                    "examples": [
+                        "example-rg-sc02"
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "storage_account_name",
+                "resource_group_name"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

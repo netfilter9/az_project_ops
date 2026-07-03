@@ -1,0 +1,85 @@
+---
+
+- name: main | set installation directory facts
+  set_fact:
+    install_dir: "{{ root_dir | default ('/usr/sap')}}"
+
+- name: main | check for additional install items
+  shell: find {{ install_dir }}/sapinst/EXPORTS -name "LABEL*.ASC" -printf "%h\n" | sort -u
+  register: sap_exports_folders
+
+- name: main | create sapinst.params
+  template:
+    src: "sapinst.params.j2"
+    dest: "{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params"
+    mode: '777'
+
+- name: main | make sure sapinst is executable
+  file:
+    path: "{{ install_dir }}/sapinst/SWPM/sapinst"
+    mode: '777'
+
+- name: main | install
+  vars:
+    hostname: "{{ virtual_hostname | default(ansible_hostname) }}"
+  command: 
+    cmd: "./sapinst SAPINST_INPUT_PARAMETERS_URL=/{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params SAPINST_USE_HOSTNAME={{ hostname }} SAPINST_EXECUTE_PRODUCT_ID={{ product_id }} SAPINST_CWD={{ install_dir }}/sapinst/logs SAPINST_SKIP_DIALOGS=true SAPINST_START_GUI={{ sapinst_enable_gui | default(false) }}  SAPINST_START_GUISERVER={{ sapinst_enable_gui | default(false) }}"
+    creates: "{{ install_dir }}/sapinst/LOGS/sapinstlog_{{ ansible_hostname }}_{{ role }}*.zip"
+  args:
+    chdir: "{{ install_dir }}/sapinst/SWPM/"
+  register: install
+  ignore_errors: yes
+
+- name: main | get SDBUPD file path 
+  command: find {{ install_dir }}/sapinst/EXPORTS/ -iname "SDBUPD"
+  register: filepath
+
+- name: main | print name
+  debug:
+    var: filepath.stdout
+
+- name: main | set directory facts
+  set_fact:
+    file_dir: "{{ filepath.stdout | dirname }}"
+
+- name: main | print name
+  debug:
+    var: file_dir
+
+- name: main | update database
+  command: "./SDBUPD -b -d {{ sap.db.sid | upper }} -u control,{{ passwords.master }}"
+  args:
+    chdir: "{{ file_dir }}"
+
+- name: main | get SDBUPD file path 
+  command: find {{ install_dir }}/sapinst/logs/ -iname "installationSuccesfullyFinished.dat"
+  register: present
+
+- name: main | print name
+  debug:
+    var: present
+
+- name: main | retry dbload
+  command: "{{ install_dir }}/sapinst/SWPM/sapinst"
+  args:
+    chdir: "{{ install_dir }}/sapinst/logs"
+  when: present.stdout | length == 0
+
+- name: main | Create logs directory if it does not exist
+  file:
+    path: "{{ install_dir }}/sapinst/LOGS"
+    state: directory
+    mode: '0755'
+
+- name: main | create zip file of installation logs
+  archive:
+    path: "{{ install_dir }}/sapinst/logs"
+    dest: "{{ install_dir }}/sapinst/LOGS/sapinstlog_{{ ansible_hostname }}_{{ role }}_{{ ansible_date_time.iso8601 }}.zip"
+    format: zip
+    force_archive: true
+  when: install.changed
+
+- name: main | tidy up sapinst.params
+  file:
+    path: "{{ install_dir }}/{{ role }}.{{ansible_hostname}}.params"
+    state: absent

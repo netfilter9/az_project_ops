@@ -1,0 +1,17 @@
+---
+#
+# setting hostname 
+#
+- name: Set hostname
+  hostname:
+    name: "{{ hostname }}"
+    
+# preseving hostname set to true.
+# hostname set even after reboots
+- name:  preserving hostname, even after reboots
+  lineinfile:
+    dest: /etc/cloud/cloud.cfg
+    regexp: "^preserve_hostname:[ \t]+false"
+    line: "preserve_hostname: true"
+    state: present
+  

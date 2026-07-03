@@ -1,0 +1,111 @@
+---
+
+  # output a comma separated list of current cluster members
+  # need to use nodename rather than cluster name or this will fail
+  # https://github.com/dsccommunity/xFailOverCluster/issues/7
+- name: get initial cluster node status
+  win_shell: |
+    $cluster = Get-Cluster -Name "{{ node1 }}" -ErrorAction SilentlyContinue
+    if($cluster) {
+      (Get-ClusterNode -Cluster "{{ node1 }}" |
+        Select-Object -Property NodeName |
+        ForEach-Object { "$($_.NodeName).$($cluster.Domain)" }) -join ','
+    }
+  changed_when: no
+  register: cluster_nodes
+  ignore_errors: yes
+
+- name: create windows cluster
+  win_dsc:
+    resource_name: xCluster
+    Name: "{{ cluster.name }}"
+    StaticIPAddress: "{{ cluster.ip }}"
+    DomainAdministratorCredential_username: "{{ domain_ansible_username }}@{{ domain_fqdn }}"
+    DomainAdministratorCredential_password: "{{ domain_ansible_password }}"
+  register: create_windows_cluster
+  when:
+    - inventory_hostname == node1
+    - cluster_nodes.stdout | length == 0
+
+- name: wait for cluster
+  win_dsc:
+    resource_name: xWaitForCluster
+    Name: "{{ cluster.name }}"
+    RetryIntervalSec: "{{ retry_interval_sec }}"
+    RetryCount: "{{ retry_count }}"
+  when:
+    - inventory_hostname == node1
+    - create_windows_cluster is changed
+
+- name: configure cluster quorom
+  win_dsc:
+    resource_name: xClusterQuorum
+    IsSingleInstance: "Yes"
+    Type: NodeAndCloudMajority
+    Resource: "{{ cluster.quorom_storage_account_name }}"
+    StorageAccountAccessKey: "{{ cluster.quorom_storage_account_key }}"
+    PsDscRunAsCredential_username: "{{ domain_ansible_username }}@{{ domain_fqdn }}"
+    PsDscRunAsCredential_password: "{{ domain_ansible_password }}"
+  register: cloud_quorum
+  when: inventory_hostname == node1
+
+- name: get cluster node status
+  win_shell: |
+    $cluster = Get-Cluster -Name "{{ node1 }}" -ErrorAction SilentlyContinue
+    if($cluster) {
+      (Get-ClusterNode -Cluster "{{ node1 }}" |
+        Select-Object -Property NodeName |
+        ForEach-Object { "$($_.NodeName).$($cluster.Domain)" }) -join ','
+    }
+  changed_when: no
+  register: cluster_current_nodes
+  ignore_errors: yes
+
+  # convert the cluster members to a list for ease of reference
+- name: set fact for existing cluster node members
+  set_fact:
+    cluster_node_members: "{{ cluster_current_nodes.stdout_lines[0].split(',') }}"
+  when:
+    - cluster_current_nodes.stdout_lines[0] is defined
+
+  # for windows server 2019 we should just be able to join the cluster
+  # by running the dsc again
+- name: windows server 2019 join cluster
+  block:
+
+    - name: windows server 2019 join windows cluster
+      win_dsc:
+        resource_name: xCluster
+        Name: "{{ cluster.name }}"
+        StaticIPAddress: "{{ cluster.ip }}"
+        DomainAdministratorCredential_username: "{{ domain_ansible_username }}@{{ domain_fqdn }}"
+        DomainAdministratorCredential_password: "{{ domain_ansible_password }}"
+      when: inventory_hostname != node1
+
+  when:
+    - ansible_distribution is regex('(?i)windows server 2019')
+
+- name: windows server 2016 join cluster
+  block:
+
+        - name: windows server 2016 join windows cluster
+          vars:
+            ansible_become_user: "{{ ansible_user }}"
+            ansible_become_pass: "{{ ansible_password }}"
+          win_shell: |
+            $fqdn = $(@($env:COMPUTERNAME,$env:USERDNSDOMAIN) -join '.')
+            $cluster = Get-Cluster -Name "{{ node1 }}"
+            $nodeName = Add-ClusterNode -Name $fqdn -InputObject $cluster -NoStorage
+            Write-Output "Added $($nodeName.NodeName) to $($cluster.Name)"
+          register: join_cluster_server2016
+          become: yes
+          become_method: runas
+          when:
+            - inventory_hostname != node1
+
+        - name: debug join_cluster_server2016
+          debug:
+            var: join_cluster_server2016
+
+  when:
+    - ansible_distribution is regex('(?i)windows server 2016')

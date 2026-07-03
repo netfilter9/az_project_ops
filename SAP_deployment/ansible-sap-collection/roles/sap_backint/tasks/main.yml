@@ -1,0 +1,44 @@
+- name: main | install packages
+  package:
+    name:
+      - python2
+    state: present
+
+- name: main | create backint.rsp
+  template:
+    src: "backint_config.j2"
+    dest: "/tmp/backint.rsp"
+
+- name: main | install backint
+  command: "{{item}}"
+  args:
+    chdir: /tmp/ 
+  environment:
+    PYTHONIOENCODING: "utf-8" 
+  with_items: 
+    - aws s3 cp s3://awssap-backint-agent/binary/latest/install-aws-backint-agent /tmp/
+    - python2 install-aws-backint-agent -m silent -f backint.rsp -a yes
+  register: result
+  failed_when: 
+    - result.failed
+  become: yes
+
+- name: main | global.ini configuration
+  blockinfile:
+    path: /usr/sap/{{ sap.db.sid | default(dbsid) | upper}}/SYS/global/hdb/custom/config/global.ini
+    marker: "# {mark} BACKINT CONFIGURATION"
+    block: |     
+      [backup]
+      catalog_backup_parameter_file = /usr/sap/{{ sap.db.sid | default(dbsid) | upper }}/SYS/global/hdb/opt/hdbconfig/aws-backint-agent-config.yaml
+      data_backup_parameter_file = /usr/sap/{{ sap.db.sid | default(dbsid) | upper }}/SYS/global/hdb/opt/hdbconfig/aws-backint-agent-config.yaml
+      log_backup_parameter_file = /usr/sap/{{ sap.db.sid | default(dbsid) | upper }}/SYS/global/hdb/opt/hdbconfig/aws-backint-agent-config.yaml
+      catalog_backup_using_backint = true
+      log_backup_using_backint = true
+      parallel_data_backup_backint_channels = 8
+      data_backup_buffer_size = 4096
+      max_recovery_backint_channels = 1
+      [communication]
+      tcp_backlog = 2048
+      [persistence]
+      enable_auto_log_backup = yes
+    

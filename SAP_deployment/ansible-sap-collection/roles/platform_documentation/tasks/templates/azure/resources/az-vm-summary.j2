@@ -1,0 +1,38 @@
+
+{# 
+    generate vm summary 
+#}
+{% for terraformvmnames in vm_list %}
+{%- if loop.first -%}
+# VM Summary
+---
+|Hostname|Vm Size|Os Type|Availability Zone|Availability Set|Proximity Placement Group|
+|-|-|-|-|-|-|
+{% endif %}
+{% set datafound = namespace(isdatapresent=false) %}
+  {% for resource in resource_json if (resource.type=="microsoft.compute/virtualmachines" and resource.name == terraformvmnames) %}  
+  {%- set datafound.isdatapresent = true %}
+    {%- set row = [
+        resource.name,
+        resource.properties.hardwareProfile.vmSize,
+        "Linux" if (resource.properties.osProfile.linuxConfiguration is defined) else "Windows",
+        resource.zones[-1] if (resource.zones[-1] is defined) else "None",
+        resource.properties.availabilitySet.id.split("/")[-1]  if (resource.properties.availabilitySet is defined) else "None",
+        resource.properties.proximityPlacementGroup.id.split("/")[-1] if (resource.properties.proximityPlacementGroup is defined) else "None"
+      ]
+    -%}
+    |{{ row | join('|') }}|
+  {% endfor %}
+{%- if datafound.isdatapresent == false %}
+{%- set row = [
+    terraformvmnames,
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found",
+    "Not found"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endfor %}

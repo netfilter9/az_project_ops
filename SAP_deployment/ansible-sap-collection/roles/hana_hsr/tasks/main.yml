@@ -1,0 +1,66 @@
+---
+
+- name: main | aws
+  block: 
+
+    - name: main | Backup
+      include_tasks: Backups.yml
+
+    - name: main | enable-site1
+      include_tasks: enable-site1.yml
+
+    - name: main | copy-files
+      include_tasks: copy-files.yml
+
+    - name: main | stop-hana
+      include_tasks: stop-hana.yml
+    
+    - name: main | register-node2
+      include_tasks: register-node2.yml
+
+  when: platform == 'aws' 
+
+
+- name: main | azure
+  block: 
+
+    - name: main | copy-files
+      include_tasks: copy-files.yml
+
+    - name: main | Backups
+      include_tasks: Backups.yml
+
+    - name: main | enable-site1
+      include_tasks: enable-site1.yml
+
+    - name: main | stop-hana
+      include_tasks: stop-hana.yml
+    
+    - name: main | register-node2
+      include_tasks: register-node2.yml
+      
+  when: platform == 'azure'
+
+
+- name: main | gcp
+  block: 
+
+    - name: main | gcp-autostart-disable
+      include_tasks: gcp-autostart-disable.yml
+
+    - name: main | copy-files
+      include_tasks: copy-files.yml
+
+    - name: main | Backups
+      include_tasks: Backups.yml
+    
+    - name: main | enable-site1
+      include_tasks: enable-site1.yml
+
+    - name: main | stop-hana
+      include_tasks: stop-hana.yml
+    
+    - name: main | register-node2
+      include_tasks: register-node2.yml
+
+  when: platform == 'gcp'

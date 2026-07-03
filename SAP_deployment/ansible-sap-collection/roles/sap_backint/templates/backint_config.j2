@@ -1,0 +1,9 @@
+[DEFAULT]
+hana_sid = {{ sap.db.sid | default(dbsid) | upper }}
+s3_sse_kms_arn = {{ backint.sse_kms_arn }} 
+s3_bucket_name = {{ backint.bucket_name }}
+s3_bucket_folder = {{ backint.bucket_folder }}
+s3_bucket_owner_account_id = {{ backint.bucket_owner_account_id }}
+modify_global_ini = sql
+s3_bucket_region = {{ backint.bucket_region }}
+installation_directory = /hana/shared/

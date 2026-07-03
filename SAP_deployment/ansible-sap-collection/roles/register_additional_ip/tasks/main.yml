@@ -1,0 +1,7 @@
+---
+- name: set file name
+  set_fact:
+    file: "{% if platform == 'gcp' %}gcp.yml{% else %}others.yml{% endif %}"
+
+- name: register additional ip
+  include_tasks: "{{ file }}"

@@ -1,0 +1,6 @@
+---
+- name: sysctl-tweaks | update ipv4 tcp timestamps
+  sysctl:
+    name: "net.ipv4.tcp_timestamps"
+    value: "0"
+    state: present

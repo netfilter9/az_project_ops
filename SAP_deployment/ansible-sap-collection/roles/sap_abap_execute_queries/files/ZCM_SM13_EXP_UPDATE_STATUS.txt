@@ -1,0 +1,113 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM13_EXP_UPDATE_STATUS                   *
+* Title               :   Capture Update Status in SM13                *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   22/09/2020                                   *
+* Purpose             :   This report is for capturing Update Status   *
+*                         in SM13 during Cloud Migration               *
+*----------------------------------------------------------------------*
+" This code is referred from Standard Report SAPMSM14
+" Module show_general
+
+REPORT zcm_sm13_exp_update_status.
+
+DATA: BEGIN OF info.
+    INCLUDE STRUCTURE vbinfo.
+DATA: END OF info.
+
+DATA: BEGIN OF infoline.
+    INCLUDE STRUCTURE vbinfo.
+DATA: infotext(50) TYPE c.
+DATA: END OF infoline.
+
+DATA:       th_opcode(1)         TYPE x.
+
+CONSTANTS: vb_get_info LIKE th_opcode VALUE 17,
+           lc_sep      TYPE c VALUE '|'                LENGTH 1,
+           lc_export   TYPE c VALUE 'EXPORT'           LENGTH 6,
+           lc_txt30    TYPE c VALUE 'Deactivate'       LENGTH 12,
+           lc_txt31    TYPE c VALUE 'Activate'         LENGTH 10,
+           lc_txt01    TYPE c VALUE 'Update is active' LENGTH 20,
+           lc_txt02    TYPE c VALUE
+           'Update deactivated by system'              LENGTH 40,
+           lc_txt03    TYPE c VALUE
+            'Updating by user deactivated'             LENGTH 40,
+           lc_title    TYPE c VALUE
+         'Update Program Administration'               LENGTH 45,
+           lc_err_msg  TYPE c VALUE
+           'UnabletoreadUpdateStatus'                  LENGTH 45,
+           lc_status   TYPE c VALUE  'Status'          LENGTH 10,
+           lc_msg      TYPE c VALUE  'Message'         LENGTH 10
+           ##NO_TEXT.
+
+
+DATA:ls_input        TYPE tab512,
+     ls_output       TYPE tab512,
+     lv_action       TYPE char20,
+     lv_activate(20).
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+               TABLES lt_input  STRUCTURE tab512
+                      lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.       " Action
+
+  " Adding title to the output
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  CASE lv_action.
+
+    WHEN lc_export.      " If action is Export
+
+      CLEAR info.
+
+      CALL 'ThVBCall'
+      ID 'OPCODE' FIELD vb_get_info
+      ID 'VBINFO' FIELD info.
+
+      IF sy-subrc = 0.
+        MOVE-CORRESPONDING info TO infoline.
+
+        IF infoline-vb_active = 1.
+          infoline-infotext = lc_txt01.
+          lv_activate = lc_txt31.
+        ELSE.
+          IF infoline-autostop = 1.
+            infoline-infotext = lc_txt02.
+          ELSE.
+            infoline-infotext = lc_txt03.
+          ENDIF.
+          lv_activate = lc_txt30.
+        ENDIF.
+      ENDIF.
+
+
+      IF infoline-infotext IS NOT INITIAL.
+        " Adding table heading to the output
+        CONCATENATE lc_status lc_sep
+                    lc_msg INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        " Adding table data to the output
+        CONCATENATE lv_activate lc_sep
+                    infoline-infotext  INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+      ELSE.
+        " Unable to read Update Status
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+  ENDCASE.
+  CLEAR : ls_output, lv_activate.
+  FREE:  infoline.
+
+ENDFORM.

@@ -1,0 +1,137 @@
+*&*******************************************************************&*
+* Report              :   ZBASIS_R_STMS_QUEUE                         *
+* Title               :   STMS Queue                                  *
+* Created by          :   Fathima Hussain                             *
+* Created on          :   07/09/2020                                  *
+* Purpose             :   This report is used to export import queue  *
+*---------------------------------------------------------------------*
+REPORT zbasis_r_stms_queue.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c       VALUE '|',
+             lc_export     TYPE char20   VALUE 'EXPORT',
+             lc_msg_nodata TYPE string VALUE
+             'There is no data'.
+
+  DATA: ls_input  TYPE tab512,
+        ls_output TYPE tab512,
+        ls_prefinal TYPE string,
+        lv_action TYPE char8.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read action required from Python interface
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_export.
+
+*      Table Name
+      ls_output = 'TMSBUFFER'.
+      APPEND ls_output TO lt_output.
+
+      SELECT * FROM TMSBUFFER INTO TABLE @DATA(lt_TMSBUFFER).
+      IF sy-subrc <> 0.
+        ls_output = lc_msg_nodata.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      " Titles
+      CONCATENATE 'DOMNAM' lc_sep
+                  'SYSNAM' lc_sep
+                  'BUFPOS' lc_sep
+                  'BUFLVL' lc_sep
+                  'TRKORR' lc_sep
+                  'UMODES' lc_sep
+                  'IMPFLG' lc_sep
+                  'MAXRC' lc_sep
+                  'TARCLI' lc_sep
+                  'PROJECT' lc_sep
+                  'TRFUNC' lc_sep
+                  'ACTFLG' lc_sep
+                  'PREFLG' lc_sep
+                  'NODATAFLG' lc_sep
+                  'JOBID' lc_sep
+                  'TPSTATID' lc_sep
+                  'IMPSING' lc_sep
+                  'CVERSFLG' lc_sep
+                  'OWNER' lc_sep
+                  'TEXT' lc_sep
+                  'COMSYS' lc_sep
+                  'SRCCLI'
+                  INTO ls_output.
+      APPEND ls_output TO lt_output.
+
+      "Table data
+      LOOP AT lt_tmsbuffer INTO data(ls_tmsbuffer).
+        CONCATENATE ls_tmsbuffer-DOMNAM lc_sep
+                    ls_tmsbuffer-SYSNAM lc_sep
+                    ls_tmsbuffer-BUFPOS lc_sep
+                    ls_tmsbuffer-BUFLVL lc_sep
+                    ls_tmsbuffer-TRKORR lc_sep
+                    ls_tmsbuffer-UMODES lc_sep
+                    ls_tmsbuffer-IMPFLG lc_sep
+                    ls_tmsbuffer-MAXRC lc_sep
+                    ls_tmsbuffer-TARCLI lc_sep
+                    ls_tmsbuffer-PROJECT lc_sep
+                    ls_tmsbuffer-TRFUNC lc_sep
+                    ls_tmsbuffer-ACTFLG lc_sep
+                    ls_tmsbuffer-PREFLG lc_sep
+                    ls_tmsbuffer-NODATAFLG lc_sep
+                    ls_tmsbuffer-JOBID lc_sep
+                    ls_tmsbuffer-TPSTATID lc_sep
+                    ls_tmsbuffer-IMPSING lc_sep
+                    ls_tmsbuffer-CVERSFLG lc_sep
+                    ls_tmsbuffer-OWNER lc_sep
+                    ls_tmsbuffer-TEXT lc_sep
+                    ls_tmsbuffer-COMSYS lc_sep
+                    ls_tmsbuffer-SRCCLI
+                    INTO ls_prefinal.
+          PERFORM end_null_check CHANGING ls_prefinal.
+          ls_output = ls_prefinal.
+        APPEND ls_output TO lt_output.
+      ENDLOOP.
+
+      PERFORM null_check TABLES  lt_output.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM end_null_check CHANGING ls_string TYPE string.
+
+  DATA lv_last_char TYPE char1.
+
+  lv_last_char = substring( val = ls_string
+                   off = strlen( ls_string ) - 1
+                   len = 1 ).
+  IF lv_last_char = '|'.
+    CONCATENATE ls_string 'NULL'
+      INTO ls_string.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO .
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

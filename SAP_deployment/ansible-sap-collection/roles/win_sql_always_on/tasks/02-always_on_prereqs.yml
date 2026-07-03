@@ -1,0 +1,105 @@
+---
+
+- set_fact:
+    domainName: "{{ domain.fqdn.split('.')[0] }}"
+
+- debug:
+    msg: "{{ domainName }}"
+
+- name: SQL always on service
+  win_dsc:
+    resource_name: SqlAlwaysOnService
+    Ensure: Present
+    ServerName: "{{ ansible_hostname }}"
+    RestartTimeout: 1000
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: Create SQL Server login
+  win_dsc:
+    resource_name: SqlLogin
+    Ensure: Present
+    ServerName: "{{ ansible_hostname }}"
+    Name: 'NT SERVICE\ClusSvc'
+    LoginType: 'WindowsUser'
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: Manage server permissions
+  win_dsc:
+    resource_name: SqlPermission
+    Ensure: Present
+    ServerName: "{{ ansible_hostname }}"
+    Principal: 'NT SERVICE\ClusSvc'
+    Permission: "AlterAnyAvailabilityGroup,ViewServerState,ConnectSql"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: Manage server permissions on secondary DB
+  win_dsc:
+    resource_name: SqlPermission
+    Ensure: Present
+    ServerName: "{{ ansible_hostname }}"
+    Principal: 'NT SERVICE\ClusSvc'
+    Permission: "AlterAnyAvailabilityGroup,ViewServerState,ConnectSql,AlterAnyEndPoint"
+    InstanceName: "{{ mssql_params.install.instance_name }}"
+    PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+    PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+  when: inventory_hostname == node2
+
+- name: SQL Server endpoint setup
+  win_dsc:
+      resource_name: DSC_SqlEndpoint
+      EndpointType: DatabaseMirroring
+      Ensure: Present
+      Port: 5022
+      endpointName: "{{ cluster.sqlavailabilityGroup }}"
+      InstanceName: "{{ mssql_params.install.instance_name }}"
+      IpAddress: "0.0.0.0"
+      ServerName: "{{ ansible_hostname }}"
+      PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+      PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: SQL Server endpoint status
+  win_dsc:
+      resource_name: MSFT_SqlServerEndpointState
+      Name: "{{ cluster.sqlavailabilityGroup }}"
+      InstanceName: "{{ mssql_params.install.instance_name }}"
+      State: 'Started'
+      ServerName: "{{ ansible_hostname }}"
+      PsDscRunAsCredential_username: "{{ domainName }}\\{{ domain.username }}"
+      PsDscRunAsCredential_password: "{{ override_domain_password | default(vault_passwords.domain) }}"
+
+- name: copy sql code on node1
+  template:
+    src: permission.j2
+    dest: C:\permission.sql
+  when: inventory_hostname == node1
+  
+- name: copy sql code on node2
+  template:
+    src: permissioncopy.j2
+    dest: C:\permission.sql
+  when: inventory_hostname == node2
+
+- name: Run select
+  win_shell: sqlcmd -S {{ ansible_hostname }} -i C:\\permission.sql
+  register: sql_endpoint_permission
+
+- name: Create directory structure
+  win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA1"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA2"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA3"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA4"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA5"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA6"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA7"
+    - "{{ sap.data_drive }}:\\{{ sap.sid | upper }}DATA8"
+    - "{{ sap.log_drive }}:\\{{ sap.sid | upper }}LOG1"

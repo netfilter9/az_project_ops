@@ -1,0 +1,45 @@
+---
+
+- name: splunk | unarchive the tar file that is already on the remote machine
+  become: yes
+  unarchive:
+    src: /{{ splunk.src }}/SPLUNK/{{ splunk.filename }}
+    dest: /opt/
+    remote_src: yes
+
+- name: splunk | cleanup .tar file from remote host
+  shell:
+    cmd: rm -rf *
+    chdir: /{{ splunk.src }}/SPLUNK
+    warn: false
+  
+- name: splunk | set the deployment server using command
+  become: yes  
+  command: /opt/splunkforwarder/bin/splunk set deploy-poll {{splunk.server}}:{{ splunk.port}} --accept-license --answer-yes --no-prompt 
+  no_log: true
+
+- name: splunk | set admin user credential 
+  become: yes
+  command: /opt/splunkforwarder/bin/splunk add user {{splunk.username}} -password {{passwords.splunkadmin}} -role admin
+  no_log: true
+ 
+- name: splunk | copy in /opt/splunkforwarder/
+  become: yes
+  copy:
+    src: boot-start-splunk.sh
+    dest: /opt/splunkforwarder/
+
+- name: splunk | make boot-start-splunk executable
+  file:
+    path: /opt/splunkforwarder/boot-start-splunk.sh
+    mode: "0755"
+
+- name: splunk | enable boot-start for splunk
+  become: yes
+  cron:    
+    special_time: reboot
+    job: "/opt/splunkforwarder/boot-start-splunk.sh"
+
+- name: splunk | restart Service using command
+  become: yes
+  command: /opt/splunkforwarder/bin/splunk start 

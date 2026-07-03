@@ -1,0 +1,186 @@
+{#
+  include common header to define nodes and STONITH approach
+#}
+{% include 'base_config.j2' %}
+
+{#
+  Add profile cluster 
+#}
+{% if platform == "aws" %}
+primitive res_AWS_IP ocf:suse:aws-vpc-move-ip \
+	params address={{ db_overlay_ip }} routing_table={{ route_table_id }} interface=eth0 \
+	profile=cluster \
+  {% if vpc_type is defined and vpc_type == "shared" %}
+  routing_table_role="arn:aws:iam::{{ vpc_account_number }}:role/{{ vpc_account_cluster_role }}" \
+  lookup_type=NetworkInterfaceId \
+  {% endif %}
+	op start interval=0 timeout=180 \
+	op stop interval=0 timeout=180 \
+	op monitor interval=60 timeout=60
+{% endif %}
+
+{# 
+  create a local variable for the SAP instance reference 
+  e.g. D4H_HDB00
+#}
+{% set instance = sap.db.sid + "_HDB" + sap.instance_numbers.db %}
+
+{#
+    Add HANA Topology resource (monitors across both nodes)
+#}
+primitive rsc_SAPHanaTopology_{{ instance }} ocf:suse:SAPHanaTopology \
+	operations $id="rsc_sap2_{{ instance }}-operations" \
+	op monitor interval="10" timeout="600" \
+	op start interval="0" timeout="600" \
+	op stop interval="0" timeout="300" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}"
+
+clone cln_SAPHanaTopology_{{ instance }} \
+  rsc_SAPHanaTopology_{{ instance }} \
+	meta clone-node-max="1" target-role="Started" interleave="true"
+
+{#
+    Add HANA resource (monitors active instance)
+#}
+{% if platform == "azure" or platform == "gcp" %}
+primitive rsc_SAPHana_{{ instance }} ocf:suse:SAPHana \
+	operations $id="rsc_sap_{{ instance }}-operations" \
+	op start interval="0" timeout="3600" \
+	op stop interval="0" timeout="3600" \
+	op promote interval="0" timeout="3600" \
+	op monitor interval="60" role="Master" timeout="700" \
+	op monitor interval="61" role="Slave" timeout="700" \
+	params SID="{{ sap.db.sid }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}" \
+  PREFER_SITE_TAKEOVER="true" \
+	DUPLICATE_PRIMARY_TIMEOUT="7200" \
+  AUTOMATED_REGISTER="{{ primitives.db.automatic_register | default('false') }}"
+  {% endif %}
+
+{% if platform == "aws" %}
+primitive rsc_SAPHana_{{ instance }} ocf:suse:SAPHana \
+	operations $id="rsc_sap_{{ instance }}-operations" \
+	op start interval="0" timeout="3600" \
+	op stop interval="0" timeout="3600" \
+	op promote interval="0" timeout="3600" \
+	op monitor interval="60" role="Master" timeout="700" \
+	op monitor interval="61" role="Slave" timeout="700" \
+	params SID="{{ sap.db.sid | upper }}" \
+  InstanceNumber="{{ sap.instance_numbers.db }}" \
+  PREFER_SITE_TAKEOVER="true" \
+	DUPLICATE_PRIMARY_TIMEOUT="7200" \
+  AUTOMATED_REGISTER="{{ primitives.db.automatic_register | default('false') }}"
+{% endif %}
+
+ms msl_SAPHana_{{ instance }} \
+  rsc_SAPHana_{{ instance }} \
+	meta notify="true" clone-max="2" clone-node-max="1" \ 
+  target-role="Started" interleave="true" {% if sap.lb_type == "gcp" %}\
+  is-managed="true"
+  {% endif %}
+
+{#
+    Add rsc resource
+#}
+{% if sap.lb_type == "gcp" %}
+{# GCP configure the VIP address in the operating system #}
+primitive rsc_ip_{{ instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.db.ip }} cidr_netmask=32 nic="eth0" op monitor interval=10s
+
+{% elif sap.lb_type == "azure" %}
+{# Azure configure the VIP address in the operating system #}
+primitive rsc_ip_{{ instance }} ocf:heartbeat:IPaddr2 \
+  meta target-role="Started" \
+  operations $id="rsc_ip_{{ instance }}-operations" \
+  op monitor interval="10s" timeout="20s" \
+  params ip={{ sap.logical_hosts.db.ip }}
+{% endif %}
+
+{#
+    Add appropriate "loadbalancer"
+#}
+{% if sap.lb_type == "gcp_alias" %}
+{# GCP Alias load balancer #}
+primitive nc_{{ instance }} ocf:gcp:alias \
+  op monitor interval="60s" timeout="60s" \
+  op start interval="0" timeout="180s" \
+  op stop interval="0" timeout="300s" \
+  params alias_ip="{{ sap.logical_hosts.db.ip }}/{{ sap.logical_hosts.db.cidr }}" \
+  hostlist="{{ node1 }} {{ node2 }}" \
+	gcloud_path="/usr/bin/gcloud" \
+  logging="yes" \
+  meta priority=10
+
+{% elif sap.lb_type == "gcp" %}
+{# Traditional GCP TCP Internal loadbalancer #}
+primitive nc_{{ instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:600{{ sap.instance_numbers.db }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+
+{% elif sap.lb_type == "azure" %}
+{# Traditional Azure loadbalancer #}
+primitive nc_{{ instance }} azure-lb \
+  port=625{{ sap.instance_numbers.db }} \
+  meta resource-stickiness=0
+{% endif %}
+
+{#
+  Put network resources in group
+#}
+{% if platform == "azure" or platform == "gcp" %}
+group g-primary rsc_ip_{{ instance }} nc_{{ instance }}
+{% endif %}
+
+{#
+  Ensure that the network resources and HANA master run on the same server 
+#}
+{% if platform == "azure" or platform == "gcp" %}
+colocation col_saphana_ip_{{ instance }} 4000: g-primary:Started \
+        msl_SAPHana_{{ instance }}:Master
+{% endif %}
+
+{#
+  Ensure that the network resources and HANA master run on the same server 
+#}
+{% if platform == "aws" %}
+colocation col_saphana_ip_{{ instance }} 2000: res_AWS_IP:Started \
+        msl_SAPHana_{{ instance }}:Master
+{% endif %}
+
+{#
+  Ensure hana topology is running before the hana master
+#}
+order ord_SAPHana_{{ instance }} Optional: \
+        cln_SAPHanaTopology_{{ instance }} \
+        msl_SAPHana_{{ instance }}
+
+{#
+  General configuration standards
+#}
+property cib-bootstrap-options: {% if stonith_type == "sbd" %} \
+        have-watchdog=true {% else %} \
+        have-watchdog=false {% endif %} \
+        cluster-infrastructure=corosync \
+        cluster-name=hacluster \
+        stonith-enabled=true \
+        stonith-action=off \
+        placement-strategy=default \
+        no-quorum-policy=stop \
+        stonith-timeout=600s \
+        last-lrm-refresh=1633414911 \
+        maintenance-mode=false \
+        dc-version=1.1.16-6.5.1-77ea74d \
+        startup-fencing=true {% if stonith_type == "azure_fence_agent" %}\
+        concurrent-fencing=true
+{% endif %}
+
+rsc_defaults rsc-options: \
+        resource-stickiness=1000 \
+        migration-threshold=5000
+
+op_defaults op-options: \
+        timeout=600 \
+        record-pending=true

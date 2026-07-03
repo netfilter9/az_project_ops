@@ -1,0 +1,7 @@
+---
+- name: main | create groups
+  group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid | default() }}"
+    state: "{{ item.state | default ('present') }}" 
+  loop: "{{ groupsetup }}"

@@ -1,0 +1,87 @@
+- name: hana_client | permission on hana instaler
+  file:
+    path: "{{ install_dir }}/sapinst/HANACLIENT"
+    mode: "+x"
+    recurse: yes
+    state: directory
+
+- name: hana_client | install HANA CLIENT
+  command:  
+    cmd: ./hdbinst -a client -b --hostname={{ sap.logical_hosts.db.hostname | default (ansible_hostname) }}
+    creates: /var/tmp/hdbinst_output*.log
+  args:
+    chdir: "{{ install_dir }}/sapinst/HANACLIENT/"
+  register: hdbinstresult
+
+- name: hana_client | write log file
+  copy:
+    dest: /var/tmp/hdbinst_output_{{ ansible_date_time.iso8601 }}.log
+    content: "{{ hdbinstresult.stdout }}"
+
+- name: debug 
+  debug:
+    var: ips_cms_dsnname
+
+- name: debug 
+  debug:
+    var: ips_audit_dsnname
+
+- name: main | generate odbc configuration 
+  template:
+    src: odbc.j2
+    dest: /tmp/odbc_ips
+  
+- name: main | slurp generated odbc content
+  slurp:
+    src: /tmp/odbc_ips
+  register: slurpfile
+
+- name: connection string for suse
+  block:
+    - name: set up unixODBC ini
+      blockinfile:
+        path: /etc/unixODBC/odbc.ini
+        create: yes
+        marker: "# {mark} IPS ODBC Configuration"
+        block: "{{ slurpfile['content'] | b64decode }}"
+          
+    - name: Create symbolic link 
+      file:
+        src: /etc/unixODBC/odbc.ini
+        dest: /etc/odbc.ini
+        state: link
+  when: ansible_os_family == 'Suse'
+
+
+- name: connection string for rhel
+  block:
+    - name: set up unixODBC ini
+      blockinfile:
+        path: /etc/odbc.ini
+        create: yes
+        marker: "# {mark} IPS ODBC Configuration"
+        block: "{{ slurpfile['content'] | b64decode }}"
+          
+  when: ansible_os_family == 'RedHat'
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LD_LIBRARY_PATH'
+    line: export LD_LIBRARY_PATH=/usr/sap/hdbclient
+    insertafter: '^#export LD_LIBRARY_PATH'
+    path: ~/.profile  
+  register: profile
+  become: yes
+  become_user: "{{admin_user}}"
+  when: ansible_os_family == 'Suse'
+
+- name: Update .profile
+  lineinfile:
+    regexp: '^export LD_LIBRARY_PATH'
+    line: export LD_LIBRARY_PATH=/usr/sap/hdbclient
+    insertafter: '^#export LD_LIBRARY_PATH'
+    path: ~/.bash_profile 
+  register: profile
+  become: yes
+  become_user: "{{admin_user}}"
+  when: ansible_os_family == 'RedHat'

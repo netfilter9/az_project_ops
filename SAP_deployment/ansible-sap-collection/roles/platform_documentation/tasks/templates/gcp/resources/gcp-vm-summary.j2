@@ -1,0 +1,33 @@
+{# 
+    generate vm summary 
+#}
+{% for terraformvmnames in vm_list %}
+{% if loop.first %}
+# VM Summary
+---
+|Hostname|Vm Size|Os Type|
+|-|-|-|
+{% endif %}
+{% set datafound = namespace(isdatapresent=false) %}
+  {% for resource in gce_json if (resource.kind=="compute#instance" and resource.name == terraformvmnames) %}
+  {%- set datafound.isdatapresent = true %}
+    {%- set row = [
+        resource.name,
+        resource.machineType.split('/')|last,
+        "Windows" if ("windows" in resource.disks[0].licenses[0]) else "Linux",
+        ]
+    -%}
+
+    |{{ row | join('|') }}|
+  {% endfor %}
+  {%- if datafound.isdatapresent == false %}
+{%- set row = [
+    terraformvmnames,
+    "Not found",
+    "Not found",
+    "Not found"
+  ]
+-%}
+|{{ row | join('|') }}|
+{% endif %}
+{% endfor %}

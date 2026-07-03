@@ -1,0 +1,198 @@
+*&********************************************************************&*
+* Report              :   ZCM_SMT1_EXP_TRUSTED_RFC                     *
+* Title               :   Trusted RFC in SMT1                          *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   18/09/2020                                   *
+* Purpose             :   This report is to capture Trusted RFCs in    *
+*                         SMT1 during Cloud Migration                  *
+*----------------------------------------------------------------------*
+
+REPORT zcm_smt1_exp_trusted_rfc.
+
+TYPES: BEGIN OF lty_result,
+         rfcdest     TYPE rfcdest,
+         action(30)  TYPE c,
+         result(80)  TYPE c,
+         message(80) TYPE c,
+       END OF lty_result.
+
+CONSTANTS: lc_sep         TYPE c VALUE '|'                LENGTH 1,
+           lc_null        TYPE c VALUE 'NULL'             LENGTH 4,
+           lc_export      TYPE c VALUE 'EXPORT'           LENGTH 6,
+           lc_msec        TYPE c VALUE 'msec'             LENGTH 4,
+           lc_logon       TYPE c VALUE 'Logon'            LENGTH 5,
+           lc_cancel      TYPE c VALUE 'Cancel'           LENGTH 6,
+           lc_error       TYPE c VALUE 'Error'            LENGTH 5,
+           lc_con_error   TYPE c VALUE 'Connection Error' LENGTH 20,
+           lc_err_details TYPE c VALUE 'Error details'    LENGTH 20,
+           lc_rfcsysid    TYPE c VALUE 'RFCSYSID'         LENGTH 10,
+           lc_tlicense_nr TYPE c VALUE 'TLICENSE_NR'      LENGTH 12,
+           lc_rfctrustsy  TYPE c VALUE 'RFCTRUSTSY'       LENGTH 14,
+           lc_llicense_nr TYPE c VALUE 'LLICENSE_NR'      LENGTH 14,
+           lc_rfcdest     TYPE c VALUE 'RFCDEST'          LENGTH 7,
+           lc_rfccredest  TYPE c VALUE 'RFCCREDEST'       LENGTH 14,
+           lc_rfcregdest  TYPE c VALUE 'RFCREGDEST'       LENGTH 14,
+           lc_rfcmsgsrv   TYPE c VALUE 'RFCMSGSRV'        LENGTH 12,
+           lc_action      TYPE c VALUE 'Action'           LENGTH 6,
+           lc_result      TYPE c VALUE 'Result'           LENGTH 6,
+           lc_conn_test   TYPE c VALUE
+           'Connection Test'                              LENGTH 30,
+           lc_title       TYPE c VALUE
+           'Trusted Trusting Connections'                 LENGTH 35,
+           lc_err_msg     TYPE c VALUE
+           'No Trusted RFC found in the system'           LENGTH 40
+           ##NO_TEXT.
+
+DATA: ls_input         TYPE tab512,
+      ls_output        TYPE tab512,
+      lv_action        TYPE char20,
+      lv_begin         TYPE i,
+      lv_end           TYPE i,
+      lv_transfer_time LIKE sy-index,
+      lv_rfc_mess      LIKE sy-lisel,
+      lt_result        TYPE TABLE OF lty_result,
+      ls_result        TYPE lty_result,
+      lt_trusted       TYPE TABLE OF rfcsysacl,
+      ls_trusted       TYPE rfcsysacl.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      SELECT rfcsysid tlicense_nr rfctrustsy
+             llicense_nr rfcdest rfccredest
+             rfcmsgsrv rfcregdest
+             FROM rfcsysacl
+             INTO CORRESPONDING FIELDS OF
+             TABLE lt_trusted.
+
+      " Adding title to the output
+      ls_output = lc_title.
+      APPEND ls_output TO lt_output.
+
+      IF lt_trusted IS NOT INITIAL.
+
+        " Sorting table by RFCSYSSID
+        SORT lt_trusted BY rfcsysid.
+
+        " Adding heading to the output
+        CONCATENATE lc_rfcsysid     lc_sep
+                    lc_tlicense_nr  lc_sep
+                    lc_rfctrustsy   lc_sep
+                    lc_llicense_nr  lc_sep
+                    lc_rfcdest      lc_sep
+                    lc_rfccredest   lc_sep
+                    lc_rfcregdest   lc_sep
+                    lc_rfcmsgsrv
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_trusted INTO ls_trusted.
+
+          CONCATENATE ls_trusted-rfcsysid     lc_sep
+                      ls_trusted-tlicense_nr  lc_sep
+                      ls_trusted-rfctrustsy   lc_sep
+                      ls_trusted-llicense_nr  lc_sep
+                      ls_trusted-rfcdest      lc_sep
+                      ls_trusted-rfccredest   lc_sep
+                      ls_trusted-rfcregdest   lc_sep
+                      ls_trusted-rfcmsgsrv
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+
+        " No Trusted RFC found in the system
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+
+      ENDIF.
+
+      " Adding empty line
+      ls_output = space.
+      APPEND ls_output TO lt_output.
+
+      " Adding title to the output
+      ls_output = lc_conn_test.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+      " Adding heading to the output
+      CONCATENATE lc_rfcdest    lc_sep
+                  lc_action     lc_sep
+                  lc_result     lc_sep
+                  lc_error
+                  INTO ls_output.
+      APPEND ls_output TO lt_output.
+
+      REFRESH lt_result.
+
+      LOOP AT lt_trusted INTO ls_trusted.
+
+        " FM for Authorization Check of RFCDEST
+        CALL FUNCTION 'RFC_TRUSTED_CHECK'
+          EXPORTING
+            rfcdest       = ls_trusted-rfcdest
+          IMPORTING
+            transfer_time = lv_transfer_time
+            error_message = lv_rfc_mess.
+
+        ls_result-rfcdest = ls_trusted-rfcdest.
+
+        IF syst-subrc = 1 OR NOT lv_rfc_mess IS INITIAL.
+          ls_result-action = lc_logon .
+          ls_result-result = lc_cancel.
+          ls_result-message =  lv_rfc_mess.
+          APPEND ls_result TO lt_result.
+        ELSE.
+          IF syst-subrc = 2.
+            ls_result-action = lc_logon.
+            ls_result-result = lc_con_error.
+            ls_result-message =  lv_rfc_mess.
+            APPEND ls_result TO lt_result.
+
+          ELSE.
+            ls_result-action = lc_logon.
+            ls_result-result = lv_transfer_time.
+            CONDENSE ls_result-result NO-GAPS.
+            CONCATENATE ls_result-result lc_msec
+              INTO ls_result-result SEPARATED BY space.
+            APPEND ls_result TO lt_result.
+          ENDIF.
+        ENDIF.
+
+        CLEAR ls_result.
+
+      ENDLOOP.
+
+      LOOP AT lt_result INTO ls_result.
+
+        IF ls_result-message IS INITIAL.
+          ls_result-message = lc_null.
+        ENDIF.
+
+        CONCATENATE ls_result-rfcdest   lc_sep
+                    ls_result-action    lc_sep
+                    ls_result-result    lc_sep
+                    ls_result-message
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR: ls_result, ls_output.
+
+      ENDLOOP.
+
+  ENDCASE.
+
+ENDFORM.

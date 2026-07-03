@@ -1,0 +1,28 @@
+---
+- name: resource create fs_{{ sap.sid|upper }}_{{ sap.ascs_type }} 
+  command: pcs resource create fs_{{ sap.sid|upper }}_{{ sap.ascs_type }} Filesystem device='{{ ascs_device }}' directory='/usr/sap/{{sap.sid|upper}}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}' fstype='nfs' force_unmount=safe --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create fs_{{ sap.sid|upper }}_ERS 
+  command: pcs resource create fs_{{ sap.sid|upper }}_ERS Filesystem device='{{ ers_device }}' directory='/usr/sap/{{sap.sid|upper}}/ERS{{ sap.instance_numbers.ers }}' fstype='nfs' force_unmount=safe --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create vip_{{ sap.sid|upper }}_{{ sap.ascs_type }} 
+  command: pcs resource create vip_{{ sap.sid|upper }}_{{ sap.ascs_type }} aws-vpc-move-ip ip={{ ascs_overlay_ip }} interface=eth0 routing_table="{{ route_table_id }}" monapi=true --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create vip_{{ sap.sid|upper }}_ERS 
+  command: pcs resource create vip_{{ sap.sid|upper }}_ERS aws-vpc-move-ip ip={{ ers_overlay_ip }} interface=eth0 routing_table="{{ route_table_id }}" monapi=true --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 

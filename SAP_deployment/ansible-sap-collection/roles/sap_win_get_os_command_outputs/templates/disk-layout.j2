@@ -1,0 +1,14 @@
+[{% for disk in disk_layout_outputs.stdout_lines -%}
+  {%- if loop.index == 3  %}
+     {"source": "{{ disk.split()[0] | replace(":","") }}","free_size": "{{ disk.split()[1] }}","size": "{{ disk.split()[2] }}" },
+  {%- endif %}  
+  {%- if loop.index == 5  %}
+     {"source": "{{ disk.split()[0] | replace(":","") }}","free_size": "{{ disk.split()[1] }}","size": "{{ disk.split()[2] }}" },
+  {%- endif %}  
+  {%- if loop.index == 7  %}
+     {"source": "{{ disk.split()[0] | replace(":","") }}","free_size": "{{ disk.split()[1] }}","size": "{{ disk.split()[2] }}" },
+  {%- endif %}  
+  {%- if loop.index == 9  %}
+     {"source": "{{ disk.split()[0] | replace(":","") }}","free_size": "{{ disk.split()[1] }}","size": "{{ disk.split()[2] }}" }
+  {%- endif %}  
+{% endfor %}]

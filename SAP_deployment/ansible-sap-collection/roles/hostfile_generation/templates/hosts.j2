@@ -1,0 +1,8 @@
+{% for host in groups['all'] %}
+{% if 'ansible_eth0' in hostvars[host] and hostvars[host]['update_host_file'] is not defined %}
+{{ hostvars[host]['ansible_default_ipv4']['address'] }}  {{ hostvars[host]['ansible_hostname'] }}{{ fqdn }}  {{ hostvars[host]['ansible_hostname'] }}
+{% endif %}
+{% endfor %}
+{% for entry in sap.logical_hosts %}
+{{ sap.logical_hosts[entry].ip  }} {{ sap.logical_hosts[entry].hostname  }}{{ fqdn }} {{ sap.logical_hosts[entry].hostname }}
+{% endfor %}

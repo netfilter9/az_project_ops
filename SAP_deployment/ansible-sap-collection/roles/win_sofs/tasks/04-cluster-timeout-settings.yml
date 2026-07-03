@@ -1,0 +1,14 @@
+---
+
+- name: adjust cluster timeout settings
+  win_dsc:
+    resource_name: xClusterProperty
+    Name: "{{ cluster.name }}"
+    SameSubnetDelay: 2000
+    SameSubnetThreshold: 15
+    PsDscRunAsCredential_username: "{{ domain_ansible_username }}@{{ domain_fqdn }}"
+    PsDscRunAsCredential_password: "{{ domain_ansible_password }}"
+
+- name: set cluster route history length
+  win_shell: |
+    (Get-Cluster).RouteHistoryLength = 30

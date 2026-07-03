@@ -1,0 +1,5 @@
+*.db_name='{{ sap.db.sid | upper }}'
+*.db_create_online_log_dest_1='/oracle/{{ sap.db.sid | upper }}/origlogA'
+*.db_create_online_log_dest_2='/oracle/{{ sap.db.sid | upper }}/origlogB'
+*.db_recovery_file_dest='/oracle/{{ sap.db.sid | upper }}/oraflash'
+*.DB_RECOVERY_FILE_DEST_SIZE=4G

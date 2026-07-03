@@ -1,0 +1,20 @@
+- name: main 
+  block:
+    - name: fetch instance id
+      command: aws ec2 describe-instances --region {{region}} --filters Name=private-ip-address,Values={{primary_ip}} --query "Reservations[*].Instances[*].[InstanceId]" --output text
+      register: primary_id
+
+    - name: fetch instance id
+      command: aws ec2 describe-instances --region {{region}} --filters Name=private-ip-address,Values={{secondary_ip}} --query "Reservations[*].Instances[*].[InstanceId]" --output text
+      register: secondary_id
+
+    - name: setting fact for sid
+      set_fact:
+              pri_instance_id: "{{ primary_id.stdout }}"
+              sec_instance_id: "{{ secondary_id.stdout }}"
+
+    - name: azure_stonith | create Stonith Device
+      command: "{{ item }}"
+      with_items: 
+        - pcs stonith create stonith-rhelha fence_aws region={{ region }} pcmk_host_map="{{ pcmk_primary_host }}:{{ pri_instance_id }};{{ pcmk_secondary_host }}:{{ sec_instance_id }}" power_timeout=240 pcmk_reboot_timeout=480 pcmk_reboot_retries=4
+  when: ansible_hostname == node1

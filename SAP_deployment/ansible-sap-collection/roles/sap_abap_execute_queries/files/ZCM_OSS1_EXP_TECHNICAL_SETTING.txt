@@ -1,0 +1,243 @@
+*---------------------------------------------------------------------*
+* Program Name        :  ZCM_OSS1_EXP_TECHNICAL_SETTING               *
+* Title               :  Technical settings SAP Service Marketplace   *
+*                        Logon                                        *
+* Purpose             :  This report is used to Capture Technical     *
+*                        Settings of SAP Service Marketplace Logon    *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* OSS1/RSEFA910                                                       *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* EWOSS                     X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*01-03-2021  Initial   Ruchir Kamble  Local    To Capture Technical   *
+*                                              Setings of SAP Service *
+*                                              Marketplace Logon      *
+*---------------------------------------------------------------------*
+
+"Code referred from standard report RSEFA910
+"Events - Initialization & Start of selection
+
+REPORT zcm_oss1_exp_technical_setting.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  ##NO_TEXT
+  CONSTANTS:
+    lc_sep       TYPE c VALUE '|'                             LENGTH 1,
+    lc_hyphen    TYPE c VALUE '-'                             LENGTH 1,
+    lc_na        TYPE c VALUE 'NA'                            LENGTH 2,
+    lc_export    TYPE c VALUE 'EXPORT'                        LENGTH 6,
+    lc_inc_input TYPE c VALUE 'Incorrect input'               LENGTH 20,
+    lc_no_input  TYPE c VALUE 'No input given'                LENGTH 20,
+    lc_err_msg   TYPE c VALUE 'No data found in the system'   LENGTH 30,
+    lc_name      TYPE c VALUE 'Name'                          LENGTH 4,
+    lc_address   TYPE c VALUE 'IP Address'                    LENGTH 10,
+    lc_instance  TYPE c VALUE 'Instance no.'                  LENGTH 13,
+    lc_dbname    TYPE c VALUE 'DB Name'                       LENGTH 7,
+    lc_maintitle TYPE c VALUE
+    'Router Data for SAP Service Marketplace Logon'           LENGTH 50,
+    lc_title1    TYPE c VALUE
+    'SAP routers at Customer Site'                            LENGTH 30,
+    lc_title2    TYPE c VALUE
+    'SAP router and SAP Service Marketplace Message Server at SAP'
+                                                              LENGTH 70,
+    lc_head1     TYPE c VALUE 'SAP router 1'                  LENGTH 12,
+    lc_head2     TYPE c VALUE 'SAP router 2'                  LENGTH 12,
+    lc_head3     TYPE c VALUE 'SAP router at SAP'             LENGTH 20,
+    lc_head4     TYPE c VALUE 'SAP Service Marketplace Message Srvr'
+                                                              LENGTH 70.
+
+  DATA: ls_output TYPE tab512,
+        lv_action TYPE char6,
+        ls_ewoss  TYPE ewoss.
+
+  " Clearing variables before use
+  CLEAR: ls_output, lv_action, ls_ewoss.
+
+  FREE: lt_output.
+
+  " Adding main title to the output
+  ls_output = lc_maintitle.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  IF sy-subrc EQ 0.
+    lv_action = ls_input.
+  ELSE.
+    " No input given
+    ls_output = lc_no_input.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      SELECT SINGLE * FROM ewoss
+        WHERE dummykey = @space
+        INTO @ls_ewoss.
+
+      IF sy-subrc NE 0.
+        " No data found
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+      ELSE.
+
+        " Adding empty line to the output
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " SAP routers at Customer site
+
+        " Adding sub title and heading to the output
+        ls_output-wa = lc_title1 && space && lc_hyphen &&
+        space && lc_head1 .
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " Adding column headings to the output
+        ls_output-wa = lc_name && lc_sep && lc_address && lc_sep
+        && lc_instance.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        IF ls_ewoss-sr1name IS NOT INITIAL.
+
+          " Adding Router 1 data to the output
+          ls_output-wa = ls_ewoss-sr1name && lc_sep && ls_ewoss-sr1ip
+          && lc_sep && ls_ewoss-sr1inst.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ELSE.
+          " No data
+          ls_output-wa = lc_na && lc_sep && lc_na && lc_sep && lc_na.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ENDIF.
+
+        " Adding empty line to the output
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " Adding sub title and heading to the output
+        ls_output-wa = lc_title1 && lc_hyphen && lc_head2.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " Adding column headings to the output
+        ls_output-wa = lc_name && lc_sep && lc_address && lc_sep
+        && lc_instance.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        IF ls_ewoss-sr2name IS NOT INITIAL.
+
+          " Adding Router 2 data to the output
+          ls_output-wa = ls_ewoss-sr2name && lc_sep && ls_ewoss-sr2ip
+          && lc_sep && ls_ewoss-sr2inst.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ELSE.
+          " No data
+          ls_output-wa = lc_na && lc_sep && lc_na && lc_sep && lc_na.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ENDIF.
+
+        " Adding empty line to the output
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " SAP router and SAP Service Marketplace Message Server at SAP
+
+        " Adding sub title and heading to the output
+        ls_output-wa = lc_title2 && lc_hyphen && lc_head3.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " Adding column headings to the output
+        ls_output-wa = lc_name && lc_sep && lc_address && lc_sep
+        && lc_instance.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        IF ls_ewoss-sapxname IS NOT INITIAL.
+
+          " Adding SAP router data to the output
+          ls_output-wa = ls_ewoss-sapxname && lc_sep && ls_ewoss-sapxip
+          && lc_sep && ls_ewoss-sapxinst.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ELSE.
+          " No data
+          ls_output-wa = lc_na && lc_sep && lc_na && lc_sep && lc_na.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ENDIF.
+
+        " Adding empty line to the output
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " SAP GUI for Logging On To SAP Service Marketplace
+
+        " Adding sub title and heading to the output
+        ls_output-wa = lc_title2 && lc_hyphen && lc_head4.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        " Adding column headings to the output
+        ls_output-wa = lc_name && lc_sep && lc_dbname && lc_sep
+        && lc_instance.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+
+        IF ls_ewoss-ossname IS NOT INITIAL.
+
+          " Adding Message server data to the output
+          ls_output-wa = ls_ewoss-ossname && lc_sep &&
+          ls_ewoss-ossdbname && lc_sep && ls_ewoss-ossinst.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ELSE.
+          " No data
+          ls_output-wa = lc_na && lc_sep && lc_na && lc_sep && lc_na.
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+
+        ENDIF.
+
+      ENDIF.
+
+    WHEN OTHERS.
+      " Incorrect input
+      ls_output = lc_inc_input.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+  ENDCASE.
+
+  CLEAR ls_ewoss.
+ENDFORM.

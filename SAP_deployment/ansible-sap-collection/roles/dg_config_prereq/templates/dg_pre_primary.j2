@@ -1,0 +1,14 @@
+ALTER DATABASE FORCE LOGGING;
+alter system set db_create_online_log_dest_1='{{ root_dir }}/{{ sap.db.sid }}/origlogA';	
+alter system set db_create_online_log_dest_2='{{ root_dir }}/{{ sap.db.sid }}/origlogB';
+{% for lognumber in range(1,no_of_standby_logs + 1) %}
+ALTER DATABASE ADD STANDBY LOGFILE ('{{ root_dir }}/{{ sap.db.sid }}/origlogA/standby_redo{{ lognumber }}.log') SIZE {{ logfile_size | default('200M') }};
+{% endfor %}
+alter system set db_unique_name = '{{ sap.db.sid | lower }}{{ instance_ch | lower }}' scope=spfile; 
+alter system set log_archive_max_processes=4 scope = both;
+alter system set local_listener='(ADDRESS=(PROTOCOL=TCP)(HOST={{ db_primary_hostname | default(dbnode1) }})(PORT={{ port | default('1521') }}))' scope=both;
+alter system set open_cursors=2000 scope=both;
+alter database flashback on;
+shutdown immediate;
+startup;
+exit 0;

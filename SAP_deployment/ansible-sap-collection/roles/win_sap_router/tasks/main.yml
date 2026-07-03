@@ -1,0 +1,16 @@
+---
+
+- name: create environment variable SECUDIR
+  win_environment:
+    name: SECUDIR
+    state: present
+    level: user
+    value: "{{ downloads.download_drive }}:\\saprouter"
+    
+- name: create environment variable SNC_LIB
+  win_environment:
+    name: SNC_LIB
+    state: present
+    level: user
+    value: "{{ downloads.download_drive }}:\\saprouter\\lib\\sapcrypto.dll"
+

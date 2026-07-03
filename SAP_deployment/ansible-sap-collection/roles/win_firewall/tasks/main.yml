@@ -1,0 +1,17 @@
+---
+
+- name: database engine firewall rule
+  win_dsc:
+      resource_name: Firewall
+      Ensure: Present
+      Name: SQL-Server-Database-Engine-TCP-In
+      DisplayName: SQL Server Database Engine (TCP-In)
+      Group: SQL Server
+      Description: Inbound rule for SQL Server to allow TCP traffic for the Database Engine.
+      Direction: Inbound
+      Enabled: True
+      Action: Allow
+      Profile: "{{ mssql_params.install.firewall.profile }}"
+      Localport: "{{ mssql_params.install.firewall.local_ports }}"
+      Protocol: "TCP"
+  when: mssql_params.install.firewall.change | bool

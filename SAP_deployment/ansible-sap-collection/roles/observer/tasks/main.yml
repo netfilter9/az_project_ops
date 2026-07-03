@@ -1,0 +1,23 @@
+---
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    oracle_installation_primary_group: "{{ sap.db.primary_installation_group | default('oinstall') }}"
+
+- name: main | package install
+  import_tasks: package.yml
+  tags:
+    - packageinstall
+
+- name: main | client install
+  import_tasks: client_install.yml
+  tags:
+    - client-install
+
+- name: Wait until the file dgmgrl is present before continuing
+  wait_for:
+    path: /oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}/bin/dgmgrl
+  register: waitfor
+
+- debug:
+    var: waitfor

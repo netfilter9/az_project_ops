@@ -1,0 +1,7 @@
+---
+
+# set verbosity level on debug statements within the role
+verbosity_level: 0
+
+retry_interval_sec: 10
+retry_count: 60

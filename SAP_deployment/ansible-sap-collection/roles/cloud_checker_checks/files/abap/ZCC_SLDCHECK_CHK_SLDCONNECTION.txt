@@ -1,0 +1,486 @@
+*---------------------------------------------------------------------*
+* Program Name        :  ZCC_SLDCHECK_CHK_SLDCONNECTION               *
+* Title               :  Run SLDCHECK                                 *
+* Purpose             :  This report is to Run SLDCHECK and capture   *
+*                        connection summary message for Cloud checker *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SLDCHECK                                                            *
+*---------------------------------------------------------------------*
+*	Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* RFCDES                    X                                         *
+* LCRT_CLNTCACHE            X
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-02-2021  Initial   Soumya Ray   Local  To run SLDCHECK and capture*
+*                                          connection summary message.*
+*---------------------------------------------------------------------*
+
+REPORT zcc_sldcheck_chk_sldconnection.
+"This code has been referred from Standard Report RLCR_XI_STAYING_ALIVE
+LOAD-OF-PROGRAM.
+
+CONSTANTS: gc_error        TYPE c VALUE 'E'          LENGTH 1,
+           gc_warning      TYPE c VALUE 'W'          LENGTH 1.
+
+DATA : gv_status             TYPE c,
+       gv_bypassing_cache    TYPE char1 VALUE 'X',
+       gv_boolean            TYPE char1,
+       gv_sldui              TYPE char1 VALUE 'X',
+       gv_sldcache           TYPE char1,
+       gv_text               TYPE string.
+
+CLEAR: gv_status, gv_bypassing_cache, gv_boolean,gv_sldui,
+       gv_sldcache, gv_text.
+
+FORM get_config
+               TABLES lt_input  STRUCTURE tab512
+                      lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_export  TYPE c VALUE 'EXPORT'                LENGTH 6,
+             lc_title   TYPE c VALUE
+             'Exchange Infrastructure: Test LCR Interface'   LENGTH 60,
+             lc_ninput  TYPE c VALUE 'No input passed'       LENGTH 15,
+             lc_naction TYPE c VALUE 'Action not supported'  LENGTH 20.
+
+  DATA: ls_input       TYPE tab512,
+        ls_output      TYPe tab512,
+        lv_action      TYPE char20.
+
+  CLEAR: ls_input, lv_action, ls_output.
+
+  " Adding title to the output
+
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  "Read input
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  IF sy-subrc NE 0.
+    ls_output = lc_ninput.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+  lv_action = ls_input. " Action
+
+  CASE lv_action.
+
+    WHEN lc_export. " When action is EXPORT
+
+      PERFORM sld_run TABLES lt_output.
+
+      PERFORM sld_check TABLES lt_output.
+
+    WHEN OTHERS.
+      ls_output = lc_naction.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM sld_run TABLES lt_output TYPE table.
+
+  CONSTANTS: lc_t    TYPE c VALUE 'T' LENGTH 1,
+             lc_dest TYPE string   VALUE 'SAPSLDAPI'.
+
+  DATA:lv_use_wbem_client    TYPE c,
+       ls_rfcdes             TYPE rfcdes,
+       ls_rfcdisplay         TYPE rfcdisplay,
+       lv_nlines             TYPE i,
+       lt_bsys               TYPE lcr_t_bsysprod,
+       ls_slddest            TYPE sld_s_accessdata_display,
+       lv_sld_loopup_stopped TYPE char1,
+       lv_bs_id              TYPE text60,
+       lv_url                TYPE string.
+
+  CLEAR: lv_use_wbem_client, ls_rfcdes, ls_rfcdisplay, lv_nlines,
+         ls_slddest, lv_sld_loopup_stopped, lv_bs_id,
+         lv_url.
+  FREE: lt_bsys.
+
+  PERFORM config_selection.
+
+  CALL METHOD cl_sld_accessor_wbem_client=>load_srvr_access_setting
+    IMPORTING
+      flg_use_wbem_client = lv_use_wbem_client.
+
+  IF lv_use_wbem_client IS INITIAL.
+    SKIP.
+*   retrieve RFC destination settings:
+    SELECT SINGLE * FROM rfcdes INTO ls_rfcdes
+    WHERE rfcdest = lc_dest.
+
+    IF sy-subrc NE 0.
+
+      gv_status = gc_error .
+
+    ELSE.
+
+      IF ls_rfcdes-rfctype NE lc_t.
+
+        gv_status = gc_error .
+        RETURN.
+      ELSE.
+        CALL FUNCTION 'RFCDES2RFCDISPLAY'
+          EXPORTING
+            import_rfcdes     = ls_rfcdes
+          IMPORTING
+            export_rfcdisplay = ls_rfcdisplay
+          EXCEPTIONS
+            OTHERS            = 1.
+
+        IF sy-subrc NE 0.
+          gv_status = gc_error .
+          RETURN.
+        ENDIF.
+
+        CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+          EXPORTING
+        text = 'Testing the RFC connection to the SLD java client...'.
+
+        CALL FUNCTION 'RFC_PING'
+          DESTINATION ls_rfcdisplay-rfcdest
+          EXCEPTIONS
+            system_failure        = 1
+            communication_failure = 2
+            OTHERS                = 99.
+        IF sy-subrc NE 0.
+          gv_status = gc_error .
+          RETURN.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  SKIP.
+
+  CALL FUNCTION 'SLDAPI_GET_PRIMARY_DEST'
+    IMPORTING
+      dest                 = ls_slddest
+    EXCEPTIONS
+      no_primary_available = 1.
+
+  IF sy-subrc = 1.
+    gv_status = gc_error .
+    RETURN.
+  ENDIF.
+
+  IF gv_sldui = 'X'.
+
+    CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+      EXPORTING
+        text = 'Launching the SLD GUI in a separate browser window...'.
+  ENDIF.
+
+  CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+    EXPORTING
+      text = 'SLD lookup: get list of business systems'.
+
+
+  IF gv_bypassing_cache = 'X'.
+    gv_boolean = 'X'.
+  ELSE.
+    PERFORM test_lcr_list_business_systems  USING gv_boolean.
+  ENDIF.
+
+
+  IF gv_boolean = 'X'.
+    CALL FUNCTION 'LCR_LIST_BUSINESS_SYSTEMS'
+      EXPORTING
+        give_roles             = ' '
+        give_products          = ' '
+        bypassing_cache        = gv_bypassing_cache
+      IMPORTING
+        bus_systems            = lt_bsys
+      EXCEPTIONS
+        no_rfc_destination     = 1
+        no_landscape_directory = 2
+        communication_error    = 3
+        ld_error               = 4
+        OTHERS                 = 5.
+
+  ENDIF.
+  IF sy-subrc NE 0.
+    gv_status = gc_error .
+    IF gv_bypassing_cache = 'X'.
+      RETURN.
+    ENDIF.
+  ENDIF.
+
+
+  DESCRIBE TABLE lt_bsys LINES lv_nlines.
+  IF lv_nlines = 0.
+    gv_status = gc_warning.
+    IF gv_bypassing_cache = 'X'.
+      RETURN.
+    ENDIF.
+  ENDIF.
+
+  PERFORM test_sld_cachestatus USING lv_sld_loopup_stopped.
+
+  SKIP.
+
+  CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+    EXPORTING
+      text = 'SLD lookup: get own business system name & type'.
+
+
+  IF gv_bypassing_cache = ' ' OR lv_sld_loopup_stopped =  'X'.
+    DATA l_s_cache TYPE lcrt_clntcache.
+    PERFORM  test_lcr_get_own_bs USING l_s_cache.
+    lv_bs_id = l_s_cache-bs_key_name.
+*    lv_bs_role = l_s_cache-bs_role.
+  ELSE.
+    CALL FUNCTION 'LCR_GET_OWN_BUSINESS_SYSTEM'
+      EXPORTING
+        bypassing_cache        = gv_bypassing_cache
+      IMPORTING
+        bs_key_name            = lv_bs_id
+      EXCEPTIONS
+        no_business_system     = 1
+        no_rfc_destination     = 2
+        no_landscape_directory = 3
+        illegal_arguments      = 4
+        communication_error    = 5
+        ld_error               = 6
+        OTHERS                 = 7.
+  ENDIF.
+
+  CASE sy-subrc.
+
+    WHEN 1.
+
+      gv_status = gc_warning.
+      RETURN.
+
+    WHEN OTHERS.
+      gv_status = gc_error .
+      RETURN.
+
+  ENDCASE.
+
+  SKIP.
+
+  CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+    EXPORTING
+      text = 'SLD lookup: get business system details'.
+
+
+  gv_text = lv_bs_id.
+  gv_boolean = 'X'.
+  IF gv_bypassing_cache = ' '.
+    DATA l_aedat TYPE sydats.
+    PERFORM test_lcr_get_bs_details
+    USING gv_text lv_url lt_bsys l_aedat.
+    IF lt_bsys[] IS INITIAL.
+      sy-subrc = 1.  "no_business_system
+    ENDIF.
+  ELSE.
+    CALL FUNCTION 'LCR_GET_BS_DETAILS'
+      EXPORTING
+        bs_key_name            = gv_text
+        bypassing_cache        = gv_bypassing_cache
+      IMPORTING
+        integr_server_url      = lv_url
+        bs_details             = lt_bsys
+      EXCEPTIONS
+        no_business_system     = 1
+        no_rfc_destination     = 2
+        no_landscape_directory = 3
+        communication_error    = 4
+        ld_error               = 5
+        OTHERS                 = 6.
+  ENDIF.
+  IF sy-subrc NE 0.
+    RETURN.
+  ENDIF.
+
+  DESCRIBE TABLE lt_bsys LINES lv_nlines.
+  IF lv_nlines = 0.
+    gv_status = gc_warning.
+    RETURN.
+  ENDIF.
+
+
+ENDFORM.
+
+
+FORM sld_check TABLES lt_output TYPE table.
+
+  CONSTANTS: lc_sep         TYPE c VALUE '|'                 LENGTH 1,
+             lc_warningmsg1 TYPE c VALUE
+             'Summary: Connection to SLD works technically,' LENGTH 45,
+             lc_warningmsg2 TYPE c VALUE
+             'but the SLD content may need maintenance'      LENGTH 42,
+             lc_errormsg    TYPE c VALUE
+             'Summary: Connection to SLD does not work'      LENGTH 42,
+             lc_sucessmsg   TYPE c VALUE
+             'Summary: Connection to SLD works correctly'    LENGTH 45,
+             lc_sysid   TYPE c VALUE 'System ID'             LENGTH 9,
+             lc_checkst TYPE c VALUE 'Check status'          LENGTH 12.
+
+  DATA: ls_output TYPE tab512.
+
+  CLEAR ls_output.
+  "Coloumn heading
+  CONCATENATE lc_sysid lc_sep lc_checkst INTO ls_output.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  IF gv_status = gc_warning.
+
+    CONCATENATE sy-sysid lc_sep lc_warningmsg1 lc_warningmsg2
+    INTO ls_output.
+    APPEND ls_output TO lt_output.
+
+  ELSEIF gv_status = gc_error .
+    CONCATENATE sy-sysid lc_sep lc_errormsg INTO ls_output.
+    APPEND ls_output TO lt_output.
+  ELSE.
+    CONCATENATE sy-sysid lc_sep lc_sucessmsg INTO ls_output.
+    APPEND ls_output TO lt_output.
+  ENDIF.
+
+ENDFORM.
+
+
+FORM config_selection.
+  CONSTANTS: lc_tcode   LIKE sy-tcode VALUE 'LCRCHECK',
+             lc_tcode20 LIKE sy-tcode VALUE 'SLDCHECK'.
+  IF sy-tcode <> lc_tcode20  AND sy-tcode <> lc_tcode .
+*    CALL SCREEN 100.
+  ELSE.
+    gv_sldcache = ' '.
+    gv_sldui = 'X'.
+  ENDIF.
+  IF gv_sldcache = 'X'.
+    gv_bypassing_cache  = ' '.
+  ELSE.
+    gv_bypassing_cache  = 'X'.
+  ENDIF.
+ENDFORM.
+
+FORM test_lcr_list_business_systems
+                                   USING gv_boolean TYPE char1.
+
+  CONSTANTS:
+  lc_bus_systems_list TYPE indx_srtfd VALUE 'BUS_SYSTEM_LIST2'.
+
+  TYPES: BEGIN OF lty_sld_s_bskey,
+           bs_key_name TYPE sld_bskey,
+           bs_caption  TYPE string,
+         END OF lty_sld_s_bskey.
+
+  DATA:  lt_bslist_cache TYPE STANDARD TABLE OF lty_sld_s_bskey,
+         ls_indx         TYPE lcrt_indx.
+
+  CLEAR ls_indx.
+  FREE: lt_bslist_cache.
+
+  IMPORT bs_list2  TO lt_bslist_cache
+  FROM DATABASE lcrt_indx(xi)
+  ID lc_bus_systems_list TO ls_indx.
+  IF sy-subrc = 0.
+    gv_boolean = 'X'.
+  ELSE.
+    gv_boolean = ' '.
+    sy-subrc = 0.
+  ENDIF.
+
+ENDFORM.
+
+FORM test_sld_cachestatus
+                         USING l_flag TYPE char1.
+  CONSTANTS: lc_cachestatus TYPE c VALUE 'CACHESTATUS' LENGTH 11.
+
+  DATA: lv_text    TYPE string,
+        lv_srtfd   TYPE indx_srtfd,
+        ls_cache TYPE lcrt_clntcache.
+
+  CLEAR: lv_text, lv_srtfd, ls_cache.
+
+  l_flag = ' '.
+  CONCATENATE sy-sysid sy-mandt lc_cachestatus INTO lv_text.
+  lv_srtfd = lv_text.
+
+  SELECT SINGLE * FROM lcrt_clntcache
+  INTO ls_cache WHERE srtfd = lv_srtfd.
+  IF sy-subrc = 0 AND ls_cache-bs_role > 4.
+    l_flag = 'X'.
+  ENDIF.
+
+ENDFORM.
+
+FORM test_lcr_get_own_bs
+                        USING s_cache TYPE lcrt_clntcache.
+
+  DATA: lv_text    TYPE string,
+        lv_srtfd   TYPE indx_srtfd,
+        ls_cache TYPE lcrt_clntcache.
+
+  CLEAR: lv_text, lv_srtfd, ls_cache.
+
+  CONCATENATE sy-sysid sy-mandt INTO lv_text.
+  lv_srtfd = lv_text.
+  SELECT SINGLE * FROM lcrt_clntcache
+  INTO ls_cache WHERE srtfd = lv_srtfd.
+  IF sy-subrc <> 0.
+    CLEAR ls_cache.
+    RETURN.
+  ENDIF.
+ENDFORM.
+
+FORM test_lcr_get_bs_details
+                        USING bs_key_name       TYPE string
+                              integr_server_url TYPE  string
+                              bs_details        TYPE  lcr_t_bsysprod
+                              l_aedat           TYPE sydats.
+
+  CONSTANTS:
+  lc_bus_system_details TYPE indx_srtfd VALUE 'BUS_SYSTEM_DETAIL2'.
+
+  TYPES: BEGIN OF lty_s_bsysinfo,
+          bs_key_name TYPE string,
+          url         TYPE string,
+          logsys      TYPE logsys,
+         END OF lty_s_bsysinfo.
+
+
+  DATA: lt_details_cache    TYPE lcr_t_bsysprod,
+        lt_info_cache       TYPE STANDARD TABLE OF lty_s_bsysinfo,
+        ls_indx             TYPE lcrt_indx,
+*        lt_bs_details_cache TYPE lcr_t_bsysprod,
+        ls_info             TYPE lty_s_bsysinfo,
+        lv_rc               TYPE i.
+
+*  FIELD-SYMBOLS: <fs_detail>  TYPE lcrs_bsysprod.
+
+  CLEAR: ls_info, lv_rc, ls_indx.
+  FREE: lt_details_cache, lt_info_cache. "lt_bs_details_cache.
+
+  IMPORT bs_details TO lt_details_cache
+  is_infos   TO lt_info_cache
+  FROM DATABASE lcrt_indx(xi)
+  ID lc_bus_system_details TO ls_indx.
+
+  IF sy-subrc = 0.
+*   find relevant entries:
+*    LOOP AT lt_details_cache ASSIGNING <fs_detail>
+*    WHERE bs_key_name = bs_key_name.
+*      APPEND <fs_detail> TO lt_bs_details_cache.
+*    ENDLOOP.
+    lv_rc = sy-subrc.
+    READ TABLE lt_info_cache WITH KEY bs_key_name = bs_key_name
+    INTO ls_info.
+    IF lv_rc = 0 AND sy-subrc = 0.
+      l_aedat = ls_indx-aedat.
+      integr_server_url = ls_info-url.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.

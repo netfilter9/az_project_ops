@@ -1,0 +1,15 @@
+---
+
+- name: create user account in AD
+  win_domain_user:
+    name: "{{ item.value.username }}"
+    password: "{{ item.value.password }}"
+    password_never_expires: yes
+    upn: "{{ item.value.username }}@{{ domain_fqdn }}"
+    state: present
+    domain_username: "{{ domain_fqdn }}\\{{ domain_ansible_username }}"
+    domain_password: "{{ domain_ansible_password }}"
+    domain_server: "{{ domain_controller }}"
+  delegate_to: "{{ domain_controller }}"
+  with_dict: "{{ domain_users }}"
+  when: domain_users is defined

@@ -1,0 +1,25 @@
+sp_configure 'number of user connections', 150
+go
+sp_configure 'heap memory per user', 240000
+go
+sp_configure 'number of remote connections', 100
+go
+sp_configure 'number of remote logins', 100
+go
+sp_configure 'max memory', 500000
+go
+sp_configure 'procedure cache size',  27680
+go
+sp_configure 'lock scheme', 0, datarows
+go
+sp_configure 'max online engines', 8
+go
+sp_configure 'number of engines at startup', 8
+go
+sp_configure 'open objects', 2000
+go
+sp_configure 'open indexes', 4000
+go
+sp_configure 'open partitions', 3000
+go
+quit

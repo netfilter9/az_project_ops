@@ -1,0 +1,109 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SM59_EXP_RFC_DESTINATIONS               *
+* Title               :   RFC Destinations Export                     *
+* Created by          :   ASHWINI B                                   *
+* Created on          :   29/10/2020                                  *
+* Purpose             :   This report is used to export RFC           *
+*                     :   destinations from tcode SM59 pre migration  *
+*---------------------------------------------------------------------*
+REPORT zcm_sm59_exp_rfc_destinations.
+
+FORM get_config                             ##CALLED
+              TABLES ft_input  STRUCTURE tab512
+                     ft_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep        TYPE c  VALUE '|'                LENGTH 1,
+             lc_act_exp    TYPE c  VALUE 'EXPORT'           LENGTH 6,
+             lc_rfcdest    TYPE c  VALUE 'RFC destination'  LENGTH 20,
+             lc_rfctype    TYPE c  VALUE 'RFC type'         LENGTH 20,
+             lc_rfcoptions TYPE c  VALUE 'RFC options'      LENGTH 20,
+             lc_msg        TYPE c  VALUE
+             'No data found'                                LENGTH 30.
+
+  DATA: ls_input      TYPE tab512,
+        ls_output     TYPE tab512,
+        lv_action     TYPE char6.
+
+    " Read input values from Python/Ansibel
+  READ TABLE ft_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_act_exp. "EXPORT
+
+* Under the pre-migration activities, the data
+* related to RFC destinations created in the system is
+* exported to Python.The table RFCDES holds this data. This is read
+* to determine the number of RFC connections in system
+    SELECT rfcdest,
+           rfctype,
+           rfcoptions
+        FROM rfcdes
+        INTO TABLE @DATA(lt_rfcdes).
+    IF sy-subrc EQ 0.
+      SORT: lt_rfcdes BY rfcdest rfctype.
+    ENDIF.
+
+      IF lt_rfcdes[] IS NOT INITIAL.
+
+        " Title
+        CLEAR: ls_output.
+        ls_output = 'List of RFC destinations'.
+        APPEND ls_output TO ft_output.
+
+        " Heading columns
+        CLEAR: ls_output.
+        CONCATENATE lc_rfcdest   lc_sep
+                    lc_rfctype   lc_sep
+                    lc_rfcoptions INTO ls_output.
+        APPEND ls_output TO ft_output.
+
+        " Data
+        LOOP AT lt_rfcdes
+          ASSIGNING FIELD-SYMBOL(<fs_rfcdes>).
+
+          DO.
+            ASSIGN COMPONENT sy-index
+            OF STRUCTURE <fs_rfcdes>
+            TO FIELD-SYMBOL(<field>).
+            CONDENSE <field>.
+            IF sy-subrc <> 0.
+              EXIT.
+            ENDIF.
+            IF <field> IS INITIAL.
+              <field> = 'NULL'.
+            ENDIF.
+            IF sy-index EQ 1.
+              ls_output = <field>.
+            ELSE.
+              CONCATENATE ls_output <field> INTO ls_output
+              SEPARATED BY lc_sep.
+            ENDIF.
+          ENDDO.
+
+          CONDENSE ls_output.
+          APPEND ls_output TO ft_output.
+          CLEAR: ls_output.
+        ENDLOOP.
+
+      ELSE.
+
+        CLEAR: ls_output.
+        ls_output = 'List of RFC destinations'.
+        APPEND ls_output TO ft_output.
+
+        CLEAR: ls_output.
+        " No data found
+        ls_output = lc_msg.
+        APPEND ls_output TO ft_output.
+        RETURN.
+
+      ENDIF.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.

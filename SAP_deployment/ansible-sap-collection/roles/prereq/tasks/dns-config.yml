@@ -1,0 +1,14 @@
+- name: dns-config | adding values in /etc/sysconfig/network/config dns_searchlist
+  lineinfile:
+    path: /etc/sysconfig/network/config
+    regexp: "NETCONFIG_DNS_STATIC_SEARCHLIST="
+    line: NETCONFIG_DNS_STATIC_SEARCHLIST="{{ dns.searchlist }}"
+
+- name: dns-config | adding values in network config dns_servers
+  lineinfile:
+    path: /etc/sysconfig/network/config
+    regexp: "NETCONFIG_DNS_STATIC_SERVERS="
+    line: NETCONFIG_DNS_STATIC_SERVERS="{{ dns.servers }}"
+
+- name: dns-config | Update netconfig
+  command: "netconfig update -f"

@@ -1,0 +1,173 @@
+node1: "{{ groups['std'][0] }}"
+swapfile_size: 640000000 #65536
+tune: "{{ sap.tune }}"
+product_id: "{{ sap.product_ids.std }}"
+
+
+users:
+  bin:
+    uid: 1010
+  bingroup:
+    gid: 82
+  sidadm:
+    uid: 1003
+  dbsidadm:
+    uid: 1012
+  sapinst:
+    gid: 1101
+  sapsys:
+    gid: 1100
+  db2sid:
+    uid: 1014
+  sapsid:
+    uid: 1016
+  dbsidadmgroup:
+    gid: 1120
+  dbsidctl:
+    gid: 1121
+  dbsidmon:
+    gid: 1122
+  dbsidmnt:
+    gid: 1123
+
+groupsetup:
+  - name: sapsys
+    gid: "{{ users.sapsys.gid }}"
+  - name: sapinst
+    gid: "{{ users.sapinst.gid }}"
+  - name: bin
+    gid: "{{ users.bingroup.gid }}"  
+  - name: "db{{ sap.db.sid|lower }}adm"
+    gid: "{{ users.dbsidadmgroup.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}ctl"
+    gid: "{{ users.dbsidctl.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mon"
+    gid: "{{ users.dbsidmon.gid }}" 
+  - name: "db{{ sap.db.sid|lower }}mnt"
+    gid: "{{ users.dbsidmnt.gid }}" 
+  
+usersetup:
+  - name: bin
+    uid: "{{ users.bin.uid }}"
+    group: bin
+    shell: /bin/sh
+    password: "{{ vault_passwords.sidadm }}"
+    sudo: true
+  - name: "{{ sap.sid|lower }}adm"
+    uid: "{{ users.sidadm.uid }}"
+    group: sapsys
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "db2{{ sap.db.sid|lower }}"
+    uid: "{{ users.db2sid.uid }}"
+    group: "db{{ sap.db.sid|lower }}adm"
+    groups: sapinst
+    home: /db2/db2{{ sap.db.sid|lower }}
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+  - name: "sap{{ sap.sid|lower }}"    
+    uid: "{{ users.sapsid.uid }}"
+    group: "db{{ sap.db.sid|lower }}mon"
+    shell: /bin/csh
+    password: "{{ vault_passwords.sidadm }}"  
+    sudo: true
+
+volume_groups:  
+  - ref: sapmnt
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAPBIN 
+    lv: lv_sapmnt
+    size: 20g
+    mount: /sapmnt
+  - ref: usr_sap
+    pvs: /dev/disk/azure/data/by-lun/0
+    vg: VGSAPBIN 
+    lv: lv_usrsap
+    size: 20g
+    mount: /usr/sap
+  - ref: db2_db2q01
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VGDB2BIN 
+    lv: lv_db2Q01inst
+    size: 10g
+    mount: /db2/db2q01
+  - ref: db2_Q01
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VGDB2BIN 
+    lv: lv_dbQ01
+    size: 20g
+    mount: /db2/Q01
+  - ref: db2_Q01_db2dump
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VGDB2BIN 
+    lv: lv_db2Q01dump
+    size: 10g
+    mount: /db2/Q01/db2dump
+  - ref: ilmt
+    pvs: /dev/disk/azure/data/by-lun/1
+    vg: VGDB2BIN 
+    lv: lv_ilmt
+    size: 1g
+    mount: /ilmt
+  - ref: db2_Q01_sapdata1
+    pvs: /dev/disk/azure/data/by-lun/2
+    vg: VGDATA1
+    lv: lv_db2Q01data1
+    size: 4095g
+    mount: /db2/Q01/sapdata1
+  - ref: db2_Q01_sapdata2
+    pvs: /dev/disk/azure/data/by-lun/3
+    vg: VGDATA2
+    lv: lv_db2Q01data2
+    size: 4095g
+    mount: /db2/Q01/sapdata2
+  - ref: db2_Q01_sapdata3
+    pvs: /dev/disk/azure/data/by-lun/4
+    vg: VGDATA3
+    lv: lv_db2Q01data3
+    size: 4095g
+    mount: /db2/Q01/sapdata3
+  - ref: db2_Q01_sapdata4
+    pvs: /dev/disk/azure/data/by-lun/5
+    vg: VGDATA4
+    lv: lv_db2Q01data4
+    size: 4095g
+    mount: /db2/Q01/sapdata4
+  - ref: db2_Q01_log_dir
+    pvs: /dev/disk/azure/data/by-lun/6
+    vg: VGLOG1
+    lv: lv_Q01logdb2
+    size: 145g
+    mount: /db2/Q01/log_dir
+  - ref: db2_Q01_saptmp1
+    pvs: /dev/disk/azure/data/by-lun/7
+    vg: VGLOG2
+    lv: lv_Q01tmpdb2
+    size: 50g
+    mount: /db2/Q01/saptmp1
+  - ref: db2_Q01_log_retrieve
+    pvs: /dev/disk/azure/data/by-lun/8
+    vg: VGARCH
+    lv: lv_db2Q01retrieve
+    size: 35g
+    mount: /db2/Q01/log_retrieve
+  - ref: db2_Q01_log_archive
+    pvs: /dev/disk/azure/data/by-lun/8
+    vg: VGARCH
+    lv: lv_db2Q01archive
+    size: 10g
+    mount: /db2/Q01/log_archive
+  - ref: /opt/traps
+    pvs: /dev/disk/azure/data/by-lun/11
+    vg: VG_CORTEX
+    lv: lv_cortex
+    size: 10g
+    mount: /opt/traps 
+  - ref: db2backup
+    pvs: /dev/disk/azure/data/by-lun/9,/dev/disk/azure/data/by-lun/10
+    vg: VGDB2BACKUP
+    lv: lv_db2backup
+    size: 32767g
+    mount: /db2backup

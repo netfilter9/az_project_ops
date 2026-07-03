@@ -1,0 +1,31 @@
+---
+abap_pre_migration_list:
+   abap:
+      - { name: "ZCM_SM51_EXP_KERNEL_PATCH.txt", input_params: EXPORT }
+      - { name: "ZCM_RZ04_SM63_EXP_OPERAT_MODES.txt", input_params: EXPORT }
+      - { name: "ZCM_SM51_EXP_INSTANCES.txt", input_params: EXPORT }
+      - { name: "ZCM_SM13_EXP_UPDATEREQUEST.txt", input_params: EXPORT }
+      - { name: "ZCM_EXP_MISSING_TABLES_INDEX.txt", input_params: EXPORT }
+      - { name: "ZCM_SM37_EXP_CANCL_SUSPND_REL.txt", input_params: EXPORT }
+      - { name: "ZCM_WE02_EXP_FAILED_IDOCS.txt", input_params: EXPORT }
+      - { name: "ZCM_SE14_DEL_QCM_TABLES.txt", input_params: EXPORT } # input params can be EXPORT and DELETE(double check if you are giving DELETE)
+      - { name: "ZCM_R_CHK_D020S_DYNPSRC.txt", input_params: CHECK } #input_params can be CHECK, DELETE
+      - { name: "ZCM_DB02_CHK_LOGBCKUP_ENABLED.txt", input_params: EXPORT }
+      - { name: "ZCM_DB13_CHK_UPD_DB_CONSITENCY.txt", input_params: EXPORT }
+
+   oracle:
+      - { name: "ZCM_ORACLE_TOP_TABLES_EXP.txt", input_params: 'FETCH,100' }
+      - { name: "ZCM_T_TAORA_IAORA_CHK_CONSTNCY.txt", input_params: EXPORT }
+      - { name: "ZCM_T_TATGPC_TATGPCA_CLEAR.txt", input_params: EXPORT }      
+
+   hana:
+      - { name: "ZCM_HANA_TOP_TABLES_EXP.txt", input_params: 'FETCH,100' }
+
+   sybase:
+      - { name: "ZCM_SYBASE_TOP_TABLES_EXP.txt", input_params: 'FETCH,100' }
+
+   sql:
+      - { name: "ZCM_SQLSERVER_TOP_TABLES_EXP.txt", input_params: 'FETCH,100' }           
+
+   db2:
+      - { name: "ZCM_DB2_TOP_TABLES_EXP.txt", input_params: 'FETCH,100' }

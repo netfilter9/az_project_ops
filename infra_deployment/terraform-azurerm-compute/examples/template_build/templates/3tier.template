@@ -1,0 +1,206 @@
+{
+    "foundation": {
+        "network": {
+            "resource_group_name": "example-rg-sc01",
+            "name": "vnet-prod"
+        }
+    },
+    "deployment": {
+        "resource_group": {
+            "name": "example-rg-sc${scenario_number}-app",
+            "location": "westus2"
+        },
+        "tags": {
+            "owner": "steven.t.urwin@accenture.com",
+            "autoshutdown": "20:00BST"
+        },
+        "os_account": {
+            "admin_username": "admin_accenture",
+            "ssh_key_file": "~/.ssh/id_rsa.pub"
+        },
+        "proximity_placement_groups": {
+            "example-ppg-sc${scenario_number}-app": {}
+        },
+        "availability_sets": {
+            "ascs": {
+                "ppg_name": "example-ppg-sc${scenario_number}-app",
+                "platform_fault_domain_count": 3
+            },
+            "app": {
+                "ppg_name": "example-ppg-sc${scenario_number}-app"
+            },
+            "hana": {
+                "ppg_name": "example-ppg-sc${scenario_number}-app"
+            }
+        },
+        "load_balancers": {
+            "ilb-sap": {
+                "backends": {
+                    "s4h-ascs": {
+                        "ip_address": "10.2.${scenario_number}.30",
+                        "probe_port": 62000,
+                        "subnet": "app"
+                    },
+                    "s4h-ers": {
+                        "ip_address": "10.2.${scenario_number}.31",
+                        "probe_port": 62101,
+                        "subnet": "app"
+                    }
+                }
+            },
+            "ilb-db": {
+                "backends": {
+                    "db1-hana": {
+                        "ip_address": "10.3.${scenario_number}.50",
+                        "probe_port": 62503,
+                        "subnet": "db",
+                        "load_distribution": "SourceIPProtocol"
+                    }
+                }
+            }
+        },
+        "server_groups": {
+            "ascs": {
+                "os_type": "linux",
+                "sku": "Standard_E2s_v3",
+                "availability_set": "ascs",
+                "_backup_policy": "app",
+                "ppg_name": "example-ppg-sc${scenario_number}-app",
+                "os_disk_size": 50,
+                "enable_accelerated_networking": false,
+                "lb_refs": [
+                    "s4h-ascs",
+                    "s4h-ers"
+                ],
+                "hosts": {
+                    "sc${scenario_number}ascs01": {
+                        "nics": [
+                            {
+
+                                "ips": [
+                                    "10.2.${scenario_number}.32"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "subnet": "app",
+                "image_details": {
+                    "_resource_id": "/subscriptions/911df94d-12e9-4695-a90f-943a1bef518d/resourceGroups/stu-rg-images/providers/Microsoft.Compute/galleries/stuimages/images/suse15/versions/1.0.0",
+                    "marketplace_reference": {
+                        "offer": "sles-sap-15-sp1-byos",
+                        "publisher": "SUSE",
+                        "sku": "gen2",
+                        "version": "2020.06.10"
+                    }
+                },
+                "disks": [
+                    {
+                        "name": "usrsap",
+                        "disk_size": 128,
+                        "number_of_disks": 1,
+                        "storage_account_type": "StandardSSD_LRS"
+                    }
+                ]
+            },
+            "apps": {
+                "os_type": "linux",
+                "sku": "Standard_E2s_v3",
+                "availability_set": "app",
+                "_backup_policy": "app",
+                "ppg_name": "example-ppg-sc${scenario_number}-app",
+                "enable_accelerated_networking": false,
+                "os_disk_size": 50,
+                "hosts": {
+                    "sc${scenario_number}pas01": {
+                        "nics": [
+                            {
+                                "ips": [
+                                    "10.2.${scenario_number}.40"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "subnet": "app",
+                "image_details": {
+                    "_resource_id": "/subscriptions/911df94d-12e9-4695-a90f-943a1bef518d/resourceGroups/stu-rg-images/providers/Microsoft.Compute/galleries/stuimages/images/suse15/versions/1.0.0",
+                    "marketplace_reference": {
+                        "offer": "sles-sap-15-sp1-byos",
+                        "publisher": "SUSE",
+                        "sku": "gen2",
+                        "version": "2020.06.10"
+                    }
+                },
+                "disks": [
+                    {
+                        "name": "usrsap",
+                        "disk_size": 128,
+                        "number_of_disks": 1
+                    }
+                ]
+            },
+            "hana": {
+                "os_type": "linux",
+                "sku": "Standard_E16s_v3",
+                "availability_set": "hana",
+                "_backup_policy": "hanadb",
+                "ppg_name": "example-ppg-sc${scenario_number}-app",
+                "os_disk_size": 50,
+                "subnet": "db",
+                "lb_refs": [
+                    "db1-hana"
+                ],
+                "hosts": {
+                    "sc${scenario_number}hana01": {
+                        "nics": [
+                            {
+                                "ips": [
+                                    "10.3.${scenario_number}.51",
+                                    "10.3.${scenario_number}.53"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "image_details": {
+                    "_resource_id": "/subscriptions/911df94d-12e9-4695-a90f-943a1bef518d/resourceGroups/stu-rg-images/providers/Microsoft.Compute/galleries/stuimages/images/suse15/versions/1.0.0",
+                    "marketplace_reference": {
+                        "offer": "sles-sap-15-sp1-byos",
+                        "publisher": "SUSE",
+                        "sku": "gen2",
+                        "version": "2020.06.10"
+                    }
+                },
+                "disks": [
+                    {
+                        "name": "usrsap",
+                        "disk_size": 128,
+                        "number_of_disks": 1
+                    },
+                    {
+                        "name": "hanashared",
+                        "disk_size": 128,
+                        "number_of_disks": 1
+                    },
+                    {
+                        "name": "hanadata",
+                        "disk_size": 128,
+                        "number_of_disks": 3
+                    },
+                    {
+                        "name": "hanalog",
+                        "disk_size": 128,
+                        "number_of_disks": 2,
+                        "write_accelerator_enabled": false
+                    },
+                    {
+                        "name": "hanabackup",
+                        "disk_size": 512,
+                        "number_of_disks": 1
+                    }
+                ]
+            }
+        }
+    }
+}

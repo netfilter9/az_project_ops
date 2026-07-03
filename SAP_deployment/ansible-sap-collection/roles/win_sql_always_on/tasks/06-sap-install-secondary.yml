@@ -1,0 +1,14 @@
+- name: failover to secondary node
+  win_shell: Invoke-Sqlcmd -Query 'ALTER AVAILABILITY GROUP "{{ cluster.sqlavailabilityGroup }}" FAILOVER'
+
+- name: Install for sql login copy
+  include_role: 
+    name: win_sap_install
+  vars:
+    role: msstools
+ 
+- name: reboot system after sap install
+  win_reboot:
+
+- name: wait for connection after reboot
+  wait_for_connection:

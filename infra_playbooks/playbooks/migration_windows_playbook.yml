@@ -1,0 +1,40 @@
+- name: Discover services on Windows
+  hosts: "{{ hosts }}"
+  gather_facts: true
+  vars:
+    phase: "premigration"
+    app_name: "open_text"
+    purpose: ""
+    ansible_connection: ssh
+    ansible_remote_tmp: 'C:Windows\Temp\.ansible'
+    ansible_shell_type: powershell
+    ansible_shell_executable: 'powershell.exe'
+
+  tasks:
+    - name: Get timestamp from the Windows VM
+      ansible.windows.win_shell: |
+        Get-Date -Format "yyyyMMdd_HHmmss"
+      register: time_stamp
+
+    - name: Collect all services via CIM (rich info)
+      ansible.windows.win_shell: |
+        Get-CimInstance Win32_Service |
+          Select-Object Name, DisplayName, State, Status, StartMode, ProcessId |
+          ConvertTo-Json -Depth 3
+      register: services_state
+
+    - name: Ensure remote temp directory exists
+      ansible.windows.win_file:
+        path: 'C:\Windows\Temp\.ansible_logs'
+        state: directory
+
+    - name: Copy VM service results to json file
+      ansible.windows.win_copy:
+        content: "{{ services_state.stdout | from_json | to_nice_json }}"
+        dest: 'C:\Windows\Temp\.ansible_logs\ansible_services.json'
+
+    - name: Fetch service results JSON to local
+      ansible.builtin.fetch:
+        src: 'C:\Windows\Temp\.ansible_logs\ansible_services.json'
+        dest: "{{ lookup('env','HOME') }}/migration_logs/{{ phase }}/{{ app_name }}/{{ ansible_hostname }}/{{ time_stamp.stdout | trim }}{{ purpose }}/services.json"
+        flat: true

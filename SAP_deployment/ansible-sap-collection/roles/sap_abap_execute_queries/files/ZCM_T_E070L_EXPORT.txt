@@ -1,0 +1,73 @@
+*&********************************************************************&*
+* Report              :   ZCM_T_E070L_EXPORT                           *
+* Title               :   Capture E070L entries                        *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   03/09/2020                                   *
+* Purpose             :   This report is to capture E070L entries      *
+*                         during Cloud Migration                       *
+*----------------------------------------------------------------------*
+
+REPORT zcm_t_e070l_export.
+
+CONSTANTS: lc_sep     TYPE c VALUE '|'            LENGTH 1,
+           lc_export  TYPE c VALUE 'EXPORT'       LENGTH 6,
+           lc_lastnum TYPE c VALUE 'LASTNUM'      LENGTH 25,
+           lc_trkorr  TYPE c VALUE 'TRKORR'       LENGTH 20,
+           lc_title   TYPE c VALUE
+           'List of E070L entries'                LENGTH 50,
+           lc_err_msg TYPE c VALUE
+           'No entries found in table E070L'      LENGTH 50
+           ##NO_TEXT.
+
+DATA: ls_input  TYPE tab512,
+      ls_output TYPE tab512,
+      lv_action TYPE char10,
+      lt_e070l  TYPE TABLE OF e070l,
+      ls_e070l  TYPE e070l.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.               " When action is EXPORT
+
+      SELECT * FROM e070l
+               INTO TABLE lt_e070l.
+
+        " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      IF lt_e070l IS NOT INITIAL.
+
+        " Adding headings to the output
+        CONCATENATE lc_lastnum   lc_sep
+                    lc_trkorr
+                   INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_e070l INTO ls_e070l.
+
+          CONCATENATE ls_e070l-lastnum  lc_sep
+                      ls_e070l-trkorr
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+
+        ENDLOOP.
+
+      ELSE.
+
+        ls_output = lc_err_msg.
+        APPEND ls_output TO lt_output.
+      ENDIF.
+
+  ENDCASE.
+ENDFORM.

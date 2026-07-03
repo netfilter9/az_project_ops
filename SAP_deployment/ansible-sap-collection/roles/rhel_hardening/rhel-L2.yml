@@ -1,0 +1,14 @@
+---
+- hosts: rhel
+  become: yes
+  become_method: sudo
+  gather_facts: true
+  ignore_errors: false
+  ignore_unreachable: true
+  vars:
+    ignore_errors: false
+    ignore_unreachable: true
+    rhel7cis_level1: false
+    rhel7cis_level2: true
+  roles:
+    - role: rhel-hardening

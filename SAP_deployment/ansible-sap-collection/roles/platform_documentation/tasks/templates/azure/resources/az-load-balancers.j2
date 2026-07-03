@@ -1,0 +1,89 @@
+{#
+    generate loadbalancer summaries
+#}
+{% for resource in resource_json if resource.type=="microsoft.network/loadbalancers" %}
+
+# Load Balancer Summary ({{ resource.name }})
+---
+|Name|Backend Address Pools|Frontend Ip Configurations|Load Balancing Rules|Location|Outbound Rules|Probes|Sku|
+|-|-|-|-|-|-|-|-|
+|{{ resource.name }}|
+    {%- for entry in resource.properties.backendAddressPools -%}
+{{ entry.name }}<br>
+    {%- endfor -%}|
+    {%- for entry in resource.properties.frontendIPConfigurations -%}
+{{ entry.name }}<br>
+    {%- endfor -%}|
+    {%- for entry in resource.properties.loadBalancingRules -%}
+{{ entry.name }}<br>
+    {%- endfor -%}
+|{{ resource.location }}|
+    {%- for entry in resource.properties.outboundRules -%}
+{{ entry.name }}<br>
+    {%- endfor -%}|
+    {%- for entry in resource.properties.probes -%}
+{{ entry.name }}<br>
+    {%- endfor -%}
+|{{ resource.sku.name }}|
+
+    {#
+        generate backend details
+    #}
+    {% for entry in resource.properties.backendAddressPools %}
+        {% if loop.first %}
+## Load Balancer BackendAddressPools
+|Name|Backend Ip Configurations|Load Balancing Rules|
+|-|-|-|
+        {% endif %}
+|{{ entry.name }}|
+        {%- for item in entry.properties.backendIPConfigurations -%}
+{{ item.id.split('/')|last }}<br>
+        {%- endfor -%}|
+        {%- for item in entry.properties.loadBalancingRules -%}
+{{ item.id.split('/')|last }}<br>
+        {%- endfor -%}|
+    {% endfor %}
+
+    {#
+        generate front end details
+    #}
+    {% for entry in resource.properties.frontendIPConfigurations %}
+        {% if loop.first %}
+## Load Balancer FrontendIpConfigurations
+|Name|Private Ip Address|IP Allocation Method|Subnet|Load Balancing Rules|
+|-|-|-|-|-|
+        {% endif %}
+|{{ entry.name }}|{{ entry.properties.privateIPAddress }}|{{ entry.properties.privateIPAllocationMethod }}|{{ entry.properties.subnet.id.split('/')|last }}|
+        {%- for item in entry.properties.loadBalancingRules -%}
+{{ item.id.split('/')|last }}<br>
+        {%- endfor -%}|
+    {% endfor %}
+
+    {#
+        generate rule details
+    #}
+    {% for entry in resource.properties.loadBalancingRules %}
+        {% if loop.first %}
+## Load Balancer LoadBalancingRules
+|Name|Protocol|Frontend Port|Backend Port|Idle Timeout In Minutes|Load Distribution|Enable Floating IP|Frontend IP Configuration|Backend Address Pool|Probe|
+|-|-|-|-|-|-|-|-|-|-|
+        {% endif %}
+|{{ entry.name }}|{{ entry.properties.protocol }}|{{ entry.properties.frontendPort }}|{{ entry.properties.backendPort }}|{{ entry.properties.idleTimeoutInMinutes }}|{{ entry.properties.loadDistribution }}|{{ entry.properties.enableFloatingIP }}|{{ entry.properties.frontendIPConfiguration.id.split('/')|last }}|{{ entry.properties.backendAddressPool.id.split('/')|last }}|{{ entry.properties.probe.id.split('/')|last }}|
+    {% endfor %}
+
+    {#
+        generate probe details
+    #}
+    {% for entry in resource.properties.probes %}
+        {% if loop.first %}
+## Load Balancer Probes
+|Name|Protocol|Port|Interval In Seconds|Number Of Probes|Load Balancing Rules|
+|-|-|-|-|-|-|
+        {% endif %}
+|{{ entry.name }}|{{ entry.properties.protocol }}|{{ entry.properties.port }}|{{ entry.properties.intervalInSeconds }}|{{ entry.properties.numberOfProbes }}|
+        {%- for item in entry.properties.loadBalancingRules -%}
+{{ item.id.split('/')|last }}<br>
+        {%- endfor -%}|
+    {% endfor %}
+
+{% endfor %}

@@ -1,0 +1,40 @@
+---
+
+- name: disable UAC
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\system
+    name: EnableLUA
+    data: 0
+    type: dword
+    state: present
+  register: uac_result
+  when: win_disable_uac | bool
+  tags:
+    - disable-uac
+
+- name: disable guest account
+  win_user:
+    name: "{{ win_guest_account_name }}"
+    account_disabled: yes
+  when: win_disable_guest_account | bool
+  tags:
+    - disable-guestaccount
+
+- name: install dsc modules
+  include_tasks: dsc-modules.yml
+  tags:
+    - dsc-modules
+
+- name: set first optical disk drive letter to Z
+  win_dsc:
+    resource_name: OpticalDiskDriveLetter
+    DiskId: 1
+    DriveLetter: Z
+  ignore_errors: True
+  tags:
+    - change-cd-drive-letter
+
+- name: reboot windows
+  win_reboot:
+    post_reboot_delay: 20
+  when: uac_result is changed

@@ -1,0 +1,51 @@
+---
+
+- name: sql server prereqs
+  include_tasks: 01-prereqs.yml
+  tags:
+    - sqlserver-prereqs
+
+- name: create sql service accounts
+  include_tasks: 02-create-service-accounts.yml
+  tags:
+    - create-service-accounts
+  when: mssql_params.service_accounts.create | bool
+
+- name: download SQL installers
+  win_shell: 
+   azcopy cp '{{ item.url }}{{ sas_tokens[item.token_ref] }}' {{ item.dest }} --recursive=true --overwrite=ifSourceNewer
+  args:
+    chdir: "{{ mssql_params.download_drive }}:\\"
+  with_items: "{{ mssql_params.downloads }}"
+  tags:
+    - sql-download
+  when: platform == 'azure'
+
+- name: download SQL installers
+  win_shell: gsutil -m cp -r gs://{{ item.url }}* {{ item.dest }}
+  args:
+    chdir: "{{ mssql_params.download_drive }}:\\"
+  with_items: "{{ mssql_params.downloads }}"
+  tags:
+    - sql-download
+  when: platform == 'gcp'
+  
+- name: install sql server
+  include_tasks: 03-install-sql.yml
+  tags:
+    - install-sql
+
+- name: reboot windows
+  win_reboot:
+    post_reboot_delay: 20    
+  tags:
+    - sql-reboot
+
+- name: install ssms
+  include_tasks: 04-install-ssms.yml
+  tags:
+    - install-ssms
+  when: default_params.install.install_ssms | bool
+
+- name: Resizing of temp files
+  include_tasks: 05-temp-files-resize.yml

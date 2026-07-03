@@ -1,0 +1,35 @@
+---
+
+# default verbosity level for debug output
+verbosity_level: 0
+
+# ensure that the necessary pip packages are installed on the system
+domain_join_pip_packages:
+  - dnspython
+  - pexpect
+
+# whether the role should configure ntp (chrony)
+domain_join_configure_ntp: yes
+
+# a particular organization unit to locate the join request e.g.
+# "OU=Linux,OU=Servers,DC=example,DC=local"
+domain_join_computer_ou: "{{ domain.ou_path }}"
+
+# linux credentials to join the domain
+domain_join_username: "{{ domain.username }}"
+# supply required password using a secure method
+domain_join_password: "{{ domain.password }}"
+
+# whether to update the /etc/dhcp/dhclient.conf
+# to add the search path for the domain
+domain_join_update_dhcp_client: yes
+
+# active directory domain to join
+dns_domain_name: "{{ domain.fqdn }}"
+
+# a list of domain controllers in the domain to use
+# this needs to be set to valid values for the role to work
+domain_controllers: "{{ domain.controllers }}"
+
+# an organization unit path for windows servers to be placed in
+win_domain_ou_path: "{{ domain.ou_path }}"

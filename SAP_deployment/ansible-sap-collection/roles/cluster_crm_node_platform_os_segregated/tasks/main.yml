@@ -1,0 +1,45 @@
+---
+- name: main | azure cluster
+  block:
+    - name: suse | azure  
+      import_tasks: suse_azure.yml
+      tags:
+        - suse_azure
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | azure  
+      import_tasks: rhel_azure.yml
+      tags:
+        - rhel_azure
+      when: ansible_os_family == 'RedHat'
+  when: platform == 'azure'
+
+- name: main | aws cluster
+  block:
+    - name: suse | aws
+      import_tasks: suse_aws.yml
+      tags:
+        - suse_aws
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | aws
+      import_tasks: rhel_aws.yml
+      tags:
+        - rhel_aws
+      when: ansible_os_family == 'RedHat'
+  when: platform == 'aws'
+
+- name: main | gcp cluster 
+  block: 
+    - name: suse | gcp
+      import_tasks: suse_gcp.yml
+      tags:
+        - suse_gcp
+      when: ansible_os_family == 'Suse'
+
+    - name: rhel | gcp
+      import_tasks: rhel_gcp.yml
+      tags:
+        - rhel_gcp
+      when: ansible_os_family == 'RedHat'
+  when: platform == 'gcp'

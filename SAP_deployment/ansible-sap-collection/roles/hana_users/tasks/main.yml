@@ -1,0 +1,8 @@
+- name: create hana users
+  command : "/usr/sap/{{ sap.db.sid|upper }}/HDB{{ sap.instance_numbers.db }}/exe/hdbsql -d {{item.tenant | default('SYSTEMDB')}} -i {{ sap.instance_numbers.db }} -u SYSTEM -p '{{ passwords.system}}' CREATE USER {{ item.user |upper }} PASSWORD '{{ passwords.system }}' NO FORCE_FIRST_PASSWORD_CHANGE" 
+  loop: "{{ sap.db.users }}"
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("user name already exists"))
+  no_log: true

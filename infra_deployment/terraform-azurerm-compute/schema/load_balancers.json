@@ -1,0 +1,218 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "load_balancers": {
+            "title": "Load Balancers",
+            "description": "List of load balancer definitions for this deployment",
+            "type": "object",
+            "examples": [
+                {
+                    "ilb-demo": {
+                        "backends": {
+                            "demo": {
+                                "ip_address": "",
+                                "probe_port": 62503,
+                                "subnet": "app"
+                            }
+                        }
+                    }
+                },
+                {
+                    "ilb-sap": {
+                        "backends": {
+                            "ascs": {
+                                "ip_address": "",
+                                "probe_port": 62000,
+                                "subnet": "app"
+                            },
+                            "ers": {
+                                "ip_address": "",
+                                "probe_port": 62101,
+                                "subnet": "app"
+                            }
+                        }
+                    },
+                    "ilb-db": {
+                        "location": "uksouth",
+                        "backends": {
+                            "hana": {
+                                "ip_address": "",
+                                "probe_port": 62503,
+                                "subnet": "db"
+                            }
+                        }
+                    }
+                }
+            ],
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "diagnostics": {
+                        "title": "Diagnostics Settings",
+                        "description": "option diagnostics settings details",
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "title": "Diagnostics Type",
+                                "description": "type of diagnostics storage backend",
+                                "type": "string",
+                                "enum": [
+                                    "storage",
+                                    "log_analytics"
+                                ]
+                            },
+                            "retention": {
+                                "title": "Retention",
+                                "description": "numbers of days to retain diagnostics data",
+                                "type": "integer",
+                                "default": 30
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "location": {
+                        "$ref": "fields.json#/definitions/location"
+                    },
+                    "backends": {
+                        "title": "Load Balancer Instances",
+                        "description": "Details for load balancers",
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                                "ip_address": {
+                                    "title": "Front End IP Address",
+                                    "description": "IP address for associated load balancer front end",
+                                    "type": "string",
+                                    "format": "ipv4",
+                                    "examples": [
+                                        "10.0.0.5"
+                                    ]
+                                },
+                                "probe_protocol": {
+                                    "title": "Probe Protocol",
+                                    "description": "protocol used by the front end",
+                                    "$ref": "fields.json#/definitions/protocol",
+                                    "default": "Tcp"
+                                },
+                                "interval_in_seconds": {
+                                    "title": "Interval",
+                                    "description": "probe interval in seconds",
+                                    "type": "integer",
+                                    "default": 5
+                                },
+                                "number_of_probes": {
+                                    "title": "Number of Probes",
+                                    "description": "(Optional) The number of missing probes allowed. Defaults to 2",
+                                    "type": "integer",
+                                    "default": 2
+                                },
+                                "rule_protocol": {
+                                    "title": "Rule Protocol",
+                                    "description": "(Optional) The protocol to be used for the rule. Defaults to All",
+                                    "$ref": "fields.json#/definitions/protocol",
+                                    "default": "All"
+                                },
+                                "idle_timeout_in_minutes": {
+                                    "title": "Idle Timeout In Minutes",
+                                    "description": "(Optional) The idle timeout to be configured in the rule. Defaults to 30",
+                                    "type": "integer",
+                                    "default": 30
+                                },
+                                "enable_floating_ip": {
+                                    "title": "Enable Floating IP",
+                                    "description": "(Optional) Determines if floating IP are allowed. Defaults to true",
+                                    "type": "boolean",
+                                    "default": true
+                                },
+                                "frontend_port": {
+                                    "title": "Frontend Port",
+                                    "description": "(Optional) The port to be used on the front end. Defaults to 0 (HA Port)",
+                                    "type": "integer",
+                                    "default": 0
+                                },
+                                "backend_port": {
+                                    "title": "Backend Port",
+                                    "description": "(Optional) The port to be used on the back end. Defaults to 0 (HA Port)",
+                                    "type": "integer",
+                                    "default": 0
+                                },
+                                "load_distribution": {
+                                    "title": "Load Distribution",
+                                    "description": "(Optional) The load distribution approach. Defaults to SourceIPProtocol",
+                                    "type": "string",
+                                    "oneOf": [
+                                        {
+                                            "const": "SourceIPProtocol",
+                                            "description": "//TODO"
+                                        },
+                                        {
+                                            "const": "SourceIP",
+                                            "description": "//TODO"
+                                        },
+                                        {
+                                            "const": "Default",
+                                            "description": "//TODO"
+                                        }
+                                    ],
+                                    "default": "SourceIPProtocol"
+                                },
+                                "probe_port": {
+                                    "title": "Probe Port",
+                                    "description": "(Required) the port to be used by the probe",
+                                    "type": "integer",
+                                    "examples": [
+                                        "620<ascssid>",
+                                        "621<erssid>",
+                                        "625<dbsid"
+                                    ]
+                                },
+                                "subnet": {
+                                    "title": "Subnet",
+                                    "description": "(Required) the subnet used for the load balancer front end",
+                                    "type": "string",
+                                    "examples": [
+                                        "app",
+                                        "db"
+                                    ]
+                                },
+                                "zones": {
+                                    "title": "Availability Zones",
+                                    "description": "Set to 'No-Zone' if deploying in a region that does not support zones",
+                                    "type": "array",
+                                    "items": {
+                                        "enum": [
+                                            "Zone-Redundant",
+                                            "1",
+                                            "2",
+                                            "3",
+                                            "No-Zone"
+                                        ]
+                                    },
+                                    "default": [
+                                        "Zone-Redundant"
+                                    ]
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "probe_port",
+                                "subnet"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "backends"
+                ]
+            }
+        }
+    },
+    "additionalProperties": false
+}

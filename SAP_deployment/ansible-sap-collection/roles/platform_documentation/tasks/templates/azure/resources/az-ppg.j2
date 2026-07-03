@@ -1,0 +1,38 @@
+{# 
+    generate proximity placement group entries 
+#}
+{% for resource in resource_json if resource.type=="microsoft.compute/proximityplacementgroups" %}
+  {% if loop.first %}
+# Proximity placement group
+---
+Proximity placement groups ensure resources are deployed closely together to ensure the best possible performance. 
+|Name|Proximity Placement Group Type|Availability Sets|Virtual Machines|
+|-|-|-|-|
+  {% endif -%}
+
+  {%- set av = namespace(sets=[]) -%}
+  {%- for as in resource_json if as.type == "microsoft.compute/availabilitysets" -%}
+    {%- if as.properties.proximityPlacementGroup.id is defined and as.properties.proximityPlacementGroup.id|lower == resource.id|lower -%}
+      {%- set av.sets = av.sets + [as.name] -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- set vms = namespace(hosts=[]) -%}
+  {%- for vm in resource_json if vm.type == "microsoft.compute/virtualmachines" -%}
+    {%- if vm.properties.proximityPlacementGroup.id is defined and vm.properties.proximityPlacementGroup.id|lower == resource.id|lower -%}
+      {%- set vms.hosts = vms.hosts + [vm.name] -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- set row = [
+      resource.name,
+      resource.properties.proximityPlacementGroupType,
+      av.sets|sort|join("<br>"|safe),
+      vms.hosts|sort|join("<br>"|safe)
+    ]
+  -%}
+
+|{{ row | join('|') }}|
+{% endfor %}
+
+

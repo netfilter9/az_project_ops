@@ -1,0 +1,64 @@
+---
+
+- name: tune | install RHEL packages
+  package:
+    name:
+      - sapconf
+      - libatomic
+      - numad
+      - libtool-ltdl        
+    state: present
+
+- name: tune | configure tuned service
+  service:
+    name: tuned
+    state: started
+    enabled: true
+
+- name: tune | install tuned-profiles-{{ tune }}
+  package:
+    name: tuned-profiles-{{ tune }}
+    state: present
+
+- name: tune | Ensure delete existing tuned file
+  file:
+    name: /etc/tuned/sap-hana/tuned.conf
+    state: absent
+    
+- name: tune | tune profile setup
+  command: "{{ item }}"
+  loop: 
+    - tuned-adm profile {{ rhel_tune_profile_name }}
+    - tuned-adm active
+
+- name: tune | copy in /etc/sysctl.d/sap_hana.conf
+  copy:
+    src: sap_hana_rhel
+    dest: /etc/sysctl.d/sap_hana.conf
+
+- name: tune | copy in /etc/tuned/sap-hana
+  file:
+    path: "/etc/tuned/sap-hana"
+    state: directory
+
+- name: tune | copy in /etc/tuned/sap-hana/tuned.conf
+  copy:
+    src: modify_CPU
+    dest: /etc/tuned/sap-hana/tuned.conf
+
+# KSM (Kernel Same-page Merging) is disbaled for system performance for RHEL systems
+
+- name: tune | Ensure KSM (Kernel Same-page Merging) is disabled
+  command: echo 0 > /sys/kernel/mm/ksm/run
+
+- name: tune | Ensure SELinux is set to enforcing mode
+  lineinfile:
+    path: /etc/sysconfig/selinux
+    regexp: '^SELINUX='
+    line: SELINUX=disabled
+
+- name: tune | disable numad service
+  service:
+    name: numad
+    state: stopped
+    enabled: no

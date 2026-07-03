@@ -1,0 +1,501 @@
+*&********************************************************************&*
+* Report              :   ZCM_HANA_TOP_TABLES_EXP                      *
+* Title               :   Top Tables for HANA Database                 *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   02/07/2020                                   *
+* Purpose             :   This report is used to fetch top 100 tables  *
+*                     :   in the system                                *
+*----------------------------------------------------------------------*
+REPORT zcm_hana_top_tables_exp.
+
+CONSTANTS: lc_sep        TYPE c VALUE '|'                LENGTH 1,
+           lc_top        TYPE c VALUE 'Top'              LENGTH 3,
+           lc_fetch      TYPE c VALUE 'FETCH'            LENGTH 5,
+           lc_table_name TYPE c VALUE 'TableName'        LENGTH 10,
+           lc_size       TYPE c VALUE 'Size'         	 LENGTH 4
+           ##no_text,
+           lc_no_rows    TYPE c VALUE 'NumberofRows'     LENGTH 15
+           ##no_text,
+           lc_err_msg    TYPE c VALUE 'No Records found' LENGTH 20
+           ##no_text,
+           lc_title      TYPE c VALUE 'Large Tables'     LENGTH 15
+           ##no_text.
+
+DATA: ls_input      TYPE tab512,
+      ls_output     TYPE tab512,
+      lv_action     TYPE char10,
+      lv_num_tab    TYPE char10,
+      lv_str        TYPE string,
+      lv_query      TYPE string,
+      lv_rawtime    TYPE string,
+      lv_time_from  TYPE string,
+      lv_time_to    TYPE string,
+      lv_sql_stmt   TYPE string,
+      lv_port       TYPE char10,
+      lv_msintotal  TYPE char22,
+      lv_rec_count  TYPE char22,
+      lv_con_name   TYPE dbcon_name,
+      lt_table      TYPE TABLE OF hdb_column_tables_part_size,
+      ls_table      TYPE hdb_column_tables_part_size,
+      lr_dref       TYPE REF TO data,
+      lr_ref        TYPE REF TO data,
+      lr_result_ref TYPE REF TO data,
+      lr_sql_excp   TYPE REF TO cx_sql_exception,
+      lr_second_con TYPE REF TO cl_sql_connection,
+      lr_stmt_ref   TYPE REF TO cl_sql_statement,
+      lr_result     TYPE REF TO cl_sql_result_set,
+      lr_set        TYPE REF TO cl_sql_result_set.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config                   ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  " Read input file from Python
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  SPLIT ls_input AT lc_sep INTO
+  lv_action       " Action
+  lv_num_tab.     " Number of tables to be fetched
+  CASE lv_action.
+
+    WHEN lc_fetch.
+
+            " Adding title to the output
+            CONCATENATE lc_top lv_num_tab lc_title
+                        INTO ls_output SEPARATED BY space.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+
+      TRY.
+          lr_second_con = cl_db6_con=>get_connection( lv_con_name ).
+          lr_stmt_ref   = lr_second_con->create_statement(  ).
+
+          CLEAR: lv_str, lv_query.
+          " Building query to fetch Application server time
+          CONCATENATE
+          ' SELECT MAX( SNAPSHOT_ID ) FROM '
+          ' _SYS_STATISTICS.HOST_COLUMN_TABLES_PART_SIZE '
+          ' AS HOST_COLUMN_TABLES_PART_SIZE   '
+          INTO lv_query.
+
+          TRY.
+              lr_result = lr_stmt_ref->execute_query( lv_query ).
+              GET REFERENCE OF lv_rawtime INTO lr_ref.
+              lr_result->set_param( lr_ref ).
+              lr_result->next( ).
+
+              IF strlen( lv_rawtime ) > 14.
+                lv_str = lv_rawtime(14).
+              ENDIF.
+
+              CONCATENATE lv_str+0(4) '-' lv_str+4(2) '-' lv_str+6(2)
+                          ' ' lv_str+8(2) ':' lv_str+10(2) ':'
+                          lv_str+12(2) '.000'
+                          INTO lv_time_from RESPECTING BLANKS.
+
+              " Setting date & time into the param tab
+              GET REFERENCE OF lv_time_from INTO lr_dref.
+              lr_stmt_ref->set_param( lr_dref ).
+
+              lv_time_to = '9999-12-30 23:59:59.000'.
+              GET REFERENCE OF lv_time_to INTO lr_dref.
+              lr_stmt_ref->set_param( lr_dref ).
+
+            CATCH cx_sql_exception INTO lr_sql_excp.
+              DATA(lv_date_msg) = lr_sql_excp->get_text( ).
+
+
+              ls_output =  lv_date_msg.
+              APPEND ls_output TO lt_output.
+              CLEAR ls_output.
+              RETURN.
+
+          ENDTRY.
+
+          CLEAR lv_sql_stmt.
+          " Building query to fetch n large tables
+
+CONCATENATE
+'SELECT SQ_EXC_AGGR.HOST AS HOST ,'
+' SQ_EXC_AGGR.PORT AS PORT ,'
+' SQ_EXC_AGGR.SCHEMA_NAME AS SCHEMA_NAME ,'
+' SQ_EXC_AGGR.TABLE_NAME AS TABLE_NAME ,'
+' SQ_EXC_AGGR.PART_ID AS PART_ID ,'
+' SQ_EXC_AGGR.SNAPSHOT_ID AS SNAPSHOT_ID ,'
+' SQ_EXC_AGGR.MEMORY_SIZE_IN_TOTAL AS MEMORY_SIZE_IN_TOTAL ,'
+' SQ_EXC_AGGR.MEMORY_SIZE_IN_MAIN AS MEMORY_SIZE_IN_MAIN ,'
+' SQ_EXC_AGGR.MEMORY_SIZE_IN_DELTA AS MEMORY_SIZE_IN_DELTA ,'
+' SQ_EXC_AGGR.MEMORY_SIZE_IN_HISTORY_MAIN AS'
+' MEMORY_SIZE_IN_HISTORY_MAIN ,'
+' MEMORY_SIZE_IN_HISTORY_DELTA ,'
+' SQ_EXC_AGGR.ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL AS'
+' ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL ,'
+' SQ_EXC_AGGR.RECORD_COUNT AS RECORD_COUNT ,'
+' SQ_EXC_AGGR.RAW_RECORD_COUNT_IN_MAIN AS RAW_RECORD_COUNT_IN_MAIN ,'
+' SQ_EXC_AGGR.RAW_RECORD_COUNT_IN_DELTA AS'
+' RAW_RECORD_COUNT_IN_DELTA ,'
+' SQ_EXC_AGGR.RAW_RECORD_COUNT_IN_HISTORY_MAIN AS'
+' RAW_RECORD_COUNT_IN_HISTORY_MAIN ,'
+' SQ_EXC_AGGR.RAW_RECORD_COUNT_IN_HISTORY_DELTA AS'
+' RAW_RECORD_COUNT_IN_HISTORY_DELTA ,'
+' SQ_EXC_AGGR.LAST_COMPRESSED_RECORD_COUNT AS'
+' LAST_COMPRESSED_RECORD_COUNT ,'
+' SQ_EXC_AGGR.IS_DELTA_LOADED_B AS IS_DELTA_LOADED_B ,'
+' SQ_EXC_AGGR.LOADED AS LOADED ,'
+' SQ_EXC_AGGR.LAST_MERGE_TIME AS LAST_MERGE_TIME ,'
+' SQ_EXC_AGGR.LOCATION AS LOCATION ,'
+' 0.0 AS PART_COUNT ,'
+' 0.0 AS TABLE_COLUMN_COUNT ,'
+' SQ_EXC_AGGR.CREATE_TIME AS CREATE_TIME ,'
+' SQ_EXC_AGGR.IS_LOG_DELTA_B AS IS_LOG_DELTA_B ,'
+' SQ_EXC_AGGR.LAST_ESTIMATED_MEMORY_SIZE AS '
+' LAST_ESTIMATED_MEMORY_SIZE ,'
+' SQ_EXC_AGGR.LAST_ESTIMATED_MEMORY_SIZE_TIME AS'
+' LAST_ESTIMATED_MEMORY_SIZE_TIME ,'
+' SQ_EXC_AGGR.LAST_REPLAY_LOG_TIME AS LAST_REPLAY_LOG_TIME ,'
+' SQ_EXC_AGGR.LAST_TRUNCATION_TIME AS LAST_TRUNCATION_TIME ,'
+' SQ_EXC_AGGR.MAX_UDIV AS MAX_UDIV ,'
+' SQ_EXC_AGGR.MERGE_COUNT AS MERGE_COUNT ,'
+' SQ_EXC_AGGR.MODIFY_TIME AS MODIFY_TIME ,'
+' SQ_EXC_AGGR.PERSISTENT_MERGE_B AS PERSISTENT_MERGE_B ,'
+' SQ_EXC_AGGR.READ_COUNT AS READ_COUNT ,'
+' SQ_EXC_AGGR.SERVER_TIMESTAMP AS SERVER_TIMESTAMP ,'
+' SQ_EXC_AGGR.UNUSED_RETENTION_PERIOD AS UNUSED_RETENTION_PERIOD ,'
+' SQ_EXC_AGGR.WRITE_COUNT AS WRITE_COUNT'
+' FROM (SELECT CREATE_TIME ,'
+' HOST ,'
+' IS_DELTA_LOADED_B ,'
+' IS_LOG_DELTA_B ,'
+' LOADED ,'
+' LOCATION ,'
+' MAX(ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL) AS'
+' ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL ,'
+' MAX(LAST_COMPRESSED_RECORD_COUNT) AS'
+' LAST_COMPRESSED_RECORD_COUNT ,'
+' MAX(LAST_ESTIMATED_MEMORY_SIZE) AS'
+' LAST_ESTIMATED_MEMORY_SIZE ,'
+' MAX(LAST_ESTIMATED_MEMORY_SIZE_TIME) AS'
+' LAST_ESTIMATED_MEMORY_SIZE_TIME ,'
+' MAX(LAST_MERGE_TIME) AS LAST_MERGE_TIME ,'
+' MAX(LAST_REPLAY_LOG_TIME) AS LAST_REPLAY_LOG_TIME ,'
+' MAX(LAST_TRUNCATION_TIME) AS LAST_TRUNCATION_TIME ,'
+' MAX(MAX_UDIV) AS MAX_UDIV ,'
+' MAX(MEMORY_SIZE_IN_DELTA) AS MEMORY_SIZE_IN_DELTA ,'
+' MAX(MEMORY_SIZE_IN_HISTORY_DELTA) AS'
+' MEMORY_SIZE_IN_HISTORY_DELTA ,'
+' MAX(MEMORY_SIZE_IN_HISTORY_MAIN) AS'
+' MEMORY_SIZE_IN_HISTORY_MAIN ,'
+' MAX(MEMORY_SIZE_IN_MAIN) AS MEMORY_SIZE_IN_MAIN ,'
+' MAX(MEMORY_SIZE_IN_TOTAL) AS MEMORY_SIZE_IN_TOTAL ,'
+' MAX(MERGE_COUNT) AS MERGE_COUNT ,'
+' MAX(RAW_RECORD_COUNT_IN_DELTA) AS RAW_RECORD_COUNT_IN_DELTA ,'
+' MAX(RAW_RECORD_COUNT_IN_HISTORY_DELTA) AS'
+' RAW_RECORD_COUNT_IN_HISTORY_DELTA ,'
+' MAX(RAW_RECORD_COUNT_IN_HISTORY_MAIN) AS'
+' RAW_RECORD_COUNT_IN_HISTORY_MAIN ,'
+' MAX(RAW_RECORD_COUNT_IN_MAIN) AS RAW_RECORD_COUNT_IN_MAIN ,'
+' MAX(READ_COUNT) AS READ_COUNT ,'
+' MAX(RECORD_COUNT) AS RECORD_COUNT ,'
+' MAX(UNUSED_RETENTION_PERIOD) AS UNUSED_RETENTION_PERIOD ,'
+' MAX(WRITE_COUNT) AS WRITE_COUNT ,'
+' MODIFY_TIME ,'
+' PART_ID ,'
+' PERSISTENT_MERGE_B ,'
+' PORT ,'
+' SCHEMA_NAME ,'
+' SERVER_TIMESTAMP ,'
+' SNAPSHOT_ID ,'
+' TABLE_NAME'
+' FROM (SELECT CASE HOST_COLUMN_TABLES_PART_SIZE.IS_DELTA_LOADED'
+' WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END AS IS_DELTA_LOADED_B ,'
+' CASE HOST_COLUMN_TABLES_PART_SIZE.IS_LOG_DELTA WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END AS IS_LOG_DELTA_B ,'
+' CASE HOST_COLUMN_TABLES_PART_SIZE.PERSISTENT_MERGE WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END AS PERSISTENT_MERGE_B ,'
+' HOST_COLUMN_TABLES_PART_SIZE.CREATE_TIME AS CREATE_TIME ,'
+' HOST_COLUMN_TABLES_PART_SIZE.HOST AS HOST ,'
+' HOST_COLUMN_TABLES_PART_SIZE.LOADED AS LOADED ,'
+' HOST_COLUMN_TABLES_PART_SIZE.MODIFY_TIME AS MODIFY_TIME ,'
+' HOST_COLUMN_TABLES_PART_SIZE.PART_ID AS PART_ID ,'
+' HOST_COLUMN_TABLES_PART_SIZE.PORT AS PORT ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SCHEMA_NAME AS SCHEMA_NAME ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SERVER_TIMESTAMP AS'
+' SERVER_TIMESTAMP ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SNAPSHOT_ID AS SNAPSHOT_ID ,'
+' HOST_COLUMN_TABLES_PART_SIZE.TABLE_NAME AS TABLE_NAME ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL)'
+' AS ESTIMATED_MAX_MEMORY_SIZE_IN_TOTAL ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_COMPRESSED_RECORD_COUNT) '
+' AS LAST_COMPRESSED_RECORD_COUNT ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_ESTIMATED_MEMORY_SIZE) '
+' AS LAST_ESTIMATED_MEMORY_SIZE ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_ESTIMATED_MEMORY_SIZE_TIME) '
+' AS LAST_ESTIMATED_MEMORY_SIZE_TIME ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_MERGE_TIME) '
+' AS LAST_MERGE_TIME ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_REPLAY_LOG_TIME) '
+' AS LAST_REPLAY_LOG_TIME ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.LAST_TRUNCATION_TIME) '
+' AS LAST_TRUNCATION_TIME ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MAX_UDIV) AS MAX_UDIV ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MEMORY_SIZE_IN_DELTA) '
+' AS MEMORY_SIZE_IN_DELTA ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MEMORY_SIZE_IN_HISTORY_DELTA) '
+' AS MEMORY_SIZE_IN_HISTORY_DELTA ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MEMORY_SIZE_IN_HISTORY_MAIN) '
+' AS MEMORY_SIZE_IN_HISTORY_MAIN ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MEMORY_SIZE_IN_MAIN)'
+' AS MEMORY_SIZE_IN_MAIN ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MEMORY_SIZE_IN_TOTAL) '
+' AS MEMORY_SIZE_IN_TOTAL ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.MERGE_COUNT) '
+' AS MERGE_COUNT ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.RAW_RECORD_COUNT_IN_DELTA)'
+' AS RAW_RECORD_COUNT_IN_DELTA ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.RAW_RECORD_COUNT_IN_HISTORY_DELTA)'
+' AS RAW_RECORD_COUNT_IN_HISTORY_DELTA ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.RAW_RECORD_COUNT_IN_HISTORY_MAIN)'
+' AS RAW_RECORD_COUNT_IN_HISTORY_MAIN ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.RAW_RECORD_COUNT_IN_MAIN)'
+' AS RAW_RECORD_COUNT_IN_MAIN ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.READ_COUNT)'
+' AS READ_COUNT ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.RECORD_COUNT)'
+' AS RECORD_COUNT ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.UNUSED_RETENTION_PERIOD)'
+' AS UNUSED_RETENTION_PERIOD ,'
+' MAX(HOST_COLUMN_TABLES_PART_SIZE.WRITE_COUNT)'
+' AS WRITE_COUNT ,'
+' M_TABLE_LOCATIONS.LOCATION AS LOCATION'
+' FROM _SYS_STATISTICS.HOST_COLUMN_TABLES_PART_SIZE AS'
+' HOST_COLUMN_TABLES_PART_SIZE LEFT OUTER JOIN SYS.M_TABLE_LOCATIONS'
+' AS M_TABLE_LOCATIONS'
+' ON HOST_COLUMN_TABLES_PART_SIZE.SCHEMA_NAME = '
+' M_TABLE_LOCATIONS.SCHEMA_NAME AND'
+' HOST_COLUMN_TABLES_PART_SIZE.TABLE_NAME = '
+' M_TABLE_LOCATIONS.TABLE_NAME AND'
+' HOST_COLUMN_TABLES_PART_SIZE.PART_ID ='
+' M_TABLE_LOCATIONS.PART_ID AND'
+' HOST_COLUMN_TABLES_PART_SIZE.PORT ='
+' M_TABLE_LOCATIONS.PORT AND'
+' HOST_COLUMN_TABLES_PART_SIZE.HOST = M_TABLE_LOCATIONS.HOST'
+' WHERE HOST_COLUMN_TABLES_PART_SIZE.SNAPSHOT_ID >= TO_TIMESTAMP( ? )'
+' AND'
+' HOST_COLUMN_TABLES_PART_SIZE.SNAPSHOT_ID <= TO_TIMESTAMP( ? )'
+' GROUP BY HOST_COLUMN_TABLES_PART_SIZE.HOST ,'
+' HOST_COLUMN_TABLES_PART_SIZE.PORT ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SCHEMA_NAME ,'
+' HOST_COLUMN_TABLES_PART_SIZE.TABLE_NAME ,'
+' HOST_COLUMN_TABLES_PART_SIZE.PART_ID ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SNAPSHOT_ID ,'
+' CASE HOST_COLUMN_TABLES_PART_SIZE.IS_DELTA_LOADED WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END ,'
+' HOST_COLUMN_TABLES_PART_SIZE.LOADED ,'
+' M_TABLE_LOCATIONS.LOCATION ,'
+' HOST_COLUMN_TABLES_PART_SIZE.CREATE_TIME ,'
+' CASE HOST_COLUMN_TABLES_PART_SIZE.IS_LOG_DELTA WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END ,'
+' HOST_COLUMN_TABLES_PART_SIZE.MODIFY_TIME ,'
+' CASE HOST_COLUMN_TABLES_PART_SIZE.PERSISTENT_MERGE WHEN '
+''''
+'TRUE'
+''''
+' THEN '
+''''
+'X'
+''''
+' WHEN '
+''''
+'FALSE'
+''''
+' THEN '
+''''
+''
+''''
+' ELSE '
+''''
+'-'
+''''
+' END ,'
+' HOST_COLUMN_TABLES_PART_SIZE.SERVER_TIMESTAMP ) '
+' AS SQ_STD_AGGR'
+' GROUP BY HOST ,'
+' PORT ,'
+' SCHEMA_NAME ,'
+' TABLE_NAME ,'
+' PART_ID ,'
+' SNAPSHOT_ID ,'
+' IS_DELTA_LOADED_B ,'
+' LOADED ,'
+' LOCATION ,'
+' CREATE_TIME ,'
+' IS_LOG_DELTA_B ,'
+' MODIFY_TIME ,'
+' PERSISTENT_MERGE_B ,'
+' SERVER_TIMESTAMP ) AS SQ_EXC_AGGR'
+' ORDER BY MEMORY_SIZE_IN_TOTAL DESC'
+' LIMIT '
+lv_num_tab
+INTO lv_sql_stmt RESPECTING BLANKS.
+
+          TRY.
+              " Here we get the large tables
+              lr_set = lr_stmt_ref->execute_query( lv_sql_stmt ).
+              GET REFERENCE OF lt_table INTO lr_result_ref.
+              lr_set->set_param_table( itab_ref = lr_result_ref ).
+              lr_set->next_package( ).
+
+            CATCH cx_sql_exception INTO lr_sql_excp.
+              DATA(lv_exe_msg) = lr_sql_excp->get_text( ).
+
+              ls_output =  lv_exe_msg.
+              APPEND ls_output TO lt_output.
+              CLEAR ls_output.
+              RETURN.
+          ENDTRY.
+
+          IF lt_table IS NOT INITIAL.
+
+            " Adding heading to the output
+
+            CONCATENATE lc_table_name     lc_sep
+                        lc_size           lc_sep
+                        lc_no_rows
+                        INTO ls_output.
+            APPEND ls_output TO lt_output.
+
+            LOOP AT lt_table INTO ls_table.
+
+              lv_msintotal = ls_table-memory_size_in_total.
+              lv_rec_count = ls_table-record_count.
+
+              CONDENSE: lv_msintotal, lv_rec_count.
+
+              CONCATENATE ls_table-table_name      lc_sep
+                          lv_msintotal             lc_sep
+                          lv_rec_count
+                          INTO ls_output.
+              APPEND ls_output TO lt_output.
+              CLEAR: ls_output, lv_msintotal, lv_rec_count.
+
+            ENDLOOP.
+
+          ELSE.
+
+            " No records found
+
+            ls_output = lc_err_msg.
+            APPEND ls_output TO lt_output.
+            CLEAR ls_output.
+          ENDIF.
+
+        CATCH cx_sql_exception INTO lr_sql_excp.
+          DATA(lv_con_msg) = lr_sql_excp->get_text( ).
+
+          ls_output = lv_con_msg.
+
+          APPEND ls_output TO lt_output.
+          CLEAR ls_output.
+          RETURN.
+      ENDTRY.
+  ENDCASE.
+
+ENDFORM.

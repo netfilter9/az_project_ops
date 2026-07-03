@@ -1,0 +1,4 @@
+---
+- name: main | adding OS packages for all aws servers
+  include_tasks: "{{ ansible_os_family }}.yml"
+ 

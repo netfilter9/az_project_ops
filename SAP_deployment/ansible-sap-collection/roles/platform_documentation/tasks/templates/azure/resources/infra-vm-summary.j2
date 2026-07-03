@@ -1,0 +1,23 @@
+{# 
+    generate vm summary 
+#}
+{% if deployment.server_groups is defined %}
+# VM Summary (All VMs)
+---
+|Hostname|Vm Size|Os Type|
+|-|-|-|
+  {% for group_k, group_v in deployment.server_groups.items() %}
+    {%- for host_k, host_v in group_v.hosts.items() -%}
+      {%- set row = [
+        host_k,
+        group_v.sku,
+        group_v.os_type
+        ]
+      -%}
+
+      |{{ row | join('|') }}|
+    {% endfor %}
+  {% endfor %}
+  
+{% endif %}
+

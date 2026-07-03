@@ -1,0 +1,244 @@
+*---------------------------------------------------------------------*
+* Program Name        :  ZCM_SPNEGO_CONFIG_DETAILS                    *
+* Title               :  Capture SPNego Details                       *
+* Purpose             :  To capture SPNego Details                    *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SPNEGO                                                              *
+*---------------------------------------------------------------------*
+*	Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* X                         X
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*03-22-2021  Initial  Yasaswini K  Local     To Capture SPNEGO user   *
+*                                            Principal details        *
+*---------------------------------------------------------------------*
+REPORT zcm_spnego_config_details.
+
+FORM get_config        ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_title   TYPE c VALUE 'KerberosUserPrincipals'
+                                                       LENGTH 24,
+             lc_name    TYPE c VALUE 'UserPrincipalName'
+                                                       LENGTH 24,
+             lc_date    TYPE c VALUE 'CreatedDate'     LENGTH 11,
+             lc_title2  TYPE c VALUE 'ServicePrincipalNames'
+                                                       LENGTH 25,
+             lc_service TYPE c VALUE 'ServicePrincipalName'
+                                                       LENGTH 24,
+             lc_unique  TYPE c VALUE 'UserPrincipaluniqueness'
+                                                       LENGTH 40,
+             lc_token   TYPE c VALUE 'TokenCheck'      LENGTH 10,
+             lc_export  TYPE c VALUE 'EXPORT'          LENGTH 6,
+             lc_invalid TYPE c VALUE 'InvalidInput'    LENGTH 12,
+             lc_sep     TYPE c VALUE '|'               LENGTH 1,
+             lc_null    TYPE c VALUE 'NULL'            LENGTH 4,
+             lc_time    TYPE c VALUE 'CreatedTime'     LENGTH 11.
+  TYPES:
+    BEGIN OF ty_spn_info,
+      spn     TYPE string,
+      iconu   TYPE icon_text,
+      unames  TYPE stringtab,
+      icont   TYPE icon_text,
+      ecode_c TYPE i,
+      etext_c TYPE string,
+      etext_v TYPE string,
+      etext_e TYPE string,
+    END OF ty_spn_info.
+
+
+  DATA: lo_cut           TYPE REF TO if_krb_keytab_persisted,
+        ls_input         TYPE tab512,
+        lx_keytab        TYPE REF TO cx_krb_keytab,
+        lt_keytab        TYPE krb_keytab_t,
+        lv_timestamp     TYPE string,
+        lv_service_name  TYPE string,
+        lt_service_names TYPE stringtab,
+        ls_spn_info      TYPE ty_spn_info,
+        ls_output        TYPE tab512,
+        lv_token         TYPE string,
+        lv_random        TYPE xstring,
+        lv_action        TYPE string,
+        lr_ex            TYPE REF TO cx_static_check,
+        lt_spn_info      TYPE STANDARD TABLE OF ty_spn_info,
+        lo_snc_control   TYPE REF TO cl_sncax_control.
+
+  CLEAR: ls_input,
+         lv_timestamp,
+         lv_service_name,
+         ls_spn_info,
+         ls_output,
+         lv_token,
+         lv_random,
+         lv_action.
+
+  FREE: lt_keytab,
+        lt_service_names,
+        lt_spn_info.
+
+  "Title
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR: ls_output.
+
+  "Read input
+  READ TABLE lt_input INTO ls_input INDEX 1.
+
+  IF sy-subrc EQ 0.
+    lv_action = ls_input.      " Action
+  ELSE.
+    ls_output = lc_invalid.
+    APPEND ls_output TO lt_output.
+    CLEAR: ls_output.
+    RETURN.
+  ENDIF.
+
+  CASE lv_action.
+
+    WHEN lc_export.         " When action is Export
+
+      TRY.
+          lo_cut = cl_krb_keytab_factory=>create_keytab_persisted( ).
+        CATCH cx_krb_keytab INTO lx_keytab.
+          ls_output = lx_keytab->get_text( ).
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+          RETURN.
+      ENDTRY.
+
+      "Get entries from SPNego
+      IF lo_cut IS BOUND.
+        TRY.
+            lo_cut->get_entries( IMPORTING et_keytab = lt_keytab ).
+          CATCH cx_krb_keytab INTO lx_keytab.
+            ls_output = lx_keytab->get_text( ).
+            APPEND ls_output TO lt_output.
+            CLEAR: ls_output.
+            RETURN.
+        ENDTRY.
+      ENDIF.
+
+      "Create object
+      TRY.
+          CREATE OBJECT lo_snc_control
+            EXPORTING
+              if_shellstyle = cl_gui_control=>ws_visible.
+        CATCH cx_sncax_control INTO lr_ex.
+          ls_output = lr_ex->get_text( ).
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+          RETURN.
+      ENDTRY.
+
+      IF lo_snc_control IS BOUND.
+
+        IF lt_keytab IS NOT INITIAL.
+          "Column Headings
+          CONCATENATE lc_name lc_date lc_time INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+        ENDIF.
+
+        LOOP AT lt_keytab INTO DATA(ls_keytab).
+
+          "Appending creation date and time to output
+          lv_timestamp = ls_keytab-creation_date.
+          CONCATENATE ls_keytab-spn lc_sep
+                      lv_timestamp+0(8) lc_sep lv_timestamp+8(6)
+          INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+
+          "Get Hosts
+          TRY.
+              lo_snc_control->lookup_service_principal_names(
+                      EXPORTING if_user_principal_name = ls_keytab-spn
+                      IMPORTING et_service_names = lt_service_names ).
+              ##NO_HANDLER
+            CATCH cx_sncax_control.
+          ENDTRY.
+
+          IF lines( lt_service_names ) > 0.
+
+            LOOP AT lt_service_names INTO DATA(ls_service_names).
+              TRY.
+                  lo_snc_control->lookup_user_principal_names(
+                    EXPORTING
+                      if_service_principal_name = ls_service_names
+                      IMPORTING et_user_names = ls_spn_info-unames ).
+                  ##NO_HANDLER
+                CATCH cx_sncax_control.
+              ENDTRY.
+
+              "User Principal Uniqueness
+              IF lines( ls_spn_info-unames ) = 1.
+                ls_spn_info-iconu = abap_true.
+              ELSE.
+                ls_spn_info-iconu = lc_null.
+              ENDIF.
+
+              "Service Principal Name
+              ls_spn_info-spn = lv_service_name.
+
+              lv_random = cl_abap_random=>seed( ).
+
+              TRY.
+                  lv_token = lo_snc_control->create_spnego_token(
+                   if_service_principal_name = ls_spn_info-spn
+                   if_random = lv_random ).
+                  ##NO_HANDLER
+                CATCH cx_sncax_control.
+              ENDTRY.
+
+              "Token Check
+              IF lv_token IS INITIAL.
+                ls_spn_info-icont = lc_null.
+              ELSE.
+                ls_spn_info-icont = abap_true.
+              ENDIF.
+
+              "Appending entries
+              APPEND ls_spn_info TO lt_spn_info.
+              CLEAR: ls_spn_info, ls_service_names,lv_token.
+            ENDLOOP.
+          ENDIF.
+        ENDLOOP.
+
+        IF lt_spn_info IS NOT INITIAL.
+
+          "Blank line
+          CLEAR: ls_output.
+          APPEND ls_output TO lt_output.
+
+          "Title
+          ls_output = lc_title2.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+
+          "Column Heading
+          CONCATENATE lc_service lc_sep lc_unique lc_sep lc_token
+          INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output.
+
+          "Data
+          LOOP AT lt_spn_info INTO ls_spn_info.
+            CONCATENATE ls_spn_info-spn    lc_sep
+                        ls_spn_info-iconu  lc_sep
+                        ls_spn_info-icont  INTO ls_output.
+            APPEND ls_output TO lt_output.
+            CLEAR: ls_output, ls_spn_info.
+          ENDLOOP.
+        ENDIF.
+      ENDIF.
+    WHEN OTHERS.
+      ls_output = lc_invalid.
+      APPEND ls_output TO lt_output.
+      CLEAR: ls_output.
+  ENDCASE.
+ENDFORM.

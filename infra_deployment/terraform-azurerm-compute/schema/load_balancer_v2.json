@@ -1,0 +1,217 @@
+{
+    "$schema": "http://json-schema.org/schema",
+    "title": "",
+    "description": "",
+    "definitions": {
+        "load_balancer_v2": {
+            "additionalProperties": false,
+            "properties": {
+                "front_end_ips": {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/front_end_ip"
+                    }
+                },
+                "backend_address_pools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "pool1",
+                            "pool2"
+                        ]
+                    }
+                },
+                "rules": {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/rule"
+                    }
+                },
+                "probes": {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/probe"
+                    }
+                },
+                "outbound_rules": {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/outbound_rules"
+                    }
+                }
+            }
+        },
+        "front_end_ip": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "use_public_ip": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "zones": {
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            "Zone-Redundant",
+                            1,
+                            2,
+                            3,
+                            "No-Zone"
+                        ]
+                    }
+                },
+                "subnet": {
+                    "type": "string",
+                    "examples": [
+                        "app"
+                    ]
+                },
+                "private_ip_address": {
+                    "type": "string"
+                },
+                "private_ip_address_allocation": {
+                    "enum": [
+                        "Dynamic",
+                        "Static"
+                    ]
+                },
+                "private_ip_address_version": {
+                    "enum": [
+                        "IPv4",
+                        "IPv6"
+                    ]
+                }
+            }
+        },
+        "rule": {
+            "additionalProperties": false,
+            "properties": {
+                "front_end_ip": {
+                    "type": "string",
+                    "examples": [
+                        "public_ip",
+                        "private_ip"
+                    ]
+                },
+                "protocol": {
+                    "enum": [
+                        "Tcp",
+                        "Udp",
+                        "All"
+                    ]
+                },
+                "frontend_port": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 65534
+                },
+                "backend_port": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "backend_address_pool": {
+                    "type": "string",
+                    "examples": [
+                        "pool1",
+                        "pool2"
+                    ]
+                },
+                "probe": {
+                    "type": "string",
+                    "examples": [
+                        "probe1"
+                    ]
+                },
+                "enable_floating_ip": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "idle_timeout_in_minutes": {
+                    "type": "number",
+                    "default": 4,
+                    "minimum": 4,
+                    "maximum": 30
+                },
+                "load_distribution": {
+                    "enum": [
+                        "Default",
+                        "SourceIP",
+                        "SourceIPProtocol"
+                    ]
+                },
+                "disable_outbound_snat": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_tcp_reset": {
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "probe": {
+            "additionalProperties": false,
+            "properties": {
+                "protocol": {
+                    "enum": [
+                        "Http",
+                        "Tcp"
+                    ]
+                },
+                "port": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "request_path": {
+                    "type": "string"
+                },
+                "interval_in_seconds": {
+                    "type": "number",
+                    "default": 15,
+                    "minimum": 5
+                },
+                "number_of_probes": {
+                    "type": "number",
+                    "default": 2
+                }
+            }
+        },
+        "outbound_rules": {
+            "additionalProperties": false,
+            "properties": {
+                "frontend_ips": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "examples": [
+                            "public_ip"
+                        ]
+                    }
+                },
+                "backend_address_pool": {
+                    "type": "string",
+                    "examples": [
+                        "pool1"
+                    ]
+                },
+                "protocol": {
+                    "enum": [
+                        "Udp",
+                        "Tcp",
+                        "All"
+                    ]
+                },
+                "enable_tcp_reset": {
+                    "type": "boolean"
+                },
+                "allocated_outbound_ports": {
+                    "type": "number"
+                },
+                "idle_timeout_in_minutes": {
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "additionalProperties": false
+}

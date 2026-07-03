@@ -1,0 +1,146 @@
+{# 
+  create a local variables for the SAP instance references 
+  e.g. A4H_ASCS00, A4H_ERS01
+#}
+{% set ascs_instance = sap.sid + "_" + sap.ascs_type + sap.instance_numbers.ascs %}
+{% set ers_instance = sap.sid + "_ERS" + sap.instance_numbers.ers %}
+
+{#
+  include common header to define nodes and STONITH approach
+#}
+{#
+  Select STONITH strategy
+#}
+{% for node in [node1,node2]  %}
+{# GCP STONITH #}
+primitive stonith-{{ node }} stonith:external/gcpstonith \
+  op monitor interval=300s timeout=60s on-fail=restart \
+  op start interval=0 timeout=60s onfail=restart \
+  params instance_name={{ node }} \
+  gcloud_path="/usr/bin/gcloud" \
+  logging=yes
+
+location loc_stonith_{{ node }} stonith-{{ node }} -inf: {{ node }}
+{% endfor %}
+
+{#
+  Setup common ASCS/ERS cluster primitives
+#}
+{#
+    Add "loadbalancer primitives"
+#}
+{% if sap.lb_type == "gcp_alias" %}
+{# GCP aliase LB #}
+primitive nc_{{ ascs_instance }} ocf:gcp:alias \
+  op monitor interval=60s timeout=15s \
+  op start interval=0 timeout=300s \
+  op stop interval=0 timeout=15s \
+  params alias_ip="{{ sap.logical_hosts.ascs.ip }}/{{ sap.logical_hosts.ascs.cidr }}" \
+  hostlist="{{ node1 }} {{ node2 }}" \
+  gcloud_path="/usr/bin/gcloud" logging=yes \
+  meta priority=10
+
+primitive nc_{{ ers_instance }} ocf:gcp:alias \
+  op start interval=0 timeout=300s \
+  op stop interval=0 timeout=15s \
+  op monitor interval=60s timeout=20s \
+  params alias_ip="{{ sap.logical_hosts.ers.ip }}/{{ sap.logical_hosts.ers.cidr }}" \
+  hostlist="{{ node2 }} {{ node1 }}" \
+  gcloud_path="/usr/bin/gcloud" \
+  meta priority=1000
+
+{% elif sap.lb_type == "gcp" %}
+{# GCP Internal TCP LB #}
+primitive nc_{{ ascs_instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:{{ ascs_healthcheck_port }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+primitive nc_{{ ers_instance }} anything \
+    params binfile="/usr/bin/socat" \
+    cmdline_options="-U TCP-LISTEN:{{ ers_healthcheck_port }},backlog=10,fork,reuseaddr /dev/null" \
+    op monitor timeout=20s interval=10 \
+    op_params depth=0
+
+{% endif %}
+
+{#
+    Add vip resource
+#}
+{# GCP aliase LB and TCP Internal LB#}
+primitive vip_{{ ascs_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ascs.ip }} cidr_netmask={{ sap.logical_hosts.ascs.cidr }} nic="eth0" \
+  op monitor interval=10s
+
+primitive vip_{{ ers_instance }} IPaddr2 \
+  params ip={{ sap.logical_hosts.ers.ip }} cidr_netmask={{ sap.logical_hosts.ers.cidr }} nic="eth0" \
+  op monitor interval=10s
+
+{#
+    set up file system failover if using traditional NFS or ANF
+#}
+{% set ascs_device = sap.nfs.ascs_device %}
+{% set ers_device = sap.nfs.ers_device %}
+
+primitive fs_{{ ascs_instance }} Filesystem \  
+  device={{ ascs_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' \
+  {% if use_autofs == false %}
+  options='{{ sap.nfs.options | default() }}' \  
+  {% endif %}
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+
+primitive fs_{{ ers_instance }} Filesystem \  
+  device={{ ers_device }} \  
+  directory=/usr/sap/{{ sap.sid|upper }}/ERS{{ sap.instance_numbers.ers }} \  
+  fstype='{{ sap.nfs.fstype | default("nfs4") }}' \
+  {% if use_autofs == false %}
+  options='{{ sap.nfs.options | default() }}' \
+  {% endif %}
+  op start timeout=60s interval=0 \  
+  op stop timeout=60s interval=0 \  
+  op monitor interval=20s timeout=40s
+
+{# 
+    set up groups
+#}
+group SAP-{{ ascs_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ascs_instance }} \
+{% endif %}
+  nc_{{ ascs_instance }} \
+  vip_{{ ascs_instance }} \
+  meta resource-stickiness=3000
+
+group SAP-{{ ers_instance }} \
+{% if sap.nfs is defined %}
+  fs_{{ ers_instance }} \
+{% endif %}
+  nc_{{ ers_instance }} \
+  vip_{{ ers_instance }} 
+
+{#
+    set rules for coloaction
+#}
+colocation col_sap_{{ sap.sid }}_no_both -5000: SAP-{{ ers_instance }} SAP-{{ ascs_instance }}
+
+{#
+    Set general properties
+#}
+property cib-bootstrap-options: {% if stonith_type == "sbd" %} \
+  have-watchdog=true {% else %} \
+  have-watchdog=false {% endif %} \
+  cluster-infrastructure=corosync \
+  cluster-name=hacluster \
+  stonith-enabled=true \
+  stonith-action=off \
+  no-quorum-policy=stop \
+  stonith-timeout=900s \
+  maintenance-mode=false \
+  startup-fencing=true \ 
+  last-lrm-refresh=1632815429 {% if stonith_type == "azure_fence_agent" %}\
+  concurrent-fencing=true
+{% endif %}

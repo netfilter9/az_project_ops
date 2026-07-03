@@ -1,0 +1,58 @@
+- name: packages | install packages for azure suse
+  package:
+    name:
+      - libltdl7
+      - libatomic1
+      - unrar
+      - socat
+    state: present
+  register: result
+  until: result is not failed
+  retries: 5
+  when: platform == 'azure' and ansible_os_family == 'Suse'
+
+- name: packages | install packages azure RedHat
+  package:
+    name:
+      - compat-sap-c++*
+      - socat
+    state: present
+  when: platform == 'azure' and ansible_os_family == 'RedHat'
+
+- name: packages | install packages for aws Suse 
+  package:
+    name:
+      - libgcc_s1
+      - libatomic1
+      - libstdc++6
+    state: present
+  when: platform == 'aws' and ansible_os_family == 'Suse'
+
+- name: packages | install packages for aws RedHat
+  package:
+    name:      
+      - libltdl*
+      - libsss_sudo      
+      - libstd*
+      - compat-sap-c++*
+      - socat
+    state: present
+  when: platform == 'aws' and ansible_os_family == 'RedHat'
+
+- name: packages | install packages for gcp 
+  package:
+    name:
+      - libgcc_s1
+      - libatomic1
+      - libstdc++6
+    state: present
+  when: platform == 'gcp' and ansible_os_family == 'Suse'
+
+- name: packages | install packages for gcp RedHat
+  package:
+    name:      
+      - libgcc_s*
+      - libatomic*
+      - libstdc++*
+    state: present
+  when: platform == 'gcp' and ansible_os_family == 'RedHat'

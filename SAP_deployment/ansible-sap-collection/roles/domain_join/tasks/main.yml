@@ -1,0 +1,17 @@
+---
+
+- name: validate that the domain vars have been supplied
+  assert:
+    that:
+      - domain is defined
+      - domain.fqdn is defined
+      - domain.controllers is defined
+      - domain.controllers | length
+
+- name: include operating system specific variables
+  include_vars:
+    file: "{{ ansible_os_family }}.yml"
+
+- name: include operating system family tasks
+  include_tasks:
+    file: "{{ ansible_os_family }}.yml"

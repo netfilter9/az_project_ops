@@ -1,0 +1,164 @@
+*&*******************************************************************&*
+* Report              :   ZCM_SMLG_EXP_LOGON_GROUPS                   *
+* Title               :   Logon group export                          *
+* Created by          :   ASHWINI B                                   *
+* Created on          :   21/08/2020                                  *
+* Modified by         :   Ruchir Kamble                               *
+* Modified on         :   01/12/2020                                  *
+* Purpose             :   This report is used to export logon group   *
+*                     :   details from tcode SMLG pre migration       *
+*---------------------------------------------------------------------*
+REPORT zcm_smlg_exp_logon_groups.
+
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  CONSTANTS: lc_sep       TYPE c       VALUE '|',
+             lc_n         TYPE c       VALUE 'N',
+             lc_act_exp   TYPE char6   VALUE 'EXPORT',
+             lc_logon     TYPE char20  VALUE 'Logon group name',
+             lc_ins       TYPE char20  VALUE 'Instance name',
+             lc_time      TYPE char20  VALUE 'Response time',
+             lc_users     TYPE char20  VALUE 'Users',
+             lc_flag      TYPE char20  VALUE 'IPV6 flag',
+             lc_ipv6      TYPE char20  VALUE 'IPV6 address',
+             lc_classnum  TYPE char10  VALUE 'Classnum',
+             lc_classname TYPE char10  VALUE 'Classname',
+             lc_favtype   TYPE char20  VALUE 'Fav Type',
+             lc_title     TYPE char20  VALUE 'List of logon groups',
+             lc_msg       TYPE char20  VALUE
+             'No data found'.
+
+  TYPES: BEGIN OF lty_rzllitab,
+           classname    TYPE rzlli_apcl,
+           applserver   TYPE rzlli_asvr,
+           resp_time    TYPE rzlli_rspt,
+           users        TYPE rzlli_usrs,
+           ipv6         TYPE flag,
+           ipv6_address TYPE ni_nodeaddr,
+         END OF lty_rzllitab,
+
+         BEGIN OF lty_rzlliclass,
+           classnum  TYPE rzlli_gpid,
+           classname TYPE rzlli_apcl,
+           favtype   TYPE rzlli_favt,
+         END OF lty_rzlliclass.
+
+  DATA: ls_input      TYPE tab512,
+        ls_output     TYPE tab512,
+        lv_action     TYPE char8,
+        lv_favtype    TYPE char1,
+        lt_rzlliclass TYPE TABLE OF lty_rzlliclass,
+        ls_rzlliclass TYPE lty_rzlliclass,
+        lt_rzllitab   TYPE TABLE OF lty_rzllitab,
+        ls_rzllitab   TYPE lty_rzllitab.
+
+  CLEAR: ls_input,
+         lv_action.
+
+  " Read input values from Python/Ansibel
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_act_exp. "EXPORT
+
+* Under the pre-migration activities, the data
+* related to logon groups created in the system is exported to
+* Python.The table RZLLITAB holds this data. This is read to
+* determine the logon groups assignment to instances
+
+        CLEAR: ls_output.
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      SELECT classname
+             applserver
+             resp_time
+             users
+             ipv6
+             ipv6_address
+       FROM rzllitab
+       INTO TABLE lt_rzllitab
+       WHERE grouptype = ' '.
+      IF sy-subrc EQ 0.
+        SORT: lt_rzllitab BY classname.
+      ELSE.
+        CLEAR: ls_output.
+        " No data found
+        ls_output = lc_msg.
+        APPEND ls_output TO lt_output.
+        RETURN.
+      ENDIF.
+
+      IF lt_rzllitab[] IS NOT INITIAL.
+
+        " Heading columns
+        CLEAR: ls_output.
+        CONCATENATE lc_logon     lc_sep
+                    lc_ins       lc_sep
+                    lc_time      lc_sep
+                    lc_users     lc_sep
+                    lc_flag      lc_sep
+                    lc_ipv6      lc_sep
+                    lc_classnum  lc_sep
+                    lc_classname lc_sep
+                    lc_favtype
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_rzllitab INTO ls_rzllitab.
+
+          SELECT classnum classname favtype
+           FROM rzlliclass
+           INTO TABLE lt_rzlliclass
+           WHERE classname EQ ls_rzllitab-classname
+           AND grouptype = ' '.
+
+         IF sy-subrc EQ 0.
+          READ TABLE lt_rzlliclass INTO ls_rzlliclass INDEX 1.
+         ENDIF.
+
+          IF ls_rzlliclass-favtype IS INITIAL.
+            ls_rzlliclass-favtype = lc_n.
+          ENDIF.
+
+          CONCATENATE ls_rzllitab-classname     lc_sep
+                      ls_rzllitab-applserver    lc_sep
+                      ls_rzllitab-resp_time     lc_sep
+                      ls_rzllitab-users         lc_sep
+                      ls_rzllitab-ipv6          lc_sep
+                      ls_rzllitab-ipv6_address  lc_sep
+                      ls_rzlliclass-classnum    lc_sep
+                      ls_rzlliclass-classname   lc_sep
+                      ls_rzlliclass-favtype
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_output, ls_rzllitab, ls_rzlliclass.
+        ENDLOOP.
+
+      ENDIF.
+
+      PERFORM null_check TABLES lt_output.
+
+    WHEN OTHERS.
+
+  ENDCASE.
+
+ENDFORM.
+
+FORM null_check TABLES lt_table TYPE table.
+
+  DO.
+    REPLACE ALL OCCURRENCES OF SUBSTRING '||'
+    IN TABLE lt_table WITH '|NULL|'.
+    FIND '||' IN TABLE lt_table.
+    IF sy-subrc <> 0.
+      EXIT .
+    ENDIF.
+  ENDDO.
+
+ENDFORM.

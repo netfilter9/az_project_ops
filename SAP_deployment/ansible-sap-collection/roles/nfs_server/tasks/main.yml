@@ -1,0 +1,53 @@
+---
+- name: main | create /srv/nfs/ directory
+  file:
+    path: /srv/nfs/
+    state: directory
+  tags:
+    - always
+
+- name: main | add nfs folder to exports file
+  lineinfile:
+    line: /srv/nfs *(rw,no_root_squash,fsid=0)
+    state: present
+    path: /etc/exports
+  tags:
+    - exports
+
+- name: main | make sure drbd installed
+  import_tasks: drbd.yml
+  when: node2 is defined
+  tags:
+    - drbd
+
+- name: main | create volume groups
+  include_tasks: volume_groups.yml
+  vars:
+    share: "{{ item }}"
+  loop: "{{ shares }}"
+  tags:
+    - volume_groups
+
+- name: main | set up drbd
+  include_tasks: drbd_for_share.yml
+  vars:
+    share: "{{ item }}"
+  loop: "{{ shares }}"
+  when: node2 is defined
+  tags:
+    - drbd2
+
+- name: main | create folders
+  include_tasks: folders.yml
+  vars:
+    share: "{{ item }}"
+  loop: "{{ shares }}"
+  when: ansible_hostname == node1
+  tags:
+    - folders
+
+- name: main | enable nfs-server services
+  systemd:
+    name: nfs-server
+    enabled: yes
+    state: restarted

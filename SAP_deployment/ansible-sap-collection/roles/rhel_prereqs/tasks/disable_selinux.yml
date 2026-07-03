@@ -1,0 +1,13 @@
+---
+- name: disable selinux | Update /etc/selinux/config
+  lineinfile:
+    regexp: '^SELINUX=enforcing'
+    line: SELINUX=disabled
+    insertafter: '^#SELINUX'
+    path: /etc/selinux/config
+  register: selinux_disable
+  when: platform == 'azure'
+
+- name: reboot server
+  reboot:
+  when: selinux_disable.changed

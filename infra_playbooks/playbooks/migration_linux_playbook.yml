@@ -1,0 +1,59 @@
+---
+- name: Sanity Tests
+  hosts: "{{ hosts }}"
+  remote_user: "{{ user }}"
+  become_method: enable
+  vars:
+    ansible_python_interpreter: /usr/local/bin/python3.11
+    phase: "premigration"
+    app_name: "dp_agent"
+    purpose: ""
+
+  tasks:
+  - name: Get timestamp from the VM
+    shell: "date +%Y%m%d_%H%M%S"
+    register: time_stamp
+
+  - name: Get ansible distribution and version
+    debug:
+      msg: "{{ ansible_distribution, ansible_distribution_version }}"
+
+  - name: Ensure remote temp directory exists
+    file:
+      path: '/tmp/.ansible'
+      state: directory
+
+  - name: Get VM services and its status
+    service_facts:
+    register: services_state
+
+  - name: Copy VM service results to json file
+    copy:
+      content: "{{ services_state | to_nice_json }}"
+      dest: "/tmp/.ansible/services.json"
+
+  - name: Copy service results json file to local
+    fetch:
+      src: "/tmp/.ansible/services.json"
+        #dest: "/tmp/{{phase}}/{{app_name}}/{{time_stamp.stdout}}/{{ansible_hostname}}/services.json"
+      dest: "{{ lookup('env','HOME') }}/migration_logs/{{ phase }}/{{ app_name }}/{{ ansible_hostname }}/{{ time_stamp.stdout | trim }}{{ purpose }}/services.json"
+      flat: true
+
+  - name: Get VM NFS mount results
+    mount_facts:
+      fstypes:
+        - nfs
+        - nfs4
+    register: nfs_state
+
+  - name: Copy mount results offline to json file
+    copy:
+      content: "{{ nfs_state | to_nice_json }}"
+      dest: "/tmp/.ansible/nfs_state.json"
+
+  - name: Copy json mount results to local
+    fetch:
+      src: "/tmp/.ansible/nfs_state.json"
+        #dest: "/tmp/{{phase}}/{{app_name}}/{{time_stamp.stdout}}/{{ansible_hostname}}/nfs_state.json"
+      dest: "{{ lookup('env','HOME') }}/migration_logs/{{ phase }}/{{ app_name }}/{{ ansible_hostname }}/{{ time_stamp.stdout | trim }}{{ purpose }}/services.json"
+      flat: true

@@ -1,0 +1,64 @@
+{{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}_DGMGRL.WORLD=
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+        (ADDRESS =
+          (COMMUNITY = SAP.WORLD)
+          (PROTOCOL = TCP)
+          (HOST = {{ db_primary_hostname | default(dbnode1) }})
+          (PORT = {{ port | default('1521') }})
+        )
+    )
+    (CONNECT_DATA =
+       (SID = {{ sap.db.sid | upper }})
+       (GLOBAL_NAME = {{ sap.db.sid | upper }})
+       (SERVICE_NAME = {{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}_DGMGRL)
+    )
+  )
+{{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}.WORLD=
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+        (ADDRESS =
+          (COMMUNITY = SAP.WORLD)
+          (PROTOCOL = TCP)
+          (HOST ={{ db_primary_hostname | default(dbnode1) }})
+          (PORT = {{ port | default('1521') }})
+        )
+    )
+    (CONNECT_DATA =
+       (SID = {{ sap.db.sid | upper }})
+       (GLOBAL_NAME = {{ sap.db.sid | upper }}.WORLD)
+       (SERVICE_NAME = {{ sap.db.sid | upper }}{{ primary_instance_ch | upper }})
+    )
+  )
+{{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }}_DGMGRL.WORLD=
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+        (ADDRESS =
+          (COMMUNITY = SAP.WORLD)
+          (PROTOCOL = TCP)
+          (HOST = {{ db_secondary_hostname | default(dbnode2) }})
+          (PORT = {{ port | default('1521') }})
+        )
+    )
+    (CONNECT_DATA =
+       (SID = {{ sap.db.sid | upper }})
+       (GLOBAL_NAME = {{ sap.db.sid | upper }})
+       (SERVICE_NAME = {{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }}_DGMGRL)
+    )
+  )
+{{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }}.WORLD=
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+        (ADDRESS =
+          (COMMUNITY = SAP.WORLD)
+          (PROTOCOL = TCP)
+          (HOST = {{ db_secondary_hostname | default(dbnode2) }})
+          (PORT = {{ port | default('1521') }})
+        )
+    )
+    (CONNECT_DATA =
+       (SID = {{ sap.db.sid | upper }})
+       (GLOBAL_NAME = {{ sap.db.sid | upper }})
+       (SERVICE_NAME = {{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }})
+    )
+  )

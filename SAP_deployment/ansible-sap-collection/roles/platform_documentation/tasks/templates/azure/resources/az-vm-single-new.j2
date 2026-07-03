@@ -1,0 +1,85 @@
+{# 
+    generate individual host specifications
+#}
+{% for resource in resource_json.data if resource.type=="microsoft.compute/virtualmachines" %}
+      
+  {%- set vm_image = namespace(data=[]) -%}
+  {%- if resource.properties.storageProfile.imageReference.id is defined -%}
+    {%- set vm_image.data = vm_image.data + ["ImageId: "~resource.properties.storageProfile.imageReference.id] -%}
+  {%- else -%}
+    {%- set vm_image.data = vm_image.data + ["Publisher: "~resource.properties.storageProfile.imageReference.publisher] -%}
+    {%- set vm_image.data = vm_image.data + ["Offer: "~resource.properties.storageProfile.imageReference.offer] -%}
+    {%- set vm_image.data = vm_image.data + ["Sku: "~resource.properties.storageProfile.imageReference.sku] -%}
+    {%- set vm_image.data = vm_image.data + ["Version: "~resource.properties.storageProfile.imageReference.version] -%}
+  {%- endif -%}
+
+  {%- set vm_row = [
+    resource.name,
+    resource.properties.hardwareProfile.vmSize,
+    "Linux" if (resource.properties.osProfile.linuxConfiguration is defined) else "Windows",
+    vm_image.data|join("<br>"|safe)
+    ]
+  -%}
+# VM Summary ( {{ resource.name }} )
+|Hostname|Vm Size|Os Type|Image|
+|-|-|-|-|
+|{{ vm_row | join('|') }}|
+
+## Network Interfaces
+|Name|Ip Addresses|Allocation Method|Primary|Subnet|Enable Accelerated Networking|
+|-|-|-|-|-|-|
+{# generate NIC summary for VM #}
+  {%- for nic in resource.properties.networkProfile.networkInterfaces -%} {# nics #}
+    {%- for entry in resource_json.data if entry.type == "microsoft.network/networkinterfaces" and entry.id|lower == nic.id|lower -%}
+      {%- set nic_data = namespace(addresses=[], allocation_method=[], primary=false, subnet=[]) -%}
+
+        {%- for config in entry.properties.ipConfigurations -%}
+          {%- set nic_data.addresses = nic_data.addresses + [config.properties.privateIPAddress] -%}
+          {%- set nic_data.allocation_method = nic_data.allocation_method + [config.properties.privateIPAllocationMethod] -%}
+          {%- set nic_data.primary = true if entry.properties.primary else false -%}
+          {%- set nic_data.subnet = nic_data.subnet + [config.properties.subnet.id.split('/')|last] -%}
+        {%- endfor -%}
+
+      {%- set nic_row = [
+          entry.name,
+          nic_data.addresses|join("<br>"|safe),
+          nic_data.allocation_method|join("<br>"|safe),
+          nic_data.primary,
+          nic_data.subnet|join("<br>"|safe),
+          entry.properties.enableAcceleratedNetworking
+        ]
+      -%}
+|{{ nic_row | join('|') }}|
+    {% endfor %} {# nic properties #}
+  {% endfor %}{# nics #}
+
+{# generate disk summary for VM #}
+  {# os disk #}
+  {% set os_disk_row = [
+    resource.properties.storageProfile.osDisk.name,
+    resource.properties.storageProfile.osDisk.managedDisk.storageAccountType | default("Not found"),
+    resource.properties.storageProfile.osDisk.diskSizeGB | default("Not found"),
+    "",
+    resource.properties.storageProfile.osDisk.caching,
+    resource.properties.storageProfile.osDisk.writeAcceleratorEnabled,
+    "Managed"
+    ]
+  %}
+## Disks
+|Name|Storage Account Type|Disk Size GB|Lun|Caching|Write Accelerator Enabled|Managed Disk|
+|-|-|-|-|-|-|-|
+|{{ os_disk_row | join('|') }}|
+  {%- for disk in resource.properties.storageProfile.dataDisks|sort(attribute="lun") -%}
+    {%- set disk_row = [
+      disk.name,
+      disk.managedDisk.storageAccountType | default("Not found"),
+      disk.diskSizeGB | default("Not found"),
+      disk.lun,
+      disk.caching,
+      disk.writeAcceleratorEnabled,
+      "Managed" if (disk.managedDisk is defined) else "UnManaged"
+    ]
+    -%}
+|{{ disk_row | join('|') }}|  
+  {% endfor %}
+{% endfor %}

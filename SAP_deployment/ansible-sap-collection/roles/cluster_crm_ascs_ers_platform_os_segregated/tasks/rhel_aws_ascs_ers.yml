@@ -1,0 +1,172 @@
+---
+- name: main | adding sidadm in haclient group
+  user:
+    name: "{{ sap.sid|lower }}adm"
+    groups: haclient
+    append: yes
+  
+- name: ascs post steps
+  block:
+    - name: main | running sapcontrol command to stop service
+      command: "{{ item }}"
+      with_items:
+          - "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function Stop" 
+          - "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function StopService"
+          - sleep 20
+      become_user: "{{ sap.sid|lower}}adm"
+      become_method: su
+
+    - name: inserting line into specified path
+      lineinfile:
+           path: /usr/sap/{{ sap.sid|upper }}/SYS/profile/{{sap.sid|upper}}_{{ sap.ascs_type }}{{sap.instance_numbers.ascs}}_{{sap.logical_hosts.ascs.hostname}}
+           line: "{{ item }}"
+      with_items:
+         - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+         - service/halib_cluster_connector = /usr/bin/sap_cluster_connector
+
+    - name: replacing line into specified path
+      replace:
+        path: /usr/sap/{{ sap.sid |upper}}/SYS/profile/{{sap.sid|upper}}_{{ sap.ascs_type }}{{sap.instance_numbers.ascs}}_{{sap.logical_hosts.ascs.hostname}}
+        regexp: Restart_Program_01
+        replace: Start_Program_01
+
+    - name: replacing Autostart=0 line into profile path
+      lineinfile:
+        path: /usr/sap/{{ sap.sid |upper}}/SYS/profile/{{sap.sid|upper}}_{{ sap.ascs_type }}{{sap.instance_numbers.ascs}}_{{sap.logical_hosts.ascs.hostname}}
+        regexp: '^Autostart = 1'
+        line: Autostart = 0
+
+    - name: main | running sapcontrol command to start service
+      command: "{{ item }}"
+      with_items:
+          - "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function StartService {{ sap.sid |upper }}"
+      become_user: "{{ sap.sid|lower}}adm"
+      become_method: su
+      
+    - name: main | running sapcontrol command to start service
+      command: "{{ item }}"
+      with_items:
+          - "sapcontrol -nr {{ sap.instance_numbers.ascs }} -function Start"
+          - sleep 20
+      become_user: "{{ sap.sid|lower}}adm"
+      become_method: su
+  when: ansible_hostname == node1
+
+- name: ers post steps
+  block:
+      - name: main | running sapcontrol command to stop service
+        command: "{{ item }}"
+        with_items:
+            - "sapcontrol -nr {{ sap.instance_numbers.ers }} -function Stop" 
+            - "sapcontrol -nr {{ sap.instance_numbers.ers }} -function StopService"
+            - sleep 20
+        become_user: "{{ sap.sid|lower}}adm"
+        become_method: su
+
+      - name: inserting line into specified path
+        lineinfile:
+            path: /usr/sap/{{ sap.sid|upper }}/SYS/profile/{{sap.sid|upper}}_ERS{{sap.instance_numbers.ers}}_{{sap.logical_hosts.ers.hostname}}
+            line: "{{ item }}"
+        with_items:
+                 - service/halib = $(DIR_CT_RUN)/saphascriptco.so
+                 - service/halib_cluster_connector = /usr/bin/sap_cluster_connector
+
+      - name: replacing line into specified path
+        replace:
+          path: /usr/sap/{{ sap.sid | upper }}/SYS/profile/{{sap.sid | upper}}_ERS{{sap.instance_numbers.ers}}_{{sap.logical_hosts.ers.hostname}}
+          regexp: Restart_Program_00
+          replace: Start_Program_00
+
+      - name: replacing Autostart=0 line into profile path
+        lineinfile:
+          path: /usr/sap/{{ sap.sid | upper }}/SYS/profile/{{sap.sid | upper}}_ERS{{sap.instance_numbers.ers}}_{{sap.logical_hosts.ers.hostname}}
+          regexp: '^Autostart = 1'
+          line: Autostart = 0
+
+      - name: main | running sapcontrol command to start service
+        command: "{{ item }}"
+        with_items:
+            - "sapcontrol -nr {{ sap.instance_numbers.ers }} -function StartService {{ sap.sid|upper }}"
+            - sleep 20
+        become_user: "{{ sap.sid|lower}}adm"
+        become_method: su
+
+      - name: main | running sapcontrol command to start service
+        command: "{{ item }}"
+        with_items:
+            - "sapcontrol -nr {{ sap.instance_numbers.ers }} -function Start"
+            - sleep 20
+        become_user: "{{ sap.sid|lower}}adm"
+        become_method: su
+  when: ansible_hostname == node2
+
+- name: main | copy ascs service content
+  shell: cat /usr/sap/sapservices | grep "{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}"
+  register: ascs_content
+  when: ansible_hostname == node1
+
+- name: main | share ascs service content
+  delegate_to: "{{ node2 }}"
+  lineinfile:
+    line: "{{ ascs_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node1
+
+- name: main | copy ers service content
+  shell: cat /usr/sap/sapservices | grep "ERS{{ sap.instance_numbers.ers }}"
+  register: ers_content
+  when: ansible_hostname == node2
+
+- name: main | share ascs service content
+  delegate_to: "{{ node1 }}"
+  lineinfile:
+    line: "{{ ers_content.stdout }}"
+    path: /usr/sap/sapservices
+    state: present
+  when: ansible_hostname == node2
+
+- name: ensures resource-agents-deps.target.d dir exists
+  file: 
+    path:  /etc/systemd/system/resource-agents-deps.target.d
+    state: directory
+
+- name: main | Create a pacemaker service drop-in file
+  template:
+    src: "sap_systemd_config.j2"
+    dest: /etc/systemd/system/resource-agents-deps.target.d/sap_systemd_{{ sap.sid }}.conf
+
+- name: systemctl daemon-reload
+  systemd:
+    daemon_reload: true
+    
+- name: main | install packages in aws
+  package:
+    name: 
+     - nfs-utils
+     - resource-agents-sap
+     - sap-cluster-connector
+
+- name: main | ascs
+  block: 
+    - name: main | set ascs and ers directory facts
+      set_fact:
+        ascs_device: "{{ sap.nfs.ascs_device }}"
+        ers_device: "{{ sap.nfs.ers_device }}"
+
+    - name: pcs_resource_nosap | pcs resource create for aws
+      import_tasks: pcs_nosap_aws.yml
+    
+    - name: pcs_resource_nosap | pcs resource create for aws
+      import_tasks: pcs_sap_aws.yml
+        
+  when: ansible_hostname == node1
+
+- name: main | enable cluster
+  command: pcs cluster enable
+
+- name: RedHat | adding value to grub entry
+  replace:
+    path: /usr/sap/sapservices
+    regexp: '^LD_LIBRARY_PATH='
+    replace: '#LD_LIBRARY_PATH='

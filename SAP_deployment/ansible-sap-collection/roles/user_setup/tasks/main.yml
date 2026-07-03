@@ -1,0 +1,19 @@
+---
+- name: main | sap user creation
+  user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid | default() }}"
+    shell: "{{ item.shell | default ('/bin/bash') }}"
+    password: "{{ item.password | password_hash('sha512') }}"
+    group: "{{ item.group }}"
+    groups: "{{ item.groups | default() }}"
+    state: "{{ item.state | default ('present') }}"
+  loop: "{{ usersetup }}"
+
+- name: main | sudoers access to user
+  lineinfile:
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} ALL=(ALL) NOPASSWD: ALL'
+    state: '{% if item.sudo is defined and item.sudo %}present{% else %}absent{% endif %}'
+    path: /etc/sudoers
+  loop: "{{ usersetup }}"

@@ -1,0 +1,36 @@
+---
+
+- name: main | set media directory facts
+  set_fact:
+    media_dir: "{{ download_dir | default ( root_dir+ '/DP')}}"
+
+- name: main | install packages
+  package:
+    name:
+      - libnsl
+      - ncurses-compat-libs-6.1-7.20180224.el8.x86_64
+    state: present
+
+- name: permission | owner group change
+  file:
+    path: "{{ media_dir }}/"
+    owner: "{{ item.name }}"
+    group: "{{ item.group }}"
+    mode: "777"
+    recurse: yes
+  loop: "{{ usersetup }}"
+
+- name: main | get tar gz name 
+  command: "find {{ media_dir }} -name HANA_*"
+  register: agent_filename
+
+- name: main | print name
+  debug:
+    var: agent_filename.stdout_lines[0]
+
+- name: main | install
+  command: ./hdbinst --silent --batch --path="{{ install_dir | default('/usr/sap/dataprovagent') }}" --agent_listener_port={{ agent_listener_port | default('5050') }} --agent_admin_port={{ agent_admin_port | default('5051') }}
+  become: yes
+  become_user: agent_adm 
+  args:
+    chdir: "{{ agent_filename.stdout_lines[0] }}"

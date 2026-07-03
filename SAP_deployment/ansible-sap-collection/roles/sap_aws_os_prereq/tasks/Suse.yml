@@ -1,0 +1,38 @@
+---
+- name: Update DHCP
+  lineinfile:
+    regexp: '^DHCLIENT_SET_HOSTNAME="yes"'
+    line: DHCLIENT_SET_HOSTNAME="no"
+    path: /etc/sysconfig/network/dhcp
+
+- name: packages | install packages
+  package:
+    name:
+      - tuned
+      - cpupower
+      - nvme-cli
+    state: present
+ 
+- name: Create a directory if it does not exist
+  file:
+    path: /etc/tuned/saptune
+    state: directory
+    mode: '0755'
+    
+- name: Copy to /sys/devices/system/current_clocksource
+  command: sudo bash -c 'echo "tsc" > /sys/devices/system/clocksource/*/current_clocksource'
+
+- name: Copy to /etc/default/grub.backup
+  copy:
+    src: /etc/default/grub
+    dest: /etc/default/grub.backup
+    remote_src: yes
+
+- name: Update grub
+  lineinfile:
+    regexp: '/GRUB_CMDLINE_LINUX/ s|"|'
+    line: 'clocksource=tsc"|2'
+    path: /etc/default/grub
+
+
+

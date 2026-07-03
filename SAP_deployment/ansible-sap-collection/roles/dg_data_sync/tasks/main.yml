@@ -1,0 +1,57 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+    db_user: "{{ sap.db.db_user | default('sysdba') }}"
+
+- name: dg config for primary db  
+  block:
+    - name: copy the rman file
+      copy:
+        src: "rman.rmn"
+        dest: /home/oracle/rman.rmn
+
+    - name: duplicate the database
+      command: "rman target SYS/{{ passwords.sys_primary }}@{{ sap.db.sid | upper }}{{ primary_instance_ch | upper }} auxiliary SYS/{{ passwords.sys_secondary }}@{{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }} @/home/oracle/rman.rmn"
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args:
+        chdir: $ORACLE_HOME/bin
+      environment:
+        path: /{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "/{{ root_dir }}/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "/{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+      register: rmnoutput
+
+    - name: tidy up the rman file
+      file:
+        path: /home/oracle/rman.rmn
+        state: absent
+
+  when: ansible_hostname == dbnode1
+
+- name: dg config for secondary db  
+  block:
+      - name: template the sql file
+        copy:
+          src: "flashback_on.sql"
+          dest: /home/oracle/flashback_on.sql
+
+      - name: run sql commands on secondary db
+        become_method: su
+        become_user: "{{ oracle_installation_user }}"
+        command: "sqlplus / as {{ db_user }} @/home/oracle/flashback_on.sql"
+        args:
+          chdir: $ORACLE_HOME/bin
+        register: sql
+
+      - name: tidy up the flashback_on file
+        file:
+          path: /home/oracle/flashback_on.sql
+          state: absent
+
+      - debug:
+          var: sql
+
+
+  when: ansible_hostname == dbnode2 and dbload_approach == 'both'

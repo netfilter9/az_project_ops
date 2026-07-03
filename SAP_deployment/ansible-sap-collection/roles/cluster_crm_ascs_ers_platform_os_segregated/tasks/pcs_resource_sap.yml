@@ -1,0 +1,11 @@
+- name: pcs_resource_nosap | pcs resource create for azure
+  import_tasks: pcs_sap_azure.yml
+  when: platform == 'azure'
+
+- name: pcs_resource_nosap | pcs resource create for aws
+  import_tasks: pcs_sap_aws.yml
+  when: platform == 'aws'
+
+- name: pcs_resource_nosap | pcs resource create for aws
+  import_tasks: pcs_sap_gcp.yml
+  when: platform == 'gcp'

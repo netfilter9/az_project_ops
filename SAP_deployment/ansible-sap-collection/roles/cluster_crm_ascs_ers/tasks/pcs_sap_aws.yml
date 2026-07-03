@@ -1,0 +1,47 @@
+---
+- name: resource create rsc_sap_{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}
+  command: pcs resource create rsc_sap_{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }} SAPInstance InstanceName="{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}_{{ sap.logical_hosts.ascs.hostname }}" START_PROFILE="/sapmnt/{{ sap.sid|upper }}/profile/{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }}_{{ sap.logical_hosts.ascs.hostname }}" AUTOMATIC_RECOVER=false meta resource-stickiness=5000 migration-threshold=1 failure-timeout=60 --group g-{{ sap.sid|upper }}_{{ sap.ascs_type }}
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource create rsc_sap_{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}
+  command: pcs resource create rsc_sap_{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }} ocf:heartbeat:SAPInstance InstanceName="{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}_{{ sap.logical_hosts.ers.hostname }}" START_PROFILE="/sapmnt/{{ sap.sid|upper }}/profile/{{ sap.sid|upper }}_ERS{{ sap.instance_numbers.ers }}_{{ sap.logical_hosts.ers.hostname }}" AUTOMATIC_RECOVER=false IS_ERS=true --group g-{{ sap.sid|upper }}_ERS
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("already exists")) 
+
+- name: resource constraint colocation
+  command: pcs constraint colocation add g-{{ sap.sid|upper }}_ERS with g-{{ sap.sid|upper }}_{{ sap.ascs_type }} -5000
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("duplicate constraint already exists"))
+
+- name: resource constraint location
+  command: pcs constraint location rsc_sap_{{ sap.sid|upper }}_{{ sap.ascs_type }}{{ sap.instance_numbers.ascs }} rule score=2000 runs_ers_{{ sap.sid|upper }} eq 1
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("duplicate constraint already exists")) 
+
+- name: resource constraint order
+  command: pcs constraint order start g-{{ sap.sid|upper }}_{{ sap.ascs_type }} then stop g-{{ sap.sid|upper }}_ERS kind=Optional symmetrical=false 
+  register: result
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("duplicate constraint already exists")) 
+  when: sap.enq_architecture == 'ENSA1'
+
+- name: resource constraint order
+  command: "{{ item }}"
+  register: result
+  with_items: 
+    - pcs constraint order start g-{{ sap.sid|upper }}_{{ sap.ascs_type }} then start g-{{ sap.sid|upper }}_ERS kind=Optional symmetrical=false 
+    - pcs constraint order start g-{{ sap.sid|upper }}_{{ sap.ascs_type }} then stop g-{{ sap.sid|upper }}_ERS kind=Optional symmetrical=false 
+  failed_when: 
+    - result.failed
+    - not (result.stderr.find("duplicate constraint already exists")) 
+  when: sap.enq_architecture == 'ENSA2'

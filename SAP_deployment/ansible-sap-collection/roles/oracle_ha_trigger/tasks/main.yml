@@ -1,0 +1,35 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+
+- name: creating new tnsnames file 
+  template:
+    src: "tnsnames.j2"
+    dest: /sapmnt/{{ sap.db.sid | upper }}/profile/oracle/tnsnames.ora
+
+- name: HA trigger 
+  block:
+
+    - name: template the sql file
+      template:
+        src: ../templates/dbtrigger.j2
+        dest: /home/oracle/dbtrigger.sql
+
+    - name: run the trigger
+      command: sqlplus / as sysdba/Cloudcoe123# @/home/oracle/dbtrigger.sql
+      become_method: su
+      become_user: "{{ oracle_installation_user }}" 
+      args:
+        chdir: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin" 
+      environment:
+        DB_SID: "{{ sap.db.sid|upper }}" 
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "/oracle/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "/oracle/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+
+    - name: tidy up the dbtrigger file
+      file:
+        path: /home/oracle/dbtrigger.sql
+        state: absent
+
+  when: ansible_hostname == dbnode1

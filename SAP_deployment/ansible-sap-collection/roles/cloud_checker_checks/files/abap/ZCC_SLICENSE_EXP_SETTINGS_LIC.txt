@@ -1,0 +1,255 @@
+*---------------------------------------------------------------------*
+* Program Name        :   ZCC_SLICENSE_EXP_SETTINGS_LIC               *
+* Title               :   Export current settings and digitally       *
+*                         signed licenses                             *
+* Purpose             :   To export details of current settings and   *
+*                         digitally signed licenses from SLICENSE     *
+*---------------------------------------------------------------------*
+* Related Transaction OR Standard Program References                  *
+* SLICENSE                                                            *
+*---------------------------------------------------------------------*
+* Tables              :   SELECT    UPDATE      INSERT      DELETE    *
+* XXXXX                     X                                         *
+*---------------------------------------------------------------------*
+* Program Change History                                              *
+*---------------------------------------------------------------------*
+*Date        Version   Author       TR#/Local     Description         *
+*---------------------------------------------------------------------*
+*09-03-2021  Initial   Soumya Ray   Local        To export details of *
+*                                                current settings and *
+*                                                digitally signed     *
+*                                               licenses from SLICENSE*
+*---------------------------------------------------------------------*
+
+REPORT zcc_slicense_exp_settings_lic.
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+               TABLES lt_input  STRUCTURE tab512
+                      lt_output STRUCTURE tab512.
+
+
+  CONSTANTS: lc_sep      TYPE c VALUE '|'            LENGTH 1,
+             lc_0        TYPE c VALUE '0'            LENGTH 1,
+             lc_1        TYPE c VALUE '1'            LENGTH 1,
+             lc_2        TYPE c VALUE '2'            LENGTH 1,
+             lc_3        TYPE c VALUE '3'            LENGTH 1,
+             lc_4        TYPE c VALUE '4'            LENGTH 1,
+             lc_5        TYPE c VALUE '5'            LENGTH 1,
+             lc_6        TYPE c VALUE '6'            LENGTH 1,
+             lc_7        TYPE c VALUE '7'            LENGTH 1,
+             lc_export   TYPE c VALUE 'EXPORT'       LENGTH 6,
+             lc_null     TYPE c VALUE 'NULL'         LENGTH 4,
+             lc_ninput   TYPE c VALUE
+             'No input passed'                       LENGTH 15,
+             lc_title    TYPE c VALUE
+             'SAP License Administration'            LENGTH 30,
+             lc_naction  TYPE c VALUE
+             'Action not supported'                  LENGTH 30,
+             lc_elicens  TYPE c VALUE
+     'Issue in fetching digitally signed licenses'   LENGTH 50,
+             lc_nlicens  TYPE c VALUE
+             'Sap license not present in system'     LENGTH 50,
+             lc_validtxt TYPE c VALUE 'Valid'        LENGTH 5,
+             lc_validwhd TYPE c VALUE
+             'Valid (inactive hardware key)'         LENGTH 29,
+             lc_exptxt   TYPE c VALUE 'Expired'      LENGTH 7,
+             lc_validwrn TYPE c VALUE
+             'Valid (expires soon)'                  LENGTH 20,
+             lc_unknwtxt TYPE c VALUE 'Unknown'      LENGTH 7,
+             lc_wrngsid  TYPE c VALUE
+             'Incorrect System ID'                   LENGTH 20,
+             lc_tmpnall  TYPE c VALUE
+             'Temporary license key not permitted'   LENGTH 50,
+             lc_nyetval  TYPE c VALUE
+             'Not yet valid'                         LENGTH 15,
+             lc_signval  TYPE c VALUE
+             'Signature invalid'                     LENGTH 20,
+             lc_intrner  TYPE c VALUE
+             'Internal Error'                        LENGTH 15,
+             lc_expirper TYPE c VALUE '14'           LENGTH 2,
+             lc_hardky   TYPE c VALUE 'Hardware key' LENGTH 12,
+             lc_sysid    TYPE c VALUE 'System ID'    LENGTH 9,
+             lc_ntvald   TYPE c VALUE
+             'Note on validity'                      LENGTH 16,
+             lc_validmsg TYPE c VALUE
+             'License check is ok'                   LENGTH 20,
+             lc_type     TYPE c VALUE 'Type'         LENGTH 4,
+             lc_prem     TYPE c VALUE 'Prem'         LENGTH 4,
+             lc_temp     TYPE c VALUE 'Temp'         LENGTH 4.
+
+  TYPES: BEGIN OF lty_licenses,
+           sid      TYPE likey_sid,
+           hwkey    TYPE likey_hwkey,
+           type     TYPE string,
+           validity TYPE string,
+         END OF lty_licenses.
+
+  DATA: lv_action       TYPE string,
+        ls_input        TYPE tab512,
+        ls_output       TYPE tab512,
+        lv_validity     TYPE string,
+        lt_likeyentries TYPE likey_license_tab,
+        ls_likeyentry   TYPE likey_license,
+        lv_custkey      TYPE custkey_t,
+        lv_rest(10)     TYPE n,
+        lv_type         TYPE string,
+        ls_license      TYPE lty_licenses,
+        lt_license      TYPE STANDARD TABLE OF lty_licenses.
+
+  "Title
+  ls_output = lc_title.
+  APPEND ls_output TO lt_output.
+  CLEAR ls_output.
+
+  "Read the input
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  IF sy-subrc NE 0.
+    "No input passed
+    ls_output = lc_ninput.
+    APPEND ls_output TO lt_output.
+    CLEAR ls_output.
+    RETURN.
+  ENDIF.
+
+  lv_action = ls_input.
+
+  CASE lv_action.
+    WHEN lc_export.
+      FREE: lt_likeyentries, lt_license.
+      CLEAR : ls_output, lv_custkey, lv_rest, ls_license, lv_type.
+*//---------Digitally Signed Licenses details-----------//*
+ " Standard code of Program SAPMSLIC & subroutine 'SL_READ_DATA_3020'
+      "Get the hardware key
+      CALL FUNCTION 'SLIC_GET_CUSTKEY'
+        EXPORTING
+          from_where         = 1
+          hostname           = ' '
+        IMPORTING
+          custkey            = lv_custkey
+        EXCEPTIONS
+          slic_bad_parameter = 1
+          OTHERS             = 2.
+      IF sy-subrc <> 0.
+        lv_custkey = lc_null.
+      ENDIF.
+
+      " Read all license keys from the database
+      CALL FUNCTION 'SLIC_LIKEY_GET_ALL_LICENSES'
+        IMPORTING
+          licenses = lt_likeyentries
+        EXCEPTIONS
+          error    = 1
+          OTHERS   = 2.
+      IF sy-subrc NE 0.
+        "Issue in fetching digitally signed licenses
+        ls_output = lc_elicens.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        RETURN.
+      ENDIF.
+
+      IF lt_likeyentries IS INITIAL.
+        "Sap license not present in system
+        ls_output = lc_nlicens.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        RETURN.
+      ENDIF.
+
+      SORT lt_likeyentries.
+
+      "Digitally signed license data
+      LOOP AT lt_likeyentries INTO ls_likeyentry.
+
+        " Set the type text.
+        CASE ls_likeyentry-TYPE.
+         WHEN lc_0. " permanent
+           lv_type = lc_prem.
+         WHEN lc_1. " temporary
+           lv_type = lc_temp.
+         WHEN OTHERS.
+           lv_type = ls_likeyentry-TYPE.
+         ENDCASE.
+
+        " To get validity text
+        CASE ls_likeyentry-validity.
+          WHEN lc_0."Valid
+            lv_validity = lc_validtxt.
+            IF ls_likeyentry-hwkey <> lv_custkey.
+              lv_validity = lc_validwhd. "Valid (inactive hardware key)
+            ENDIF.
+            IF ls_likeyentry-end_date < sy-datum.
+              lv_validity = lc_exptxt."Expired
+            ELSE.
+              lv_rest = ls_likeyentry-end_date - sy-datum.
+              IF lv_rest <= lc_expirper.
+                lv_validity = lc_validwrn  ."Valid (expires soon)
+              ENDIF.
+            ENDIF.
+          WHEN lc_1."Unknown
+            lv_validity = lc_unknwtxt.
+          WHEN lc_2."Incorrect System ID
+            lv_validity = lc_wrngsid.
+          WHEN lc_3."Temporary license key not permitted
+            lv_validity = lc_tmpnall.
+          WHEN lc_4."Expired
+            lv_validity = lc_exptxt.
+          WHEN lc_5."Not yet valid
+            lv_validity = lc_nyetval.
+          WHEN lc_6."Signature invalid
+            lv_validity = lc_signval.
+          WHEN lc_7."Internal Error
+            lv_validity = lc_intrner.
+          WHEN OTHERS. "unknown
+            lv_validity = lc_unknwtxt.
+        ENDCASE.
+        " For cases where the licences are not valid
+        IF lv_validity NE lc_validtxt.
+          ls_license-sid = ls_likeyentry-sid.
+          ls_license-hwkey = ls_likeyentry-hwkey.
+          ls_license-type = lv_type.
+          ls_license-validity = lv_validity.
+          APPEND ls_license TO lt_license.
+        ENDIF.
+
+        CLEAR: ls_likeyentry, ls_output, lv_validity, lv_rest,
+               ls_license, lv_type.
+      ENDLOOP.
+
+      "Output data
+      IF lt_license IS INITIAL.
+        "Coloumn heading
+        CONCATENATE lc_sysid lc_ntvald INTO ls_output
+        SEPARATED BY lc_sep.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        CONCATENATE sy-sysid lc_sep lc_validmsg INTO ls_output.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+      ELSE.
+        "Coloumn heading
+        CONCATENATE lc_sysid lc_hardky lc_type lc_ntvald INTO ls_output
+        SEPARATED BY lc_sep.
+        APPEND ls_output TO lt_output.
+        CLEAR ls_output.
+        "Data
+        LOOP AT lt_license INTO ls_license.
+          CONCATENATE ls_license-sid ls_license-hwkey ls_license-type
+          ls_license-validity INTO ls_output SEPARATED BY lc_sep.
+          APPEND ls_output TO lt_output.
+          CLEAR: ls_license, ls_output.
+        ENDLOOP.
+      ENDIF.
+
+      CLEAR lv_custkey.
+*//---------------------------------------------------------//*
+    WHEN OTHERS.
+      "Action not supported
+      ls_output = lc_naction.
+      APPEND ls_output TO lt_output.
+      CLEAR ls_output.
+  ENDCASE.
+
+ENDFORM.

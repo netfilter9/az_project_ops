@@ -1,0 +1,312 @@
+*&********************************************************************&*
+* Report              :   ZCM_SM51_EXP_SNC_STATUS                      *
+* Title               :   Export SNC Status of Application Server      *
+* Created by          :   Ruchir Kamble                                *
+* Created on          :   01/09/2020                                   *
+* Purpose             :   This report is for exporting SNC Status of   *
+*                         Application Server during Cloud Migration    *
+*----------------------------------------------------------------------*
+
+" This code is referred from Standard Report RSSNCSRV
+" Refer type group ICON for icons
+" Using metadata to replace icons
+" Icons replaced in this report are
+" icon_alert , icon_unlocked, icon_led_green & icon_system_user_menu
+
+REPORT zcm_sm51_exp_snc_status.
+
+DATA: BEGIN OF lt_outtab OCCURS 0,
+        classname                        LIKE rzllitab-classname,
+        name                             LIKE msxxlist-name,
+        snc_enable(4),
+        pname_appl                       LIKE rfcdessecu-pname_appl,
+        snc_accept_insecure_gui(4),
+        snc_accept_insecure_rfc(4),
+        snc_accept_insecure_r3int_rfc(4),
+        snc_accept_insecure_cpic(4),
+        snc_permit_insecure_start(4),
+        snc_gssapi_lib                   LIKE rsdbtext-zeile,
+      END OF lt_outtab.
+
+CONSTANTS: lc_sep          TYPE c VALUE '|'                LENGTH 1,
+           lc_alert        TYPE c VALUE 'AG'               LENGTH 2,
+           lc_led_green    TYPE c VALUE '5B'               LENGTH 2,
+           lc_unlocked     TYPE c VALUE '07'               LENGTH 2,
+           lc_user_menu    TYPE c VALUE '6C'               LENGTH 2,
+           lc_null         TYPE c VALUE 'NULL'             LENGTH 4,
+           lc_export       TYPE c VALUE 'EXPORT'           LENGTH 6,
+           lc_logon_groups LIKE rzllitab-grouptype VALUE space,
+           lc_active       TYPE c VALUE 'Active'           LENGTH 8,
+           lc_pr_name      TYPE c VALUE 'PrAsName'         LENGTH 15,
+           lc_gui_logon    TYPE c VALUE
+           'Non-secureGUIlogonsallowed'                    LENGTH 50,
+           lc_rfc_logon    TYPE c VALUE
+           'Non-secureRFClogonsallowed'                    LENGTH 50,
+           lc_rfc_internal TYPE c VALUE
+           'Non-secureInternalRFClogonsallowed'            LENGTH 50,
+           lc_cpic_logon   TYPE c VALUE
+           'Non-secureCPIClogonsallowed'                   LENGTH 50,
+           lc_ext_prog     TYPE c VALUE
+           'Non-secureexternalprogramsallowed'             LENGTH 50,
+           lc_library      TYPE c VALUE 'GSSAPILib'        LENGTH 20,
+           lc_app_server   TYPE c VALUE
+           'ApplicationServerInstance'                     LENGTH 30,
+           lc_title        TYPE c VALUE
+           'SNC Status of Application Server'              LENGTH 40,
+           lc_err_msg      TYPE c VALUE
+           'No Instances found in the system'              LENGTH 40
+           ##NO_TEXT.
+
+DATA : ls_input        TYPE tab512,
+       ls_output       TYPE tab512,
+       lv_action       TYPE char20,
+       lv_subrc        LIKE sy-subrc,
+       imsxxlist_lines TYPE i,
+       msg_text(80)    TYPE c,
+       msg_text1(6)    TYPE c,
+       msg_text2(6)    TYPE c,
+       percentage      TYPE i,
+       snc_enable,
+       parameter_value LIKE rsdbtext-zeile,
+       lt_imsxxlist    LIKE msxxlist OCCURS 0 WITH HEADER LINE.
+
+
+LOAD-OF-PROGRAM.
+
+FORM get_config
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+
+  READ TABLE lt_input INTO ls_input INDEX 1.
+  CHECK sy-subrc EQ 0.
+  lv_action = ls_input.      " Action
+
+  CASE lv_action.
+
+    WHEN lc_export.                     " If action is EXPORT
+
+      CALL FUNCTION 'TH_SERVER_LIST'
+        TABLES
+          list           = lt_imsxxlist
+        EXCEPTIONS
+          no_server_list = 1
+          OTHERS         = 2.
+
+      DESCRIBE TABLE lt_imsxxlist LINES imsxxlist_lines.
+
+      LOOP AT lt_imsxxlist.
+        CLEAR: lt_outtab, snc_enable.
+
+* Servername
+        lt_outtab-name = lt_imsxxlist-name.
+
+* SNC-Status
+        CALL FUNCTION 'SNC_GET_MY_INFO'
+          DESTINATION lt_imsxxlist-name
+          IMPORTING
+            pname_appl            = lt_outtab-pname_appl
+            rc                    = lv_subrc
+          EXCEPTIONS
+            internal_error        = 1
+            snc_not_active        = 2
+            communication_failure = 3
+            system_failure        = 4
+            OTHERS                = 5.
+        CASE sy-subrc.
+          WHEN 2.
+            lt_outtab-pname_appl = 'SNC nicht aktiv'(001).
+          WHEN 3 OR 4.
+            lt_outtab-pname_appl = 'RFC-Verbindung nicht möglich'(002).
+            lt_outtab-snc_enable = icon_alert.  "ICON_FAILURE.
+            APPEND lt_outtab.
+            CONTINUE.
+          WHEN 1 OR 5.
+            lt_outtab-pname_appl = 'sonstiger Fehler'(003).
+        ENDCASE.
+
+* Profile Parameter lesen      SBUF_PARAMETER_GET
+* Alle Profile Parameter lesen RZL_GET_PROFILE_PAR
+        DATA: par_sub  LIKE spfparlist OCCURS 0 WITH HEADER LINE,
+              par_usub LIKE spfparlist OCCURS 0 WITH HEADER LINE.
+
+        CALL FUNCTION 'RZL_GET_PROFILE_PAR'
+          DESTINATION lt_imsxxlist-name
+          IMPORTING
+            subrc                 = lv_subrc
+          TABLES
+            par_sub               = par_sub
+            par_usub              = par_usub
+          EXCEPTIONS
+            communication_failure = 3
+            system_failure        = 4
+            OTHERS                = 1.
+        CASE sy-subrc.
+          WHEN 3 OR 4.
+            lt_outtab-pname_appl = 'RFC-Verbindung nicht möglich'(002).
+            lt_outtab-snc_enable = lc_alert.  "ICON_FAILURE.
+            APPEND lt_outtab.
+            CONTINUE.
+          WHEN 1.
+            lt_outtab-pname_appl = 'sonstiger Fehler'(003).
+        ENDCASE.
+        IF lv_subrc NE 0.
+          lt_outtab-pname_appl = 'sonstiger Fehler'(003).
+        ENDIF.
+
+* snc/enable
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/enable'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_enable = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1'.
+            snc_enable = 'X'.
+            lt_outtab-snc_enable = lc_led_green. "icon_activate.
+          ELSE.
+*     lt_outtab-snc_enable = ICON_LED_INACTIVE. "icon_deactivate.
+          ENDIF.
+        ENDIF.
+
+* snc/accept_insecure_gui
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/accept_insecure_gui'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_accept_insecure_gui = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1' OR snc_enable IS INITIAL.
+            lt_outtab-snc_accept_insecure_gui = lc_unlocked.
+          ELSEIF parameter_value = 'U'.
+            lt_outtab-snc_accept_insecure_gui = lc_user_menu.
+          ENDIF.
+        ENDIF.
+
+* snc/accept_insecure_rfc
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/accept_insecure_rfc'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_accept_insecure_gui = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1' OR snc_enable IS INITIAL.
+            lt_outtab-snc_accept_insecure_rfc = lc_unlocked.
+          ELSEIF parameter_value = 'U'.
+            lt_outtab-snc_accept_insecure_rfc = lc_user_menu.
+          ENDIF.
+        ENDIF.
+
+* snc/accept_insecure_r3int_rfc
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/accept_insecure_r3int_rfc'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_accept_insecure_gui = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1' OR snc_enable IS INITIAL.
+            lt_outtab-snc_accept_insecure_r3int_rfc = lc_unlocked.
+          ENDIF.
+        ENDIF.
+
+* snc/accept_insecure_cpic
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/accept_insecure_cpic'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_accept_insecure_gui = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1' OR snc_enable IS INITIAL.
+            lt_outtab-snc_accept_insecure_cpic = lc_unlocked.
+          ELSEIF parameter_value = 'U'.
+            lt_outtab-snc_accept_insecure_cpic = lc_user_menu.
+          ENDIF.
+        ENDIF.
+
+* snc/permit_insecure_start
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/permit_insecure_start'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+*   lt_outtab-snc_permit_insecure_start = PAR_SUB-parvalu.
+          IF par_sub-parvalu = '1' OR snc_enable IS INITIAL.
+            lt_outtab-snc_permit_insecure_start = lc_unlocked.
+          ENDIF.
+        ENDIF.
+
+* snc/gssapi_lib
+        READ TABLE par_sub
+          WITH KEY parname = 'snc/gssapi_lib'.
+        IF sy-subrc = 0.
+          IF par_sub-parvalu IS INITIAL.
+            par_sub-parvalu = par_sub-parvald.
+          ENDIF.
+          lt_outtab-snc_gssapi_lib = par_sub-parvalu.
+        ENDIF.
+
+* Logon Gruppen
+*        IF logongrp = 'X'.
+        SELECT classname FROM rzllitab INTO lt_outtab-classname
+          WHERE applserver = lt_imsxxlist-name
+              AND grouptype  = lc_logon_groups.
+          APPEND lt_outtab.
+        ENDSELECT.
+        IF sy-subrc NE 0.
+          CLEAR lt_outtab-classname.
+          APPEND lt_outtab.
+        ENDIF.
+*        ELSE.
+        APPEND lt_outtab.
+*        ENDIF.
+      ENDLOOP.
+
+      DELETE ADJACENT DUPLICATES FROM lt_outtab.
+
+       " Adding title to the output
+        ls_output = lc_title.
+        APPEND ls_output TO lt_output.
+
+      IF lt_outtab IS NOT INITIAL.
+
+       " Adding heading to the output
+        CONCATENATE lc_app_server     lc_sep
+                    lc_active         lc_sep
+                    lc_pr_name        lc_sep
+                    lc_gui_logon      lc_sep
+                    lc_rfc_logon      lc_sep
+                    lc_rfc_internal   lc_sep
+                    lc_cpic_logon     lc_sep
+                    lc_ext_prog       lc_sep
+                    lc_library
+                    INTO ls_output.
+        APPEND ls_output TO lt_output.
+
+        LOOP AT lt_outtab ASSIGNING FIELD-SYMBOL(<fs_outtab>).
+
+          IF <fs_outtab>-snc_enable IS INITIAL.
+            <fs_outtab>-snc_enable = lc_null.
+          ENDIF.
+
+          CONCATENATE <fs_outtab>-name                          lc_sep
+                      <fs_outtab>-snc_enable                    lc_sep
+                      <fs_outtab>-pname_appl                    lc_sep
+                      <fs_outtab>-snc_accept_insecure_gui       lc_sep
+                      <fs_outtab>-snc_accept_insecure_rfc       lc_sep
+                      <fs_outtab>-snc_accept_insecure_r3int_rfc lc_sep
+                      <fs_outtab>-snc_accept_insecure_cpic      lc_sep
+                      <fs_outtab>-snc_permit_insecure_start     lc_sep
+                      <fs_outtab>-snc_gssapi_lib
+                      INTO ls_output.
+          APPEND ls_output TO lt_output.
+        ENDLOOP.
+      ENDIF.
+
+  ENDCASE.
+
+ENDFORM.

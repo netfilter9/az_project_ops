@@ -1,0 +1,8 @@
+$ClusterNetworkName = "Cluster Network 1" 
+$IPResourceName = "{{ cluster.sqlavailabilityGroup }}_{{ sap.logical_hosts.db.ip }}" 
+$ListenerILBIP = "{{ sap.logical_hosts.db.ip }}" 
+[int]$ListenerProbePort = "59999"
+
+Import-Module FailoverClusters
+
+Get-ClusterResource $IPResourceName | Set-ClusterParameter -Multiple @{"Address"="$ListenerILBIP";"ProbePort"=$ListenerProbePort;"SubnetMask"="255.255.255.255";"Network"="$ClusterNetworkName";"EnableDhcp"=0}

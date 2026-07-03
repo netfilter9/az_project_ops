@@ -1,0 +1,53 @@
+---
+
+- name: packages | install packages aws
+  package:
+    name:
+     - libselinux-python3
+     - libselinux-python
+     - tcsh
+     - lvm2
+     - lvm2-python-libs
+     - libsss_sudo
+     - libaio
+     - libaio-devel
+     - gcc-c++
+     - glibc
+     - glibc-devel
+     - libgcc
+     - compat-libcap1
+     - sysstat
+     - sysstat-10.1.5
+     - ksh
+     - compat-libstdc++-33-3.2.3
+     - smartmontools
+     - wget
+     - unzip
+     - uuidd
+     - autofs
+    state: present
+
+- name: download Packages
+  get_url:
+    url: "{{ item }}"
+    dest: ~/
+  with_items: 
+     - https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip 
+
+- name: Extract awscliv2.zip into /home/ec2-user
+  unarchive:
+    src: ~/awscli-exe-linux-x86_64.zip
+    dest: ~/
+    remote_src: yes
+
+- name: sudo ./aws/install
+  command: ./aws/install --update
+  become: yes
+  args: 
+   chdir: ~/
+ 
+- name: Create a symbolic link for awscli
+  file:
+    src: /usr/local/bin/aws
+    dest: /usr/bin/aws
+    state: link

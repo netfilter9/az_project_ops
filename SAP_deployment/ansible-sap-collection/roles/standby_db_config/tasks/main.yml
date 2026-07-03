@@ -1,0 +1,58 @@
+- name: set username
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}" 
+    db_user: "{{ sap.db.db_user | default('sysdba') }}"
+
+- name: run secondary 
+  block:
+    - name: template the standby_dg_config file
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      template:
+        src: "standby_dg_config.j2"
+        dest: /home/oracle/standby_dg_config.sql
+
+    - name: run the standby_dg_config commands
+      command:  "sqlplus / as {{ db_user }}/{{ passwords.master }} @/home/oracle/standby_dg_config.sql"
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      args:
+        chdir: $ORACLE_HOME/bin
+      environment:
+        path: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}/bin"
+        ORACLE_SID: "{{ sap.db.sid|upper }}"
+        ORACLE_BASE: "{{ root_dir }}/{{ sap.db.sid|upper }}" 
+        ORACLE_HOME: "{{ root_dir }}/{{ sap.db.sid|upper }}/{{ sap.db.software_version }}"
+      register: stoutput
+
+    - name: tidy up the standby_dg_config file
+      file:
+        path: /home/oracle/standby_dg_config.sql
+        state: absent
+
+    - debug:
+        var: stoutput
+
+    - name: template the sql file
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      copy:
+        src: "flashback_on.sql"
+        dest: /home/oracle/flashback_on.sql
+
+    - name: run sql commands on secondary db
+      become_method: su
+      become_user: "{{ oracle_installation_user }}"
+      command: "sqlplus / as {{ db_user }} @/home/oracle/flashback_on.sql"
+      args:
+        chdir: $ORACLE_HOME/bin
+      register: sql
+
+    - name: tidy up the flashback_on.sql file
+      file:
+        path: /home/oracle/flashback_on.sql
+        state: absent
+
+    - debug:
+        var: sql
+  when: ansible_hostname == dbnode2

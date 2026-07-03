@@ -1,0 +1,28 @@
+- name: autofs | setup auto.master for anf
+  lineinfile:
+    line: "/- /etc/auto.direct"
+    path: /etc/auto.master
+
+- name: autofs | copy in auto.direct template
+  template:
+    src: "auto.direct.j2"
+    dest: /tmp/autodirect
+  
+- name: main | slurp generated autodirect content
+  slurp:
+    src: /tmp/autodirect
+  register: slurpfile
+
+- name: main | modify the auto.direct file
+  blockinfile: 
+    marker: "#{mark} ANSIBLE MANAGED BLOCK"
+    dest: /etc/auto.direct
+    block: "{{ slurpfile['content'] | b64decode }}"
+    state: present
+    create: yes
+
+- name: autofs | enable autofs services
+  systemd:
+    name: autofs
+    enabled: yes
+    state: restarted

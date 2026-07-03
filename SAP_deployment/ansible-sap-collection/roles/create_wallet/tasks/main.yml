@@ -1,0 +1,24 @@
+- name: set username 
+  set_fact: 
+    oracle_installation_user: "{{ sap.db.installation_user | default('oracle') }}"
+
+- name: create wallet and give credentials
+  become_method: su
+  become_user: "{{ oracle_installation_user }}"
+  shell: 
+    cmd: |
+      ./mkdir -p /oracle/{{ observer_sid | upper }}/wallet
+      ./orapki wallet create -wallet /oracle/{{ observer_sid | upper }}/wallet -auto_login_only
+      ./mkstore -wrl /oracle/{{ observer_sid | upper }}/wallet/ -createCredential '{{ sap.db.sid | upper }}{{ primary_instance_ch | upper }}' sys {{ passwords.master }}
+      ./mkstore -wrl /oracle/{{ observer_sid | upper }}/wallet/ -createCredential '{{ sap.db.sid | upper }}{{ secondary_instance_ch | upper }}' sys {{ passwords.master }}
+      ./mkstore -wrl /oracle/{{ observer_sid | upper }}/wallet/ -listCredential
+
+  args: 
+    chdir: $ORACLE_HOME/bin
+  environment:
+    ORACLE_HOME: "/oracle/{{ observer_sid | upper }}/{{ sap.db.software_version }}"
+    CV_ASSUME_DISTID: "OEL7.6"
+  register: output1
+
+- debug:
+    var: output1  

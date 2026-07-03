@@ -1,0 +1,11 @@
+use master
+go
+disk init name='{{ sybase_enterprise.audit.data.filename }}',physname='{{ sybase_enterprise.audit.data.path }}/{{ sybase_enterprise.audit.data.filename }}.dat',SIZE='{{ sybase_enterprise.audit.data.size }}'
+go
+disk init name='{{ sybase_enterprise.audit.log.filename }}',physname='{{ sybase_enterprise.audit.log.path }}/{{ sybase_enterprise.audit.log.filename }}.dat',SIZE='{{ sybase_enterprise.audit.log.size }}'
+go
+sp_configure 'enable compression', 1
+go
+create database {{ audit_dbserver }} on {{ sybase_enterprise.audit.data.filename }}='{{ sybase_enterprise.audit.data.size }}' log on {{ sybase_enterprise.audit.log.filename }}='{{ sybase_enterprise.audit.log.size }}' with COMPRESSION = page, LOB_COMPRESSION = 100,INROW_LOB_LENGTH = 1000
+go
+quit

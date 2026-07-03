@@ -1,0 +1,20 @@
+---
+# tasks file for roles/qualys_linux_install
+
+- name: Install qualys on Linux (.rpm)
+  import_tasks: redhat.yml
+  when: ansible_os_family in ["RedHat", "Suse"]
+  tags:
+    - redhat
+
+- name: Install qualys on Linux (.deb)
+  import_tasks: debian.yml
+  when: ansible_os_family in ["Debian"]
+  tags:
+    - debian
+
+- name: Install qualys on Mac (.pkg)
+  import_tasks: mac.yml
+  when: ansible_os_family in ["Darwin"]
+  tags:
+    - mac

@@ -1,0 +1,78 @@
+---
+# - name: copy
+#   copy:
+#     src: /etc/os-release
+#     dest: /etc/lsb-release
+
+# - name: packages | install packages
+#   package:
+#     name:
+#       - libstdc++6
+#       - tcsh
+#       - cpupower
+#       - nvme-cli
+#       - java-17-openjdk 
+#       # - libncurses5
+#     state: present
+#   when: ansible_os_family == 'Suse'
+
+- name: packages | install packages
+  package:
+    name:
+      - libstdc++*
+      - mksh
+      - ksh
+      - ncurses-compat-libs
+      - java-17-openjdk 
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: comment 5912 ports(/etc/services)
+  shell: sed -e '/5912/s/^/#/g' -i /etc/services
+
+- name: comment 5913 ports(/etc/services)
+  shell: sed -e '/5913/s/^/#/g' -i /etc/services  
+
+# - name: get zip file software name
+#   command: find "{{ root_dir }}/sapinst/EXPORTS/DBRDBMS" -name "*.ZIP"
+#   register: Software_file
+
+# - name: print name
+#   debug:
+#     var: Software_file.stdout_lines[0]
+
+# - name: Unarchive Software file
+#   unarchive:
+#     remote_src: true
+#     src: "{{ Software_file.stdout_lines[0] }}"
+#     dest: "{{ root_dir }}/sapinst/EXPORTS/DBRDBMS"
+#     mode: 0755
+#   when:
+#     - "'db' in group_names"
+#     # - ansible_hostname == "{{ sap.logical_hosts.db.hostname }}"
+#     - ansible_hostname == node1
+
+# - name: permission
+#   file:
+#     path: "{{ root_dir }}/sapinst/EXPORTS/DBRDBMS/LINUXX86_64"
+#     owner: root
+#     group: root
+#     mode: "777"
+#   when:
+#     - "'db' in group_names"
+#     # - ansible_hostname == "{{ sap.logical_hosts.db.hostname }}"
+#     - ansible_hostname == node1  
+
+- name: main | tweak grub
+  include_tasks: grub.yml
+  tags:
+    - grub
+
+- name: grub | copy in grub file
+  replace:
+    path: /etc/sysconfig/sapconf
+    regexp: "{{ item.exp }}"
+    replace: "{{ item.val }}"
+  with_items:
+    - { exp: "GOVERNOR=", val: "GOVERNOR=performance" }
+    - { exp: "PERF_BIAS=", val: "PERF_BIAS=performance" }

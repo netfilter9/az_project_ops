@@ -1,0 +1,135 @@
+*&*******************************************************************&*
+* Report              :   ZCM_R_CHK_D020S_DYNPSRC                     *
+* Title               :   Check D020S entries                         *
+* Created by          :   Yasaswini Kandukuri                         *
+* Created on          :   30/09/2020                                  *
+* Purpose             :   This report is used to check D020S entries  *
+*                         (RS_SCRP_D020S_CLEAN)                       *
+*---------------------------------------------------------------------*
+REPORT zcm_r_chk_d020s_dynpsrc.
+FORM get_config                             ##CALLED
+              TABLES lt_input  STRUCTURE tab512
+                     lt_output STRUCTURE tab512.
+  CONSTANTS: lc_sep      TYPE c        VALUE '|',
+             lc_check    TYPE char20   VALUE 'CHECK',
+             lc_delete   TYPE char20   VALUE 'DELETE',
+             lc_tabname  TYPE char80   VALUE
+        'Check D020S entries with illegal identification',
+             lc_tabname1 TYPE char80   VALUE
+        'Delete D020S entries with illegal identification',
+             lc_action   TYPE char20   VALUE 'DynproAction',
+             lc_count    TYPE char20   VALUE 'Count'.
+
+  DATA: BEGIN OF lt_log OCCURS 0,
+          data(2048) TYPE c,
+        END OF lt_log.
+
+  DATA: ls_output   TYPE tab512,
+        ls_prefinal TYPE string,
+        list_tab    TYPE TABLE OF abaplist,
+        lv_msg      TYPE string,
+        lv_tab      TYPE string.
+
+  REFRESH: lt_log[],
+           list_tab.
+
+  CLEAR: lv_msg,
+         lv_tab.
+  READ TABLE lt_input INTO DATA(ls_input) INDEX 1.
+  CHECK sy-subrc EQ 0.
+  DATA(lv_action) = ls_input.
+
+  CASE lv_action.
+
+    WHEN lc_check.
+      SUBMIT rs_scrp_d020s_clean WITH check EQ 'X'
+      EXPORTING LIST TO MEMORY
+                    AND RETURN.
+
+      CALL FUNCTION 'LIST_FROM_MEMORY'
+        TABLES
+          listobject = list_tab
+        EXCEPTIONS
+          not_found  = 1
+          OTHERS     = 2.
+      " RFC connection output is got
+      CALL FUNCTION 'LIST_TO_ASCI'
+        TABLES
+          listasci           = lt_log
+          listobject         = list_tab
+        EXCEPTIONS
+          empty_list         = 1
+          list_index_invalid = 2
+          OTHERS             = 3.
+
+      CLEAR: ls_output.
+      ls_output = lc_tabname.
+      APPEND ls_output TO lt_output.
+
+      CLEAR: ls_output.
+      CONCATENATE lc_action lc_sep
+      lc_count INTO ls_output.
+      APPEND ls_output TO lt_output.
+      CLEAR:ls_output.
+
+      LOOP AT lt_log INTO DATA(wa_log).
+        SPLIT wa_log AT ':' INTO lv_msg lv_tab.
+        IF lv_msg IS NOT INITIAL AND lv_tab IS NOT INITIAL.
+          CONDENSE lv_msg.
+          CONDENSE lv_tab.
+          CONCATENATE lv_msg lc_sep
+          lv_tab INTO ls_output.
+
+          APPEND ls_output TO lt_output.
+        ENDIF.
+
+        CLEAR: wa_log, ls_output.
+      ENDLOOP.
+
+    WHEN lc_delete.
+
+      SUBMIT rs_scrp_d020s_clean WITH delete EQ 'X'
+                         EXPORTING LIST TO MEMORY
+                         AND RETURN.
+
+      CALL FUNCTION 'LIST_FROM_MEMORY'
+        TABLES
+          listobject = list_tab
+        EXCEPTIONS
+          not_found  = 1
+          OTHERS     = 2.
+      " RFC connection output is got
+      CALL FUNCTION 'LIST_TO_ASCI'
+        TABLES
+          listasci           = lt_log
+          listobject         = list_tab
+        EXCEPTIONS
+          empty_list         = 1
+          list_index_invalid = 2
+          OTHERS             = 3.
+
+      CLEAR: ls_output.
+      ls_output = lc_tabname1.
+      APPEND ls_output TO lt_output.
+
+      CLEAR: ls_output.
+      CONCATENATE lc_action lc_sep
+      lc_count INTO ls_output.
+      APPEND ls_output TO lt_output.
+      CLEAR:ls_output.
+
+      LOOP AT lt_log INTO DATA(wa_log1).
+        SPLIT wa_log1 AT ':' INTO lv_msg lv_tab.
+        IF lv_msg IS NOT INITIAL AND lv_tab IS NOT INITIAL.
+          CONDENSE lv_msg.
+          CONDENSE lv_tab.
+          CONCATENATE lv_msg lc_sep
+          lv_tab INTO ls_output.
+
+          APPEND ls_output TO lt_output.
+        ENDIF.
+
+        CLEAR: wa_log1, ls_output.
+      ENDLOOP.
+  ENDCASE.
+ENDFORM.
