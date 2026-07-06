@@ -1,4 +1,4 @@
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-terraform-demo"
-  location = "East US"
+  name     = "rg-az-stud-01"
+  location = "southeastasia"
 }
