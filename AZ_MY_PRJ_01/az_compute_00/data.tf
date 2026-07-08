@@ -1,3 +1,3 @@
 data "azurerm_resource_group" "rg" {
-  name = "rg-study"
+  name = "rg-az-stud-01"
 }

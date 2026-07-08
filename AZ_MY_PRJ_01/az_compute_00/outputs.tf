@@ -18,25 +18,25 @@ output "private_ip_address" {
   value       = azurerm_network_interface.nic.private_ip_address
 }
 
-output "vnet_id" {
-  description = "The ID of the virtual network"
-  value       = local.vnet_id
-}
+//output "vnet_id" {
+  //description = "The ID of the virtual network"
+  //value       = local.vnet_id
+//}
 
-output "subnet_id" {
-  description = "The ID of the subnet"
-  value       = local.subnet_id
-}
+//output "subnet_id" {
+  //description = "The ID of the subnet"
+  //value       = local.subnet_id
+//}
 
 output "nic_id" {
   description = "The ID of the network interface"
   value       = azurerm_network_interface.nic.id
 }
 
-output "nsg_id" {
-  description = "The ID of the network security group"
-  value       = azurerm_network_security_group.nsg.id
-}
+//output "nsg_id" {
+//  description = "The ID of the network security group"
+//  value       = azurerm_network_security_group.nsg.id
+//}
 
 output "resource_group_name" {
   description = "The resource group name"
