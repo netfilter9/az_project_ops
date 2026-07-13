@@ -1,0 +1,64 @@
+
+Linux System Administrator Cheat Sheet
+
+File & Directory Management
+
+ls - list directory contents
+  ls -l   long format
+  ls -a   include hidden files
+  ls -lh  human readable sizes
+
+df - disk free space
+  df -h   human readable
+  df -T   filesystem type
+
+du - disk usage
+  du -sh /path   directory size summary
+
+Process & System Monitoring
+
+ps - process status
+  ps aux
+  ps -ef
+
+top - real-time monitoring
+  P sort by CPU
+  M sort by memory
+  q quit
+
+uptime - system load and run time
+
+Service & Log Management
+
+systemctl - manage services
+  systemctl status service
+  systemctl start service
+  systemctl stop service
+  systemctl enable service
+
+journalctl - system logs
+  journalctl -xe
+  journalctl -u service
+  journalctl -f
+
+Text Processing & Logs
+
+grep - search text
+  grep "error" file
+  grep -i case insensitive
+  grep -n show line numbers
+
+tail - view end of file
+  tail -n 50 file
+  tail -f file
+  tail -F file
+
+User & Permission Management
+
+chmod - change permissions
+  chmod 644 file
+  chmod 755 script
+
+useradd - create user
+  useradd username
+  useradd -m -s /bin/bash username
